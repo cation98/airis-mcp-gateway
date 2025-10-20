@@ -4,15 +4,34 @@ Integration tests for MCP Server PostgreSQL persistence.
 Tests verify that UI state changes (enabled/disabled) are permanently
 persisted to PostgreSQL database and survive container restarts.
 """
+import asyncio
 import pytest
 import httpx
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
+from sqlalchemy import text
 
-from app.core.database import AsyncSessionLocal
+from app.core.config import settings
 from app.crud import mcp_server as crud
 
 # API base URL (container internal)
 API_BASE_URL = "http://localhost:8000"
+
+# Create test engine with NullPool (no connection pooling = no cache)
+test_engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=settings.DEBUG,
+    poolclass=NullPool,  # Disable connection pooling
+)
+
+# Create test session factory
+TestSessionLocal = async_sessionmaker(
+    test_engine,
+    class_=AsyncSession,
+    expire_on_commit=True,  # Force re-query after commit
+    autocommit=False,
+    autoflush=False,
+)
 
 
 @pytest.mark.asyncio
@@ -34,7 +53,7 @@ class TestMCPServerPersistence:
         async with httpx.AsyncClient(base_url=API_BASE_URL) as client:
             # Step 1: Get Figma server
             server_name = "figma"
-            async with AsyncSessionLocal() as db:
+            async with TestSessionLocal() as db:
                 server = await crud.get_server_by_name(db, server_name)
                 assert server is not None, f"Server {server_name} not found in database"
                 server_id = server.id
@@ -52,10 +71,19 @@ class TestMCPServerPersistence:
             # Step 3: Verify API returns new enabled state
             assert data["enabled"] == new_state, "API response doesn't match requested state"
 
-            # Step 4: Query PostgreSQL directly with NEW session to verify persistence
-            async with AsyncSessionLocal() as fresh_db:
-                fresh_server = await crud.get_server_by_name(fresh_db, server_name)
-                assert fresh_server.enabled == new_state, f"Database state doesn't match API response: DB={fresh_server.enabled}, expected={new_state}"
+            # Wait for commit to complete (PostgreSQL READ COMMITTED isolation)
+            await asyncio.sleep(0.1)
+
+            # Step 4: Query PostgreSQL directly with RAW SQL to verify persistence
+            async with TestSessionLocal() as fresh_db:
+                result = await fresh_db.execute(
+                    text("SELECT enabled FROM mcp_servers WHERE name = :name"),
+                    {"name": server_name}
+                )
+                row = result.first()
+                assert row is not None, f"Server {server_name} not found in database"
+                db_enabled = row[0]
+                assert db_enabled == new_state, f"Database state doesn't match API response: DB={db_enabled}, expected={new_state}"
 
             # Step 5: Toggle again (back to original)
             response = await client.post(
@@ -66,10 +94,18 @@ class TestMCPServerPersistence:
             data = response.json()
             assert data["enabled"] == initial_state, "Second toggle failed"
 
-            # Step 6: Verify PostgreSQL reflects the change with NEW session
-            async with AsyncSessionLocal() as fresh_db2:
-                fresh_server2 = await crud.get_server_by_name(fresh_db2, server_name)
-                assert fresh_server2.enabled == initial_state, f"Database state not updated after second toggle: DB={fresh_server2.enabled}, expected={initial_state}"
+            # Wait for commit to complete
+            await asyncio.sleep(0.1)
+
+            # Step 6: Verify PostgreSQL reflects the change with RAW SQL
+            async with TestSessionLocal() as fresh_db2:
+                result = await fresh_db2.execute(
+                    text("SELECT enabled FROM mcp_servers WHERE name = :name"),
+                    {"name": server_name}
+                )
+                row = result.first()
+                db_enabled = row[0]
+                assert db_enabled == initial_state, f"Database state not updated after second toggle: DB={db_enabled}, expected={initial_state}"
 
     async def test_server_list_reflects_database_state(self):
         """
@@ -85,7 +121,7 @@ class TestMCPServerPersistence:
             servers_from_api = response.json()
 
             # Verify each server's state matches PostgreSQL with NEW session
-            async with AsyncSessionLocal() as db:
+            async with TestSessionLocal() as db:
                 for api_server in servers_from_api:
                     server_name = api_server["name"]
                     db_server = await crud.get_server_by_name(db, server_name)
@@ -107,7 +143,7 @@ class TestMCPServerPersistence:
             server_name = "figma"
 
             # Get server by name with NEW session
-            async with AsyncSessionLocal() as db:
+            async with TestSessionLocal() as db:
                 server = await crud.get_server_by_name(db, server_name)
                 assert server is not None, f"Server {server_name} not found"
                 server_id = server.id
@@ -127,10 +163,19 @@ class TestMCPServerPersistence:
             before_state = response.json()
             assert before_state["enabled"] is True
 
-            # Verify persistence through direct database query with NEW session
-            async with AsyncSessionLocal() as fresh_db:
-                fresh_server = await crud.get_server_by_name(fresh_db, server_name)
-                assert fresh_server.enabled is True, "Server state not persisted in database"
+            # Wait for commit to complete
+            await asyncio.sleep(0.1)
+
+            # Verify persistence through RAW SQL
+            async with TestSessionLocal() as fresh_db:
+                result = await fresh_db.execute(
+                    text("SELECT enabled FROM mcp_servers WHERE name = :name"),
+                    {"name": server_name}
+                )
+                row = result.first()
+                assert row is not None, f"Server {server_name} not found"
+                db_enabled = row[0]
+                assert db_enabled is True, "Server state not persisted in database"
 
     async def test_multiple_toggles_maintain_consistency(self):
         """
@@ -143,7 +188,7 @@ class TestMCPServerPersistence:
             server_name = "figma"
 
             # Get server with NEW session
-            async with AsyncSessionLocal() as db:
+            async with TestSessionLocal() as db:
                 server = await crud.get_server_by_name(db, server_name)
                 assert server is not None
                 server_id = server.id
@@ -158,11 +203,19 @@ class TestMCPServerPersistence:
                 )
                 assert response.status_code == 200
 
-                # Verify database was updated with NEW session
-                async with AsyncSessionLocal() as fresh_db:
-                    fresh_server = await crud.get_server_by_name(fresh_db, server_name)
-                    assert fresh_server.enabled == new_state, \
-                        f"Toggle {i+1}: Expected {new_state}, got {fresh_server.enabled}"
+                # Wait for commit to complete
+                await asyncio.sleep(0.1)
+
+                # Verify database was updated with RAW SQL
+                async with TestSessionLocal() as fresh_db:
+                    result = await fresh_db.execute(
+                        text("SELECT enabled FROM mcp_servers WHERE name = :name"),
+                        {"name": server_name}
+                    )
+                    row = result.first()
+                    db_enabled = row[0]
+                    assert db_enabled == new_state, \
+                        f"Toggle {i+1}: Expected {new_state}, got {db_enabled}"
 
     async def test_enabled_state_survives_migration(self):
         """
@@ -177,7 +230,7 @@ class TestMCPServerPersistence:
         - No data loss during schema updates
         """
         # Query all servers with NEW session
-        async with AsyncSessionLocal() as db:
+        async with TestSessionLocal() as db:
             servers = await crud.get_servers(db, skip=0, limit=100)
             assert len(servers) > 0, "No servers found in database"
 
