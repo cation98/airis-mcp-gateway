@@ -76,3 +76,22 @@ async def delete_server(db: AsyncSession, server_id: int) -> bool:
     await db.delete(db_server)
     await db.flush()
     return True
+
+
+async def set_server_enabled_by_name(
+    db: AsyncSession,
+    name: str,
+    enabled: bool
+) -> MCPServer | None:
+    """Set server enabled flag by name (no-op if server not found)"""
+    db_server = await get_server_by_name(db, name)
+    if not db_server:
+        return None
+
+    if db_server.enabled == enabled:
+        return db_server
+
+    db_server.enabled = enabled
+    await db.commit()
+    await db.refresh(db_server)
+    return db_server

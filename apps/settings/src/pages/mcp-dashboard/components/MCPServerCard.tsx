@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface MCPServer {
   id: string;
@@ -23,7 +23,15 @@ interface MCPServerCardProps {
 
 export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = false }: MCPServerCardProps) {
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState(server.apiKey || '');
+  const [apiKeyInput, setApiKeyInput] = useState('');
+
+  useEffect(() => {
+    if (server.apiKey && server.apiKey !== 'configured') {
+      setApiKeyInput(server.apiKey);
+    } else {
+      setApiKeyInput('');
+    }
+  }, [server.apiKey]);
 
   const handleApiKeySubmit = () => {
     onUpdateApiKey(server.id, apiKeyInput);
@@ -89,7 +97,10 @@ export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = fals
         <div className="mt-2">
           {!showApiKeyInput ? (
             <button
-              onClick={() => setShowApiKeyInput(true)}
+              onClick={() => {
+                setApiKeyInput('');
+                setShowApiKeyInput(true);
+              }}
               className={`w-full px-2 py-1.5 text-xs rounded border transition-colors ${
                 server.apiKey 
                   ? 'border-green-200 bg-green-50 text-green-700'

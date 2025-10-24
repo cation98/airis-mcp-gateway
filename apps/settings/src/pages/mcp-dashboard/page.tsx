@@ -19,6 +19,19 @@ interface MCPServer {
   builtin: boolean;
 }
 
+interface SecretValue {
+  key_name: string;
+  value: string;
+}
+
+const rawApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api/v1';
+const API_BASE = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
+
+const apiFetch = (path: string, options?: RequestInit) => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return fetch(`${API_BASE}${normalizedPath}`, options);
+};
+
 export default function MCPDashboard() {
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [showConfigEditor, setShowConfigEditor] = useState(false);
@@ -26,12 +39,96 @@ export default function MCPDashboard() {
   const [configModalServer, setConfigModalServer] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchServerSecretConfig = async (serverId: string) => {
+    try {
+      const response = await apiFetch(`/secrets/${serverId}/values`);
+      if (!response.ok) {
+        return {};
+      }
+      const data = await response.json();
+      if (!Array.isArray(data)) {
+        return {};
+      }
+
+      const config: Record<string, string> = {};
+      (data as SecretValue[]).forEach((secret) => {
+        if (secret.key_name && typeof secret.value === 'string') {
+          config[secret.key_name] = secret.value;
+        }
+      });
+      return config;
+    } catch (error) {
+      console.error(`Failed to load secrets for ${serverId}`, error);
+      return {};
+    }
+  };
+
+  const persistServerState = async (serverId: string, enabled: boolean) => {
+    try {
+      const response = await apiFetch(`/server-states/${serverId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Failed to persist server state', error);
+      return false;
+    }
+  };
+
+  const upsertSecret = async (serverName: string, keyName: string, value: string) => {
+    const createResponse = await apiFetch('/secrets/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        server_name: serverName,
+        key_name: keyName,
+        value,
+      }),
+    });
+
+    if (createResponse.ok) {
+      return;
+    }
+
+    if (createResponse.status === 409) {
+      const updateResponse = await apiFetch(`/secrets/${serverName}/${keyName}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      });
+
+      if (updateResponse.ok) {
+        return;
+      }
+
+      const error = await updateResponse.json().catch(() => ({}));
+      const message = error?.detail ?? `Failed to update ${keyName}`;
+      throw new Error(message);
+    }
+
+    const error = await createResponse.json().catch(() => ({}));
+    const message = error?.detail ?? `Failed to save ${keyName}`;
+    throw new Error(message);
+  };
+
+  const restartGateway = async () => {
+    try {
+      const response = await apiFetch('/gateway/restart', { method: 'POST' });
+      return response.ok;
+    } catch (error) {
+      console.error('Failed to restart gateway', error);
+      return false;
+    }
+  };
+
   // Load server list, secrets, and toggle states from database on mount
   useEffect(() => {
     const loadServerData = async () => {
       try {
         // Load server list from mcp-config.json
-        const serversResponse = await fetch('http://localhost:9000/api/v1/mcp-config/servers');
+        const serversResponse = await apiFetch('/mcp-config/servers');
         if (!serversResponse.ok) {
           console.error('Failed to load server list');
           setIsLoading(false);
@@ -41,7 +138,7 @@ export default function MCPDashboard() {
         const serverList = serversData.servers || [];
 
         // Load saved secrets
-        const secretsResponse = await fetch('http://localhost:9000/api/v1/secrets/');
+        const secretsResponse = await apiFetch('/secrets/');
         const secretsData = secretsResponse.ok ? await secretsResponse.json() : { secrets: [] };
         const savedSecrets = secretsData.secrets || [];
 
@@ -55,7 +152,7 @@ export default function MCPDashboard() {
         });
 
         // Load server states (toggle persistence)
-        const statesResponse = await fetch('http://localhost:9000/api/v1/server-states/');
+        const statesResponse = await apiFetch('/server-states/');
         const statesData = statesResponse.ok ? await statesResponse.json() : { server_states: [] };
         const serverStates = statesData.server_states || [];
 
@@ -70,9 +167,9 @@ export default function MCPDashboard() {
           const hasSecrets = secretsByServer[server.id]?.length > 0;
           const hasState = server.id in statesByServer;
 
-          // Determine enabled state: DB state (highest priority) > default (recommended)
-          // Note: Don't auto-enable based on secrets, user must explicitly toggle
-          let enabled = server.recommended; // Default
+          // Determine enabled state: DB state (highest priority) > default (false)
+          // User must explicitly enable servers - no auto-enable
+          let enabled = false; // Default: OFF
           if (hasState) {
             // DB state has highest priority - always use it
             enabled = statesByServer[server.id];
@@ -109,50 +206,26 @@ export default function MCPDashboard() {
 
     const newEnabledState = !currentServer.enabled;
 
-    // Check if enabling a server that requires API key
-    if (newEnabledState && currentServer.apiKeyRequired && !currentServer.apiKey) {
-      alert('このサーバーを有効にするには、まずAPIキーを設定してください。');
-      return;
-    }
+    if (newEnabledState && currentServer.apiKeyRequired) {
+      const config = await fetchServerSecretConfig(id);
 
-    // If enabling server with API key, validate it first
-    if (newEnabledState && currentServer.apiKey && currentServer.apiKey !== 'configured') {
+      if (Object.keys(config).length === 0) {
+        alert('このサーバーの資格情報が見つかりません。APIキーを設定してから再度有効化してください。');
+        return;
+      }
+
       try {
-        // Fetch saved secrets for validation
-        const secretsResponse = await fetch('http://localhost:9000/api/v1/secrets/');
-        if (!secretsResponse.ok) {
-          alert('設定の取得に失敗しました');
-          return;
-        }
-
-        const secretsData = await secretsResponse.json();
-        const savedSecrets = secretsData.secrets || [];
-
-        // Build config from saved secrets
-        const config: Record<string, string> = {};
-        savedSecrets.forEach((secret: any) => {
-          if (secret.server_name === id) {
-            config[secret.key_name] = secret.value;
-          }
-        });
-
-        if (Object.keys(config).length === 0) {
-          alert('このサーバーの設定が見つかりません。APIキーを再設定してください。');
-          return;
-        }
-
-        // Validate configuration
-        const validateResponse = await fetch(`http://localhost:9000/api/v1/validate/${id}`, {
+        const validateResponse = await apiFetch(`/validate/${id}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             server_id: id,
-            config: config
-          })
+            config,
+          }),
         });
 
         if (!validateResponse.ok) {
-          alert('バリデーションリクエストに失敗しました');
+          alert('接続テストのリクエストに失敗しました。');
           return;
         }
 
@@ -162,7 +235,6 @@ export default function MCPDashboard() {
           return;
         }
 
-        // Validation succeeded, show success message
         alert(`接続成功: ${validation.message}`);
       } catch (error) {
         console.error('Validation error:', error);
@@ -171,34 +243,21 @@ export default function MCPDashboard() {
       }
     }
 
-    // Optimistic update
     setServers(prev => prev.map(server =>
       server.id === id
         ? { ...server, enabled: newEnabledState, status: newEnabledState ? 'connected' : 'disconnected' }
         : server
     ));
 
-    // Persist to database
-    try {
-      const response = await fetch(`http://localhost:9000/api/v1/server-states/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          enabled: newEnabledState
-        })
-      });
+    const persisted = await persistServerState(id, newEnabledState);
 
-      if (!response.ok) {
-        console.error('Failed to persist server state');
-        // Rollback on failure
-        setServers(prev => prev.map(server =>
-          server.id === id
-            ? { ...server, enabled: currentServer.enabled, status: currentServer.status }
-            : server
-        ));
-      }
-    } catch (error) {
-      console.error('Error persisting server state:', error);
+    if (!persisted) {
+      console.error('Failed to persist server state');
+      setServers(prev => prev.map(server =>
+        server.id === id
+          ? { ...server, enabled: currentServer.enabled, status: currentServer.status }
+          : server
+      ));
     }
   };
 
@@ -230,34 +289,20 @@ export default function MCPDashboard() {
 
     try {
       // Save to API
-      const response = await fetch('http://localhost:9000/api/v1/secrets/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          server_name: id,
-          key_name: keyName,
-          value: apiKey
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to save API key');
-      }
+      await upsertSecret(id, keyName, apiKey);
 
       // Save enabled state to DB
-      await fetch(`http://localhost:9000/api/v1/server-states/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: true })
-      });
+      const persisted = await persistServerState(id, true);
+      if (!persisted) {
+        throw new Error('サーバー状態の保存に失敗しました。');
+      }
 
       // Update local state
       setServers(prev => prev.map(server =>
         server.id === id
           ? {
               ...server,
-              apiKey,
+              apiKey: 'configured',
               enabled: true,
               status: 'connected' as const
             }
@@ -267,11 +312,8 @@ export default function MCPDashboard() {
       // Restart Gateway to apply changes
       alert('APIキーを保存しました。Gatewayを再起動しています...');
 
-      const restartResponse = await fetch('http://localhost:9000/api/v1/gateway/restart', {
-        method: 'POST'
-      });
-
-      if (restartResponse.ok) {
+      const restarted = await restartGateway();
+      if (restarted) {
         alert('Gateway再起動完了！ツールが利用可能になりました。');
       } else {
         alert('Gateway再起動に失敗しました。手動で再起動してください。');
@@ -286,28 +328,14 @@ export default function MCPDashboard() {
     try {
       // Save all fields to API
       for (const [keyName, value] of Object.entries(config)) {
-        const response = await fetch('http://localhost:9000/api/v1/secrets/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            server_name: serverId,
-            key_name: keyName,
-            value: value
-          })
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.detail || `Failed to save ${keyName}`);
-        }
+        await upsertSecret(serverId, keyName, value);
       }
 
       // Save enabled state to DB
-      await fetch(`http://localhost:9000/api/v1/server-states/${serverId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: true })
-      });
+      const persisted = await persistServerState(serverId, true);
+      if (!persisted) {
+        throw new Error('サーバー状態の保存に失敗しました。');
+      }
 
       // Update local state
       setServers(prev => prev.map(server =>
@@ -324,11 +352,9 @@ export default function MCPDashboard() {
       // Restart Gateway to apply changes
       alert('設定を保存しました。Gatewayを再起動しています...');
 
-      const restartResponse = await fetch('http://localhost:9000/api/v1/gateway/restart', {
-        method: 'POST'
-      });
+      const restarted = await restartGateway();
 
-      if (restartResponse.ok) {
+      if (restarted) {
         alert('Gateway再起動完了！ツールが利用可能になりました。');
       } else {
         alert('Gateway再起動に失敗しました。手動で再起動してください。');
@@ -343,7 +369,7 @@ export default function MCPDashboard() {
     setServers(prev => prev.map(server => {
       // 公式推奨（APIなし）の設定
       const officialNoApi = [
-        'sequential-thinking', 'time', 'fetch', 'git', 'memory',
+        'sequentialthinking', 'time', 'fetch', 'git', 'memory',
         'filesystem', 'context7', 'serena', 'mindbase'
       ];
       

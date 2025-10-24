@@ -39,7 +39,7 @@ help:
 .PHONY: up
 up: ## Start all services
 	@echo "$(GREEN)Starting services...$(NC)"
-	@docker compose up -d --remove-orphans
+	@docker compose up -d --build --remove-orphans
 	@echo "$(GREEN)✅ All services started$(NC)"
 	@echo "🔗 Gateway: http://localhost:$${GATEWAY_PORT}"
 	@echo "🗄️  Database: internal only"

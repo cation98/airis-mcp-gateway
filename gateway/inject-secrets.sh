@@ -27,13 +27,16 @@ echo "🔐 Fetching secrets from API..."
 SECRETS_JSON=$(wget -q -O- "${API_URL}/api/v1/secrets/export/env" || echo '{"env_vars":{}}')
 
 # Parse JSON and export environment variables
-echo "$SECRETS_JSON" | grep -o '"[^"]*":"[^"]*"' | while IFS=: read -r key value; do
-    # Remove quotes
-    KEY=$(echo "$key" | tr -d '"')
-    VALUE=$(echo "$value" | tr -d '"')
+echo "$SECRETS_JSON" | grep -o '"[^"]*":"[^"]*"' | while read -r pair; do
+    KEY=${pair%%":"*}
+    KEY=${KEY#\"}
+
+    VALUE=${pair#*":"}
+    VALUE=${VALUE%\"}
+    VALUE=${VALUE#\"}
 
     if [ -n "$KEY" ] && [ -n "$VALUE" ]; then
-        export "$KEY=$VALUE"
+        export "${KEY}=${VALUE}"
         echo "✅ Exported: $KEY"
     fi
 done

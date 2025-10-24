@@ -73,6 +73,41 @@ async def get_secrets_by_server(
 
 
 @router.get(
+    "/{server_name}/values",
+    response_model=list[schemas.SecretWithValue]
+)
+async def get_secret_values(
+    server_name: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all secrets for a specific server with decrypted values"""
+    secrets = await crud.get_secrets_by_server(db, server_name)
+    secrets_with_values: list[schemas.SecretWithValue] = []
+
+    for secret in secrets:
+        try:
+            decrypted_value = encryption_manager.decrypt(secret.encrypted_value)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to decrypt stored secret. Check ENCRYPTION_MASTER_KEY consistency.",
+            ) from exc
+
+        secrets_with_values.append(
+            schemas.SecretWithValue(
+                id=secret.id,
+                server_name=secret.server_name,
+                key_name=secret.key_name,
+                created_at=secret.created_at,
+                updated_at=secret.updated_at,
+                value=decrypted_value,
+            )
+        )
+
+    return secrets_with_values
+
+
+@router.get(
     "/{server_name}/{key_name}",
     response_model=schemas.SecretWithValue
 )

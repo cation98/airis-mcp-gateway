@@ -63,6 +63,8 @@ npx @agiletec/airis-mcp-gateway install
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git ~/github/airis-mcp-gateway
 cd ~/github/airis-mcp-gateway
+# Optional: copy sample env (includes a dev ENCRYPTION_MASTER_KEY)
+cp .env.example .env
 
 # Install (auto-imports existing IDE configs)
 make install
@@ -82,6 +84,7 @@ make install-dev
 - 📊 API Docs at http://localhost:9000/docs
 - 🔐 Encrypted API key management
 - 🎛️ Server ON/OFF toggles
+- 🛡️ `.env.example` ships with a sample `ENCRYPTION_MASTER_KEY` for local testing—generate a unique value before deploying anywhere shared.
 
 ---
 

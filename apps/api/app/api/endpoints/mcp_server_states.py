@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.database import get_db
 from ...schemas import mcp_server_state as schemas
 from ...crud import mcp_server_state as crud
+from ...crud import mcp_server as server_crud
 
 router = APIRouter(tags=["mcp-server-states"])
 
@@ -50,6 +51,8 @@ async def upsert_server_state(
 ):
     """Create or update server state"""
     state = await crud.upsert_server_state(db, server_id, state_data.enabled)
+    # Keep core MCP server registry in sync when present
+    await server_crud.set_server_enabled_by_name(db, server_id, state_data.enabled)
     return state
 
 
