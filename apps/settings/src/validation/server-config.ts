@@ -51,6 +51,24 @@ export const supabaseSchema = z.object({
     .regex(/^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/, 'Invalid JWT format')
 });
 
+export const supabaseSelfhostSchema = z.object({
+  PG_DSN: z.string()
+    .min(1, 'PostgreSQL DSN is required')
+    .regex(/^postgres(?:ql)?:\/\/.+$/, 'Invalid PostgreSQL DSN format'),
+  POSTGREST_URL: z.string()
+    .min(1, 'PostgREST URL is required')
+    .url('Must be a valid URL'),
+  POSTGREST_JWT: z.string()
+    .min(1, 'PostgREST JWT is required')
+    .regex(/^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/, 'Invalid JWT format'),
+  READ_ONLY: z.string()
+    .optional()
+    .refine((value) => !value || /^(true|false)$/i.test(value.trim()), 'READ_ONLY must be "true" or "false"'),
+  FEATURES: z.string()
+    .optional()
+    .refine((value) => !value || /^[a-z][a-z\-]*(,[a-z][a-z\-]*)*$/.test(value.toLowerCase()), 'Invalid feature flag list')
+});
+
 export const slackSchema = z.object({
   SLACK_BOT_TOKEN: z.string()
     .min(1, 'Bot Token is required')
@@ -106,6 +124,7 @@ export const SERVER_VALIDATION_SCHEMAS: Record<string, z.ZodObject<any>> = {
   notion: notionSchema,
   'brave-search': braveSearchSchema,
   supabase: supabaseSchema,
+  'supabase-selfhost': supabaseSelfhostSchema,
   slack: slackSchema,
   sentry: sentrySchema,
   twilio: twilioSchema,

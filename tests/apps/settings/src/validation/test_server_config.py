@@ -82,6 +82,37 @@ def test_supabase_schema_invalid_url():
     assert "SUPABASE_URL" in result["errors"]
 
 
+def test_supabase_selfhost_schema_valid():
+    """Test valid Supabase self-host configuration"""
+    from apps.settings.src.validation.server_config import validateServerConfig
+
+    config = {
+        "PG_DSN": "postgres://mcp_ro:password@host.docker.internal:5432/postgres",
+        "POSTGREST_URL": "http://host.docker.internal:54321/rest/v1",
+        "POSTGREST_JWT": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature",
+        "READ_ONLY": "true",
+        "FEATURES": "database,docs,postgrest"
+    }
+
+    result = validateServerConfig("supabase-selfhost", config)
+    assert result["success"] is True
+
+
+def test_supabase_selfhost_schema_invalid_dsn():
+    """Test invalid Supabase self-host DSN"""
+    from apps.settings.src.validation.server_config import validateServerConfig
+
+    config = {
+        "PG_DSN": "invalid_dsn",
+        "POSTGREST_URL": "http://host.docker.internal:54321/rest/v1",
+        "POSTGREST_JWT": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature"
+    }
+
+    result = validateServerConfig("supabase-selfhost", config)
+    assert result["success"] is False
+    assert "PG_DSN" in result["errors"]
+
+
 def test_twilio_schema_valid():
     """Test valid Twilio configuration"""
     from apps.settings.src.validation.server_config import validateServerConfig

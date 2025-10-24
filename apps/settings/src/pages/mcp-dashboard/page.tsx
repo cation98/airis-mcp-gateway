@@ -11,6 +11,9 @@ interface MCPServer {
   name: string;
   description: string;
   enabled: boolean;
+  command: string;
+  args: string[];
+  env?: Record<string, string> | null;
   apiKeyRequired: boolean;
   apiKey?: string;
   status: 'connected' | 'disconnected' | 'error';
@@ -180,6 +183,9 @@ export default function MCPDashboard() {
             name: server.name,
             description: server.description,
             enabled: enabled,
+            command: typeof server.command === 'string' ? server.command : '',
+            args: Array.isArray(server.args) ? server.args.map(String) : [],
+            env: server?.env ?? null,
             apiKeyRequired: server.apiKeyRequired,
             apiKey: hasSecrets ? 'configured' : undefined,
             status: enabled ? ('connected' as const) : ('disconnected' as const),
@@ -328,6 +334,9 @@ export default function MCPDashboard() {
     try {
       // Save all fields to API
       for (const [keyName, value] of Object.entries(config)) {
+        if (typeof value !== 'string' || value.trim() === '') {
+          continue;
+        }
         await upsertSecret(serverId, keyName, value);
       }
 

@@ -6,11 +6,15 @@ interface MCPServer {
   name: string;
   description: string;
   enabled: boolean;
-  tools: string[];
+  command: string;
+  args: string[];
+  env?: Record<string, string> | null;
   apiKeyRequired: boolean;
   apiKey?: string;
   status: 'connected' | 'disconnected' | 'error';
-  category: 'default' | 'custom';
+  category: string;
+  recommended?: boolean;
+  builtin: boolean;
 }
 
 interface ConfigEditorProps {
@@ -22,16 +26,28 @@ export function ConfigEditor({ servers }: ConfigEditorProps) {
 
   const generateConfig = () => {
     const enabledServers = servers.filter(s => s.enabled);
+
+    const buildServerConfig = (server: MCPServer) => {
+      const config: Record<string, unknown> = {
+        command: server.command
+      };
+
+      if (server.args.length > 0) {
+        config.args = server.args;
+      }
+
+      if (server.env && Object.keys(server.env).length > 0) {
+        config.env = server.env;
+      }
+
+      return config;
+    };
     
     switch (selectedFormat) {
       case 'claude':
         return JSON.stringify({
           mcpServers: enabledServers.reduce((acc, server) => {
-            acc[server.id] = {
-              command: "docker",
-              args: ["run", "-i", "--rm", `mcp-${server.id}`],
-              env: server.apiKey ? { API_KEY: server.apiKey } : undefined
-            };
+            acc[server.id] = buildServerConfig(server);
             return acc;
           }, {} as any)
         }, null, 2);
@@ -39,11 +55,7 @@ export function ConfigEditor({ servers }: ConfigEditorProps) {
       case 'cursor':
         return JSON.stringify({
           "mcp.servers": enabledServers.reduce((acc, server) => {
-            acc[server.id] = {
-              command: "docker",
-              args: ["run", "-i", "--rm", `mcp-${server.id}`],
-              env: server.apiKey ? { API_KEY: server.apiKey } : undefined
-            };
+            acc[server.id] = buildServerConfig(server);
             return acc;
           }, {} as any)
         }, null, 2);
@@ -54,8 +66,9 @@ export function ConfigEditor({ servers }: ConfigEditorProps) {
             id: server.id,
             name: server.name,
             enabled: server.enabled,
-            tools: server.tools,
-            apiKey: server.apiKey || null
+            command: server.command,
+            args: server.args,
+            env: server.env ?? null
           }))
         }, null, 2);
         

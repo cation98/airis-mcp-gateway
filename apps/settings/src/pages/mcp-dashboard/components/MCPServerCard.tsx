@@ -6,11 +6,13 @@ interface MCPServer {
   name: string;
   description: string;
   enabled: boolean;
-  tools: string[];
+  command: string;
+  args: string[];
+  env?: Record<string, string> | null;
   apiKeyRequired: boolean;
   apiKey?: string;
   status: 'connected' | 'disconnected' | 'error';
-  category: 'default' | 'custom';
+  category: string;
   recommended?: boolean;
 }
 
@@ -24,6 +26,14 @@ interface MCPServerCardProps {
 export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = false }: MCPServerCardProps) {
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
+
+  const commandPreview = (() => {
+    const parts = [
+      server.command,
+      ...(Array.isArray(server.args) ? server.args.slice(0, 2) : [])
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(' ') : 'builtin';
+  })();
 
   useEffect(() => {
     if (server.apiKey && server.apiKey !== 'configured') {
@@ -70,10 +80,10 @@ export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = fals
                 おすすめ
               </span>
             )}
-          </div>
+        </div>
           <p className="text-xs text-gray-600 truncate">{server.description}</p>
-          <div className="text-xs text-gray-500 mt-1">
-            {server.tools.length} ツール
+          <div className="text-xs text-gray-500 mt-1 truncate">
+            {commandPreview}
           </div>
         </div>
         
