@@ -16,6 +16,9 @@ class MCPServerInfo(BaseModel):
     apiKeyRequired: bool
     recommended: bool
     builtin: bool
+    command: str
+    args: list[str]
+    env: dict[str, str] | None = None
 
 
 class MCPConfigResponse(BaseModel):
@@ -161,6 +164,14 @@ SERVER_METADATA = {
         "recommended": True,
         "builtin": False
     },
+    "supabase-selfhost": {
+        "name": "Supabase Self-host",
+        "description": "Self-hosted Supabase（PostgREST + PostgreSQL）連携",
+        "category": "custom",
+        "apiKeyRequired": True,
+        "recommended": False,
+        "builtin": False
+    },
     "slack": {
         "name": "Slack",
         "description": "Slackメッセージとチャンネル管理",
@@ -263,8 +274,22 @@ async def get_mcp_servers():
                 "builtin": False
             })
 
+            command = str(server_config.get("command", ""))
+            args = server_config.get("args", [])
+            env = server_config.get("env")
+
+            if not isinstance(args, list):
+                args = []
+            else:
+                args = [str(arg) for arg in args]
+            if env is not None and not isinstance(env, dict):
+                env = None
+
             servers.append(MCPServerInfo(
                 id=server_id,
+                command=command,
+                args=args,
+                env=env,
                 **metadata
             ))
 
@@ -275,6 +300,9 @@ async def get_mcp_servers():
                 metadata = SERVER_METADATA[builtin_id]
                 servers.append(MCPServerInfo(
                     id=builtin_id,
+                    command="",
+                    args=[],
+                    env=None,
                     **metadata
                 ))
 

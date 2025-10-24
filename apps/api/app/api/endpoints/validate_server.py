@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import httpx
 import base64
 from typing import Dict, Any, Optional
+from urllib.parse import urlparse
 
 router = APIRouter(tags=["validation"])
 
@@ -42,6 +43,52 @@ async def validate_supabase(config: Dict[str, str]) -> Dict[str, Any]:
                 return {"valid": False, "message": f"Supabase API returned status {response.status_code}"}
     except Exception as e:
         return {"valid": False, "message": f"Connection failed: {str(e)}"}
+
+
+async def validate_supabase_selfhost(config: Dict[str, str]) -> Dict[str, Any]:
+    """Validate Supabase self-host configuration (PostgREST + PostgreSQL DSN)"""
+    pg_dsn = config.get('PG_DSN')
+    postgrest_url = config.get('POSTGREST_URL')
+    postgrest_jwt = config.get('POSTGREST_JWT')
+
+    missing_fields = [
+        field for field, value in [
+            ("PG_DSN", pg_dsn),
+            ("POSTGREST_URL", postgrest_url),
+            ("POSTGREST_JWT", postgrest_jwt)
+        ] if not value
+    ]
+
+    if missing_fields:
+        missing = ", ".join(missing_fields)
+        return {"valid": False, "message": f"Missing required fields: {missing}"}
+
+    parsed_dsn = urlparse(pg_dsn)
+    if parsed_dsn.scheme not in {"postgres", "postgresql"} or not parsed_dsn.hostname:
+        return {"valid": False, "message": "Invalid PG_DSN format. Expected postgres://user:pass@host:port/db"}
+
+    normalized_postgrest_url = postgrest_url.rstrip("/")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{normalized_postgrest_url}/",
+                headers={
+                    "apikey": postgrest_jwt,
+                    "Authorization": f"Bearer {postgrest_jwt}"
+                },
+                timeout=10.0
+            )
+
+        if response.status_code == 200:
+            return {
+                "valid": True,
+                "message": "Successfully connected to Supabase self-host PostgREST endpoint",
+                "details": {"postgrest_url": normalized_postgrest_url}
+            }
+        return {"valid": False, "message": f"PostgREST returned status {response.status_code}"}
+    except Exception as e:
+        return {"valid": False, "message": f"PostgREST connection failed: {str(e)}"}
 
 
 async def validate_stripe(config: Dict[str, str]) -> Dict[str, Any]:
@@ -212,6 +259,7 @@ async def validate_sentry(config: Dict[str, str]) -> Dict[str, Any]:
 # Validation function mapping
 VALIDATORS = {
     'supabase': validate_supabase,
+    'supabase-selfhost': validate_supabase_selfhost,
     'stripe': validate_stripe,
     'github': validate_github,
     'slack': validate_slack,

@@ -16,7 +16,13 @@ class APIKeyValidator:
         "ANTHROPIC_API_KEY": r"^sk-ant-[A-Za-z0-9\-_]{95,}$",
         "SUPABASE_URL": r"^https://[a-z0-9]+\.supabase\.co$",
         "SUPABASE_ANON_KEY": r"^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$",  # JWT
+        "PG_DSN": r"^postgres(?:ql)?://[^\s]+$",
+        "POSTGREST_URL": r"^https?://[^\s]+$",
+        "POSTGREST_JWT": r"^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$",  # JWT
+        "READ_ONLY": r"^(true|false)$",
+        "FEATURES": r"^[a-z][a-z\-]*(,[a-z][a-z\-]*)*$",
     }
+    SHORT_VALUE_KEYS = {"READ_ONLY"}
 
     @classmethod
     def validate(cls, key_name: str, value: str) -> tuple[bool, Optional[str]]:
@@ -34,7 +40,13 @@ class APIKeyValidator:
         if not value or not value.strip():
             return False, "API key cannot be empty"
 
-        if len(value) < 10:
+        value = value.strip()
+
+        min_length = 10
+        if key_name in cls.SHORT_VALUE_KEYS:
+            min_length = 2
+
+        if len(value) < min_length:
             return False, "API key is too short (minimum 10 characters)"
 
         if len(value) > 500:
@@ -45,11 +57,11 @@ class APIKeyValidator:
             pattern = cls.PATTERNS[key_name]
             if not re.match(pattern, value):
                 return False, f"Invalid format for {key_name}. Please check the API key."
+            return True, None
 
         # Generic validation for unknown keys
-        # Allow alphanumeric, hyphens, underscores, dots
-        if not re.match(r"^[A-Za-z0-9\-_.]+$", value):
-            return False, "API key contains invalid characters"
+        if "\n" in value or "\r" in value:
+            return False, "API key cannot contain newline characters"
 
         return True, None
 

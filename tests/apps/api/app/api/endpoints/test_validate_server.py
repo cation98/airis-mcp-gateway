@@ -50,6 +50,45 @@ async def test_validate_supabase_invalid_url():
 
 
 @pytest.mark.asyncio
+async def test_validate_supabase_selfhost_success():
+    """Test successful Supabase self-host validation"""
+    config = {
+        "PG_DSN": "postgres://user:pass@localhost:5432/postgres",
+        "POSTGREST_URL": "http://localhost:54321/rest/v1",
+        "POSTGREST_JWT": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.payload"
+    }
+
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        from apps.api.app.api.endpoints.validate_server import validate_supabase_selfhost
+
+        result = await validate_supabase_selfhost(config)
+
+        assert result["valid"] is True
+        assert "postgrest" in result["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_validate_supabase_selfhost_missing_fields():
+    """Test Supabase self-host validation with missing configuration"""
+    config = {
+        "PG_DSN": "postgres://user:pass@localhost:5432/postgres",
+        "POSTGREST_URL": "",
+        "POSTGREST_JWT": ""
+    }
+
+    from apps.api.app.api.endpoints.validate_server import validate_supabase_selfhost
+
+    result = await validate_supabase_selfhost(config)
+
+    assert result["valid"] is False
+    assert "missing" in result["message"].lower()
+
+
+@pytest.mark.asyncio
 async def test_validate_stripe_success():
     """Test successful Stripe validation"""
     config = {

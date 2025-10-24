@@ -132,6 +132,27 @@ def upgrade() -> None:
             'category': 'Database & Backend'
         },
         {
+            'name': 'supabase-selfhost',
+            'enabled': False,
+            'command': 'docker',
+            'args': [
+                'run', '--rm', '-i',
+                '--network', 'airis-mcp-gateway_default',
+                '-e', 'PG_DSN',
+                '-e', 'POSTGREST_URL',
+                '-e', 'POSTGREST_JWT',
+                '-e', 'READ_ONLY',
+                '-e', 'FEATURES',
+                '-v', '/Users/kazuki/github/airis-mcp-supabase-selfhost:/app:ro',
+                '-w', '/app',
+                'node:24-alpine',
+                'node', 'dist/server.js'
+            ],
+            'env': None,
+            'description': 'Self-hosted Supabase (PostgREST + PostgreSQL)',
+            'category': 'Database & Backend'
+        },
+        {
             'name': 'mongodb',
             'enabled': False,
             'command': 'npx',
