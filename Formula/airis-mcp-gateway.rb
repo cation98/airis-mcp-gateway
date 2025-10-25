@@ -4,10 +4,13 @@ class AirisMcpGateway < Formula
   url "https://github.com/agiletec-inc/airis-mcp-gateway/archive/refs/tags/v1.2.0.tar.gz"
   sha256 "f8714303bf03102b02b79d147110f9fe03777afceb2f521d42a72c3da96d815d"
   license "MIT"
+  head "https://github.com/agiletec-inc/airis-mcp-gateway.git", branch: "master"
 
   depends_on "node" => :build
   depends_on "pnpm" => :build
-  depends_on "docker"
+
+  # Note: Requires Docker-compatible runtime (OrbStack, Docker Desktop, Colima, etc.)
+  # Not enforced as dependency to allow flexibility in runtime choice
 
   def install
     # Install npm dependencies
@@ -41,10 +44,13 @@ class AirisMcpGateway < Formula
 
       ✨ Your existing IDE MCP configurations have been automatically imported!
 
+      Prerequisites:
+        - Docker-compatible runtime required (OrbStack, Docker Desktop, Colima, etc.)
+        - Ensure your Docker runtime is running before starting
+
       Quick Start:
-        1. Ensure Docker is running
-        2. Run: airis-gateway install
-        3. Restart your editors (Claude Code, Cursor, Zed, etc.)
+        1. Run: airis-gateway install
+        2. Restart your editors (Claude Code, Cursor, Zed, etc.)
 
       What was imported:
         - Claude Desktop, Cursor, Windsurf, Zed configs (if installed)

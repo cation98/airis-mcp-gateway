@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "1.0",
+  "name": "airis-mcp-gateway",
+  "displayName": "AIRIS MCP Gateway",
+  "version": "1.0.0",
+  "description": "Unified MCP server management - All 25 MCP servers via single Gateway. Zero-token startup, encrypted secret storage, and multi-editor support.",
+  "author": "Agiletec Inc.",
+  "homepage": "https://github.com/agiletec-inc/airis-mcp-gateway",
+  "license": "MIT",
+  "icon": "icon.png",
+  "server": {
+    "transport": "sse",
+    "url": "http://localhost:9090/sse"
+  },
+  "runtime": {
+    "type": "docker-compose",
+    "composeFile": "docker-compose.yml",
+    "healthCheck": {
+      "container": "airis-mcp-gateway",
+      "timeout": 60
+    }
+  },
+  "configuration": {
+    "secrets": [
+      {
+        "name": "TAVILY_API_KEY",
+        "description": "API key for Tavily web search",
+        "required": false,
+        "url": "https://tavily.com"
+      },
+      {
+        "name": "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "description": "GitHub personal access token",
+        "required": false,
+        "url": "https://github.com/settings/tokens"
+      },
+      {
+        "name": "STRIPE_SECRET_KEY",
+        "description": "Stripe API secret key",
+        "required": false,
+        "url": "https://dashboard.stripe.com/apikeys"
+      },
+      {
+        "name": "SUPABASE_URL",
+        "description": "Supabase project URL",
+        "required": false,
+        "url": "https://supabase.com/dashboard"
+      },
+      {
+        "name": "SUPABASE_ANON_KEY",
+        "description": "Supabase anonymous key",
+        "required": false,
+        "url": "https://supabase.com/dashboard"
+      }
+    ],
+    "settings": [
+      {
+        "name": "profile",
+        "displayName": "MCP Server Profile",
+        "description": "Choose server configuration profile",
+        "type": "select",
+        "options": [
+          {
+            "label": "Recommended (filesystem, context7, serena, mindbase)",
+            "value": "recommended"
+          },
+          {
+            "label": "Minimal (filesystem, context7 only)",
+            "value": "minimal"
+          }
+        ],
+        "default": "recommended"
+      }
+    ]
+  },
+  "capabilities": {
+    "tools": [
+      "Time operations",
+      "Web content fetching",
+      "Git repository operations",
+      "Persistent memory",
+      "Sequential thinking",
+      "Library documentation (Context7)",
+      "File system access",
+      "Web search (Brave, Tavily)",
+      "GitHub operations",
+      "Database operations (Supabase, PostgreSQL, MongoDB, SQLite)",
+      "Productivity tools (Notion, Slack, Figma)",
+      "Payment APIs (Stripe, Twilio)",
+      "Development tools (Puppeteer, Sentry)"
+    ],
+    "resources": [
+      "MCP server configurations",
+      "Server state management",
+      "Secret management API"
+    ]
+  },
+  "documentation": {
+    "quickStart": "README.md",
+    "secretsGuide": "SECRETS.md",
+    "troubleshooting": "docs/troubleshooting.md"
+  },
+  "support": {
+    "issues": "https://github.com/agiletec-inc/airis-mcp-gateway/issues",
+    "documentation": "https://github.com/agiletec-inc/airis-mcp-gateway#readme",
+    "community": "https://github.com/agiletec-inc/airis-mcp-gateway/discussions"
+  }
+}

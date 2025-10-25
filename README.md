@@ -34,6 +34,8 @@ airis-gateway install dev
 3. 🌉 **Registers** Gateway with all installed editors
 4. 🎉 **Done!** Restart editors → All MCP servers unified
 
+> 💡 Need the latest unreleased features? Use `brew install airis-mcp-gateway --HEAD` (Formula taps the `master` branch for cutting-edge builds).
+
 **Why Homebrew?**
 - ✅ Dependency auto-resolution (PostgreSQL, Ollama)
 - ✅ macOS standard package manager
@@ -85,6 +87,7 @@ make install-dev
 - 🔐 Encrypted API key management
 - 🎛️ Server ON/OFF toggles
 - 🛡️ `.env.example` ships with a sample `ENCRYPTION_MASTER_KEY` for local testing—generate a unique value before deploying anywhere shared.
+- 🗄️ Supabase self-host placeholders (`PG_DSN`, `POSTGREST_URL`, `POSTGREST_JWT`) are included in `.env.example`; copy them into your local `.env` or configure via Settings UI before enabling `supabase-selfhost`.
 
 ---
 
@@ -343,9 +346,15 @@ Gateway (http://localhost:9090/sse)
 | Server | Description | Auth |
 |--------|-------------|------|
 | **supabase** | Official Supabase integration | `SUPABASE_URL`, `SUPABASE_ANON_KEY` |
+| **supabase-selfhost** | Supabase self-host (PostgREST + PostgreSQL) | `PG_DSN`, `POSTGREST_URL`, `POSTGREST_JWT` *(optional:* `READ_ONLY`, `FEATURES`*)* |
 | **mcp-postgres-server** | PostgreSQL operations (self-hosted Supabase) | `POSTGRES_CONNECTION_STRING` |
 | **mongodb** | MongoDB NoSQL database | `MONGODB_CONNECTION_STRING` |
 | **sqlite** | SQLite database operations | None |
+
+> 🆕 **Supabase self-host tips**  
+> 1. Copy `.env.example` to `.env` and fill `PG_DSN`, `POSTGREST_URL`, `POSTGREST_JWT` (defaults point to `host.docker.internal`).  
+> 2. Save the same values in Settings UI → Secrets.  
+> 3. Enable `supabase-selfhost` from the dashboard to restart the Gateway with your credentials.
 
 ### 📊 Productivity & Collaboration
 

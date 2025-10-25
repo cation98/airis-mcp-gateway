@@ -6,8 +6,8 @@ services:
     build:
       context: ./gateway
       dockerfile: Dockerfile
-    image: airis/mcp-gateway:latest
-    container_name: airis-mcp-gateway
+    image: airis-mcp-gateway/gateway:latest
+    container_name: airis-mcp-gateway-gateway
     environment:
       - API_URL=http://api:8000
     command:
@@ -17,7 +17,6 @@ services:
       - --transport=sse
       - --port=9090
       - --config=/etc/docker-mcp/config.json
-      - --servers=time,fetch,git,memory,sequentialthinking,context7,filesystem,puppeteer,serena,sqlite,mindbase,self-management,tavily,stripe,figma
     ports:
       - "${GATEWAY_PORT}:9090"
     volumes:
@@ -44,7 +43,7 @@ services:
   # PostgreSQL Database (internal only, no port binding)
   postgres:
     image: postgres:17-alpine
-    container_name: airis-postgres
+    container_name: airis-mcp-gateway-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -63,12 +62,13 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
-    container_name: airis-api
+    container_name: airis-mcp-gateway-api
     ports:
       - "${API_PORT}:8000"
     volumes:
       - /Users/kazuki/github:/workspace/github:rw
       - ./apps/api/app:/app/app:rw
+      - ./apps/api/alembic:/app/alembic:rw
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-mcp_gateway}
@@ -90,7 +90,7 @@ services:
     build:
       context: .
       dockerfile: apps/settings/Dockerfile
-    container_name: airis-settings-ui
+    container_name: airis-mcp-gateway-settings-ui
     ports:
       - "${UI_PORT}:80"
     depends_on:
@@ -111,7 +111,7 @@ services:
     build:
       context: ./servers/mindbase
       dockerfile: Dockerfile
-    container_name: airis-mindbase-builder
+    container_name: airis-mcp-gateway-mindbase-builder
     volumes:
       # Source (read-only)
       - ./servers/mindbase/src:/app/src:ro
@@ -135,7 +135,7 @@ services:
     build:
       context: ./servers/self-management
       dockerfile: Dockerfile
-    container_name: airis-self-management-builder
+    container_name: airis-mcp-gateway-self-management-builder
     volumes:
       # Source (read-only)
       - ./servers/self-management/src:/app/src:ro
@@ -154,15 +154,15 @@ services:
              echo '✅ Self-Management MCP Server built: servers/self-management/dist/' &&
              sleep infinity"
 
-  # Test runner - fast config validation only
+  # Test runner - config validation + unit tests
   test:
     image: python:3.12-slim
     working_dir: /workspace
     volumes:
       - .:/workspace:ro
     command: >
-      sh -c "pip install -q pytest &&
-             pytest tests/test_config.py -v"
+      sh -c "pip install -q pytest pytest-asyncio &&
+             pytest tests/test_config.py apps/api/tests/unit/ -v -o addopts=''"
     profiles:
       - test
 
@@ -171,7 +171,7 @@ services:
     build:
       context: ./tools/measurement
       dockerfile: Dockerfile
-    container_name: airis-measurement
+    container_name: airis-mcp-gateway-measurement
     volumes:
       - ./apps/api/logs:/app/logs:ro
       - ./metrics:/app/metrics:rw

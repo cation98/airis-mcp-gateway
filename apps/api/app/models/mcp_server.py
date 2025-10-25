@@ -1,4 +1,4 @@
-from sqlalchemy import String, Boolean, JSON, Integer
+from sqlalchemy import String, Boolean, JSON, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
 from ..core.database import Base
@@ -20,11 +20,11 @@ class MCPServer(Base):
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    # Timestamps (Best Practice: DB-side defaults for reliability)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        server_default=func.now(),
+        onupdate=func.now(),
         nullable=False
     )
 
