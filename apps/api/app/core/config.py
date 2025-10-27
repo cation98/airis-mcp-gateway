@@ -1,5 +1,16 @@
+import os
 from pydantic_settings import BaseSettings
 from pathlib import Path
+
+DEFAULT_PROJECT_ROOT = Path(
+    os.getenv(
+        "CONTAINER_PROJECT_ROOT",
+        os.getenv("PROJECT_ROOT", "/workspace/project")
+    )
+)
+DEFAULT_MCP_CONFIG = Path(
+    os.getenv("MCP_CONFIG_PATH", str(DEFAULT_PROJECT_ROOT / "mcp-config.json"))
+)
 
 
 class Settings(BaseSettings):
@@ -9,7 +20,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@postgres:5432/mcp_gateway"
 
     # MCP Gateway
-    MCP_CONFIG_PATH: Path = Path("/workspace/github/airis-mcp-gateway/mcp-config.json")
+    PROJECT_ROOT: Path = DEFAULT_PROJECT_ROOT
+    MCP_CONFIG_PATH: Path = DEFAULT_MCP_CONFIG
     MCP_GATEWAY_URL: str = "http://mcp-gateway:9090"
 
     # API

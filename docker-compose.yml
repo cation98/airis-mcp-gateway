@@ -9,7 +9,15 @@ services:
     image: airis-mcp-gateway/gateway:latest
     container_name: airis-mcp-gateway-gateway
     environment:
-      - API_URL=http://api:8000
+      - API_URL=${API_INTERNAL_URL:-http://api:${API_CONTAINER_PORT:-8000}}
+      - PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
+      - HOST_REPO_DIR=${HOST_REPO_DIR}
+      - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR}
+      - HOST_SUPABASE_DIR=${HOST_SUPABASE_DIR}
+      - DOCKER_NETWORK=${DOCKER_NETWORK}
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
+      - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
+      - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT}
     command:
       - /docker-mcp
       - gateway
@@ -18,10 +26,12 @@ services:
       - --port=9090
       - --config=/etc/docker-mcp/config.json
     ports:
-      - "${GATEWAY_PORT}:9090"
+      - "${GATEWAY_PORT:-9090}:${GATEWAY_CONTAINER_PORT:-9090}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /Users/kazuki/github:/workspace/github:rw
+      - type: bind
+        source: ${HOST_WORKSPACE_DIR}
+        target: ${CONTAINER_WORKSPACE_ROOT}
       - claude-memory:/app/memory
       - ./mcp-config.json:/etc/docker-mcp/config.json:ro
       - ./figma-catalog.yaml:/etc/docker-mcp/figma-catalog.yaml:ro
@@ -64,16 +74,26 @@ services:
       dockerfile: Dockerfile
     container_name: airis-mcp-gateway-api
     ports:
-      - "${API_PORT}:8000"
+      - "${API_PORT:-8000}:${API_CONTAINER_PORT:-8000}"
     volumes:
-      - /Users/kazuki/github:/workspace/github:rw
+      - type: bind
+        source: ${HOST_WORKSPACE_DIR}
+        target: ${CONTAINER_WORKSPACE_ROOT}
       - ./apps/api/app:/app/app:rw
       - ./apps/api/alembic:/app/alembic:rw
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-mcp_gateway}
       - DEBUG=${API_DEBUG:-true}
-      - PROJECT_ROOT=/workspace/github/airis-mcp-gateway
+      - PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
+      - HOST_REPO_DIR=${HOST_REPO_DIR}
+      - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR}
+      - HOST_SUPABASE_DIR=${HOST_SUPABASE_DIR}
+      - DOCKER_NETWORK=${DOCKER_NETWORK}
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
+      - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
+      - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT}
+      - MCP_CONFIG_PATH=${CONTAINER_PROJECT_ROOT}/mcp-config.json
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,14 +129,16 @@ services:
   node:
     image: node:22-bookworm
     container_name: airis-mcp-gateway-node
-    working_dir: /workspace
+    working_dir: ${CONTAINER_PROJECT_ROOT}
     profiles:
       - cli
     entrypoint: null
     volumes:
-      - .:/workspace:cached
-      - node_modules:/workspace/node_modules
-      - pnpm-store:/workspace/.pnpm-store
+      - type: bind
+        source: ${HOST_WORKSPACE_DIR}
+        target: ${CONTAINER_WORKSPACE_ROOT}
+      - node_modules:${CONTAINER_PROJECT_ROOT}/node_modules
+      - pnpm-store:${CONTAINER_PROJECT_ROOT}/.pnpm-store
 
 
   # Supabase CLI container routed through bin/supabase shim
@@ -127,8 +149,10 @@ services:
     profiles:
       - cli
     volumes:
-      - .:/workspace:cached
-      - supabase_data:/workspace/supabase
+      - type: bind
+        source: ${HOST_WORKSPACE_DIR}
+        target: ${CONTAINER_WORKSPACE_ROOT}
+      - supabase_data:${CONTAINER_PROJECT_ROOT}/supabase
 
 
   # MindBase MCP Server Builder

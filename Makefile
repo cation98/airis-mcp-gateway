@@ -27,8 +27,22 @@ DEV_PORT ?= 5173
 CLI_PROFILE := cli
 
 # Auto-detect project name from directory
-PROJECT ?= $(notdir $(shell pwd))
+HOST_REPO_DIR := $(shell pwd)
+REPO_NAME := $(notdir $(HOST_REPO_DIR))
+HOST_WORKSPACE_DIR := $(patsubst %/,%,$(dir $(HOST_REPO_DIR)))
+HOST_SUPABASE_DIR ?= $(HOST_WORKSPACE_DIR)/airis-mcp-supabase-selfhost
+CONTAINER_WORKSPACE_ROOT := /workspace/host
+CONTAINER_PROJECT_ROOT := $(CONTAINER_WORKSPACE_ROOT)/$(REPO_NAME)
+PROJECT ?= $(REPO_NAME)
+
 export COMPOSE_PROJECT_NAME := $(PROJECT)
+export HOST_REPO_DIR
+export HOST_WORKSPACE_DIR
+export HOST_SUPABASE_DIR
+export REPO_NAME
+export CONTAINER_WORKSPACE_ROOT
+export CONTAINER_PROJECT_ROOT
+export DOCKER_NETWORK := $(COMPOSE_PROJECT_NAME)_default
 
 # Colors
 GREEN := \033[0;32m

@@ -1,6 +1,7 @@
 """API endpoints for MCP configuration"""
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
+from pathlib import Path
 import json
 import os
 
@@ -250,9 +251,16 @@ async def get_mcp_servers():
     """
     try:
         # Read mcp-config.json from project root
-        # In Docker: /workspace/github/airis-mcp-gateway/mcp-config.json
-        # In local: /Users/kazuki/github/airis-mcp-gateway/mcp-config.json
-        config_path = os.getenv('MCP_CONFIG_PATH', '/workspace/github/airis-mcp-gateway/mcp-config.json')
+        project_root = Path(
+            os.getenv(
+                'CONTAINER_PROJECT_ROOT',
+                os.getenv('PROJECT_ROOT', '/workspace/project')
+            )
+        )
+        default_config_path = project_root / 'mcp-config.json'
+        config_path = Path(
+            os.getenv('MCP_CONFIG_PATH', str(default_config_path))
+        )
         with open(config_path, 'r') as f:
             config = json.load(f)
 

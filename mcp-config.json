@@ -20,7 +20,7 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "/workspace/github"
+        "/workspace/host"
       ]
     },
     "context7": {
@@ -31,24 +31,10 @@
       ]
     },
     "serena": {
-      "command": "docker",
+      "command": "sh",
       "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--network",
-        "airis-mcp-gateway_default",
-        "-v",
-        "/Users/kazuki/github:/workspaces/projects:rw",
-        "ghcr.io/oraios/serena:latest",
-        "serena",
-        "start-mcp-server",
-        "--context",
-        "ide-assistant",
-        "--enable-web-dashboard",
-        "false",
-        "--enable-gui-log-window",
-        "false"
+        "-c",
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -v ${HOST_WORKSPACE_DIR}:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
       ]
     },
     "puppeteer": {
@@ -68,41 +54,17 @@
       ]
     },
     "mindbase": {
-      "command": "docker",
+      "command": "sh",
       "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--network",
-        "airis-mcp-gateway_default",
-        "-e",
-        "MINDBASE_API_URL=http://host.docker.internal:18002",
-        "-v",
-        "/Users/kazuki/github/airis-mcp-gateway/servers/mindbase:/app:ro",
-        "-w",
-        "/app",
-        "node:24-alpine",
-        "node",
-        "dist/index.js"
+        "-c",
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://host.docker.internal:18002} -v ${HOST_REPO_DIR}/servers/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
       ]
     },
     "self-management": {
-      "command": "docker",
+      "command": "sh",
       "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--network",
-        "airis-mcp-gateway_default",
-        "-e",
-        "GATEWAY_API_URL=http://host.docker.internal:9090/api",
-        "-v",
-        "/Users/kazuki/github/airis-mcp-gateway/servers/self-management:/app:ro",
-        "-w",
-        "/app",
-        "node:24-alpine",
-        "node",
-        "dist/index.js"
+        "-c",
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e GATEWAY_API_URL=${GATEWAY_API_URL:-http://host.docker.internal:9090/api} -v ${HOST_REPO_DIR}/servers/self-management:/app:ro -w /app node:24-alpine node dist/index.js"
       ]
     },
     "__comment_disabled": "=== DISABLED (auth required - enable via frontend UI) ===",
@@ -240,14 +202,10 @@
       ]
     },
     "__disabled_git": {
-      "command": "docker",
+      "command": "sh",
       "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--mount",
-        "type=bind,src=/Users/kazuki/github,dst=/Users/kazuki/github",
-        "mcp/git"
+        "-c",
+        "docker run -i --rm --mount type=bind,src=${HOST_WORKSPACE_DIR},dst=${HOST_WORKSPACE_DIR} mcp/git"
       ]
     },
     "__disabled_memory": {
@@ -280,30 +238,10 @@
       ]
     },
     "supabase-selfhost": {
-      "command": "docker",
+      "command": "sh",
       "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--network",
-        "airis-mcp-gateway_default",
-        "-e",
-        "PG_DSN",
-        "-e",
-        "POSTGREST_URL",
-        "-e",
-        "POSTGREST_JWT",
-        "-e",
-        "READ_ONLY",
-        "-e",
-        "FEATURES",
-        "-v",
-        "/Users/kazuki/github/airis-mcp-supabase-selfhost:/app:ro",
-        "-w",
-        "/app",
-        "node:24-alpine",
-        "node",
-        "dist/server.js"
+        "-c",
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e PG_DSN -e POSTGREST_URL -e POSTGREST_JWT -e READ_ONLY -e FEATURES -v ${HOST_SUPABASE_DIR:-${HOST_WORKSPACE_DIR}/airis-mcp-supabase-selfhost}:/app:ro -w /app node:24-alpine node dist/server.js"
       ]
     }
   },
