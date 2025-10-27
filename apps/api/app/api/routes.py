@@ -6,6 +6,7 @@ from .endpoints.gateway import router as gateway_router
 from .endpoints.mcp_server_states import router as mcp_server_states_router
 from .endpoints.mcp_config import router as mcp_config_router
 from .endpoints.validate_server import router as validate_server_router
+from .endpoints.mcp_admin import router as mcp_admin_router
 
 api_router = APIRouter()
 
@@ -43,6 +44,11 @@ api_router.include_router(
     validate_server_router,
     prefix="/validate",
     tags=["Server Validation"]
+)
+
+api_router.include_router(
+    mcp_admin_router,
+    tags=["MCP Admin"]
 )
 
 # MCP Proxy with OpenMCP Schema Partitioning (75-90% token reduction)

@@ -49,6 +49,7 @@ All commands run through docker-compose using the auto-detected workspace paths.
 ## 🔧 Configuration
 
 - `.env` controls host ports, database credentials, and optional overrides. The defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
+- Secrets stay out of `.env`: save API keys via the Settings UI. They are AES-GCM encrypted in Postgres (`MASTER_KEY_HEX`) and hot-reloaded into the gateway without restarts.
 - Project paths are auto-detected by `make` and injected as:
   - `HOST_WORKSPACE_DIR` → parent directory containing your clones
   - `CONTAINER_WORKSPACE_ROOT` → `/workspace/host`
@@ -82,6 +83,8 @@ Enabled by default after `make up`:
 
 Disabled-but-ready via UI toggle:
 - Supabase self-host, Tavily, Notion, Stripe, Twilio, GitHub, etc.
+
+Workflow: save credentials → run “Test connection” → enable. Failures are blocked automatically so the gateway stays healthy.
 
 All containerised servers use environment-aware commands (`HOST_WORKSPACE_DIR`, `DOCKER_NETWORK`, `HOST_SUPABASE_DIR`) so they work on any machine without editing JSON.
 

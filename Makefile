@@ -21,8 +21,8 @@ export PATH := $(PWD)/bin:$(PATH)
 DC := docker compose
 NODE_SVC := node
 SUPA_SVC := supabase
-PNPM_VER := 10.14.0
-NODE_VER := 22
+PNPM_VER := 10.19.0
+NODE_VER := 23
 DEV_PORT ?= 5173
 CLI_PROFILE := cli
 

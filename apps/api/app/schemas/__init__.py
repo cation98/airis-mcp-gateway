@@ -20,6 +20,14 @@ from .mcp_server_state import (
     MCPServerStateResponse,
     MCPServerStateListResponse,
 )
+from .mcp_admin import (
+    CredentialSave,
+    EnableRequest,
+    CredentialResponse,
+    ProbeResponse,
+    EnableResponse,
+    ConnectorStatus,
+)
 
 __all__ = [
     "MCPServerBase",
@@ -38,4 +46,10 @@ __all__ = [
     "MCPServerStateUpdate",
     "MCPServerStateResponse",
     "MCPServerStateListResponse",
+    "CredentialSave",
+    "EnableRequest",
+    "CredentialResponse",
+    "ProbeResponse",
+    "EnableResponse",
+    "ConnectorStatus",
 ]
