@@ -14,8 +14,8 @@ Prerequisites:
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
 cp .env.example .env        # adjust listen ports or public domains if needed
-make up                     # internal-only (Docker DNS)
-# Optional: publish to localhost during development
+make up                     # localhost publishing (9090/9000/5173)
+# Optional: internal-only mode (Docker DNS only)
 # make up-dev
 ```
 
@@ -38,8 +38,8 @@ Need a quick health check? Run `make doctor` to verify Docker availability and t
 
 | Command | What it does |
 |---------|--------------|
-| `make up` | Build + start all services (internal-only networking) |
-| `make up-dev` | Start with temporary localhost publishing (9090/9000/5173) |
+| `make up` | Build + start all services (localhost publishing 9090/9000/5173) |
+| `make up-dev` | Start with internal-only networking (Docker DNS only) |
 | `make down` | Stop containers, keep volumes |
 | `make clean` | Stop everything and drop local volumes |
 | `make logs` | Stream logs from every service |
@@ -98,7 +98,7 @@ All containerised servers use environment-aware commands (`HOST_WORKSPACE_DIR`, 
 
 ## 🧀 Troubleshooting Cheats
 
-- **Need localhost access** → run `make up-dev` (adds temporary `ports:` bindings).
+- **Need internal-only networking** → run `make up-dev` (no host port bindings).
 - **Change internal bindings** → update `*_LISTEN_PORT` in `.env`, then `make restart`.
 - **Docker daemon unavailable** → run `make doctor` for context; ensure Docker Desktop/OrbStack is running.
 - **MindBase / Supabase directories missing** → create adjacent clones or override `HOST_SUPABASE_DIR` in `.env`.

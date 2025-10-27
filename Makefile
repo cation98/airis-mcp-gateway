@@ -142,25 +142,27 @@ check-host-ports: ## Verify source files do not reference localhost or host.dock
 	@scripts/check-no-host-ports.sh
 
 .PHONY: up
-up: generate-mcp-config ## Start all services (internal only)
-	@echo "$(GREEN)Starting services...$(NC)"
-	@$(DC) up -d --build --remove-orphans
-	@echo "$(GREEN)✅ All services started$(NC)"
-	@echo "🔗 Gateway (internal DNS): http://mcp-gateway:$${GATEWAY_LISTEN_PORT}"
-	@echo "🌐 Gateway (public URL):  $${GATEWAY_PUBLIC_URL}"
-	@echo "🧠 API (internal DNS):   http://api:$${API_LISTEN_PORT}"
-	@echo "🎨 UI (internal DNS):    http://settings-ui:$${UI_LISTEN_PORT}"
+up: generate-mcp-config ## Start all services with localhost publishing
+	@echo "$(GREEN)Starting services with host port bindings...$(NC)"
+	@$(DC) -f docker-compose.yml -f docker-compose.dev.yml up -d --build --remove-orphans
+	@echo "$(GREEN)✅ All services started (localhost accessible)$(NC)"
+	@echo "🔗 Gateway:     $${GATEWAY_PUBLIC_URL}"
+	@echo "🚀 API (proxy): $${GATEWAY_API_URL}"
+	@echo "🎨 Settings UI: $${UI_PUBLIC_URL}"
 	@echo ""
-	@echo "💡 Need localhost access? Run 'make up-dev' to publish ports temporarily."
+	@echo "🧠 Internal DNS: http://mcp-gateway:$${GATEWAY_LISTEN_PORT}, http://api:$${API_LISTEN_PORT}, http://settings-ui:$${UI_LISTEN_PORT}"
+	@echo "💡 Need internal-only networking? Run 'make up-dev'."
 
 .PHONY: up-dev
-up-dev: generate-mcp-config ## Start all services with localhost publishing (dev only)
-	@echo "$(GREEN)Starting services with dev port bindings...$(NC)"
-	@$(DC) -f docker-compose.yml -f docker-compose.dev.yml up -d --build --remove-orphans
-	@echo "$(GREEN)✅ All services started (dev mode)$(NC)"
-	@echo "🔗 Gateway: http://localhost:$${GATEWAY_LISTEN_PORT}"
-	@echo "🚀 API:     http://localhost:$${API_LISTEN_PORT}"
-	@echo "🎨 UI:      http://localhost:$${UI_LISTEN_PORT}"
+up-dev: generate-mcp-config ## Start all services (internal-only networking)
+	@echo "$(GREEN)Starting services (internal DNS only)...$(NC)"
+	@$(DC) up -d --build --remove-orphans
+	@echo "$(GREEN)✅ All services started (internal mode)$(NC)"
+	@echo "🔗 Gateway (internal DNS): http://mcp-gateway:$${GATEWAY_LISTEN_PORT}"
+	@echo "🧠 API (internal DNS):     http://api:$${API_LISTEN_PORT}"
+	@echo "🎨 UI (internal DNS):      http://settings-ui:$${UI_LISTEN_PORT}"
+	@echo ""
+	@echo "💡 Need localhost access? Run 'make up'."
 
 .PHONY: down
 down: ## Stop all services
@@ -326,7 +328,7 @@ ui-up: ## Start Settings UI
 	@$(DC) up -d settings-ui
 	@echo "$(GREEN)✅ Settings UI started$(NC)"
 	@echo "🎨 Internal URL: http://settings-ui:$${UI_LISTEN_PORT}"
-	@echo "💡 Need localhost access? Run 'make up-dev'."
+	@echo "💡 Need localhost access? Run 'make up'."
 
 .PHONY: ui-down
 ui-down: ## Stop Settings UI

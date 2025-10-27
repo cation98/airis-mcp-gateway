@@ -114,7 +114,7 @@ program
     console.log('  1. ' + chalk.yellow('Restart all editors') + ' (Claude Code, Cursor, Zed, etc.)');
     console.log('  2. Test MCP tools in any editor');
     console.log('  3. Access Settings UI: ' + chalk.cyan(UI_PUBLIC_URL));
-    console.log('     ' + chalk.gray("(Run 'make up-dev' for temporary localhost publishing.)"));
+    console.log('     ' + chalk.gray("(Need internal-only mode? Run 'make up-dev'.)"));
     console.log('\n');
   });
 
@@ -158,7 +158,7 @@ program
       spinner.succeed('Gateway started');
       console.log(chalk.cyan('\n🔗 Gateway (public): ' + GATEWAY_PUBLIC_URL));
       console.log(chalk.cyan('🎨 Settings UI: ' + UI_PUBLIC_URL));
-      console.log(chalk.gray("💡 Need localhost access? Run 'make up-dev'."));
+      console.log(chalk.gray("💡 Need internal-only networking? Run 'make up-dev'."));
     } catch (error) {
       spinner.fail('Failed to start');
       console.error(chalk.red(`Error: ${error}`));
