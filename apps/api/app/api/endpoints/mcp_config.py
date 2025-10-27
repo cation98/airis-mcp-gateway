@@ -33,7 +33,7 @@ SERVER_METADATA = {
     # Built-in servers (via --servers flag)
     "time": {
         "name": "Time",
-        "description": "Time and date utilities",
+        "description": "時間と日付の操作",
         "category": "builtin",
         "apiKeyRequired": False,
         "recommended": True,
@@ -41,7 +41,7 @@ SERVER_METADATA = {
     },
     "fetch": {
         "name": "Fetch",
-        "description": "HTTP requests and API calls",
+        "description": "HTTP リクエストとAPI呼び出し",
         "category": "builtin",
         "apiKeyRequired": False,
         "recommended": True,
@@ -49,7 +49,7 @@ SERVER_METADATA = {
     },
     "git": {
         "name": "Git",
-        "description": "Local Git repository management",
+        "description": "ローカルGitリポジトリ管理と操作",
         "category": "builtin",
         "apiKeyRequired": False,
         "recommended": True,
@@ -57,7 +57,7 @@ SERVER_METADATA = {
     },
     "memory": {
         "name": "Memory",
-        "description": "Persistent data across sessions",
+        "description": "セッション間でのデータ永続化",
         "category": "builtin",
         "apiKeyRequired": False,
         "recommended": True,
@@ -65,7 +65,7 @@ SERVER_METADATA = {
     },
     "sequentialthinking": {
         "name": "Sequential Thinking",
-        "description": "Step-by-step reasoning and structured analysis",
+        "description": "段階的思考と体系的分析",
         "category": "builtin",
         "apiKeyRequired": False,
         "recommended": True,
@@ -75,7 +75,7 @@ SERVER_METADATA = {
     # Gateway servers (no auth)
     "filesystem": {
         "name": "File System",
-        "description": "Local filesystem access (required)",
+        "description": "ローカルファイルシステム操作（必須）",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": True,
@@ -83,7 +83,7 @@ SERVER_METADATA = {
     },
     "context7": {
         "name": "Context7",
-        "description": "Official library docs and code examples (required)",
+        "description": "公式ライブラリドキュメントとコード例（必須）",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": True,
@@ -91,7 +91,7 @@ SERVER_METADATA = {
     },
     "serena": {
         "name": "Serena",
-        "description": "Semantic code analysis and intelligent editing (recommended)",
+        "description": "セマンティックコード分析とインテリジェント編集（推奨）",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": True,
@@ -99,7 +99,7 @@ SERVER_METADATA = {
     },
     "mindbase": {
         "name": "Mindbase",
-        "description": "Long-term memory and failure learning system (recommended)",
+        "description": "長期記憶・失敗学習システム（推奨）",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": True,
@@ -107,7 +107,7 @@ SERVER_METADATA = {
     },
     "self-management": {
         "name": "Self Management",
-        "description": "Self-management and profile orchestration",
+        "description": "自己管理とプロファイルシステム",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": True,
@@ -115,7 +115,7 @@ SERVER_METADATA = {
     },
     "puppeteer": {
         "name": "Puppeteer",
-        "description": "Headless browser automation (E2E testing only)",
+        "description": "ヘッドレスブラウザ自動化（E2Eテスト時のみ）",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": False,
@@ -123,7 +123,7 @@ SERVER_METADATA = {
     },
     "sqlite": {
         "name": "SQLite",
-        "description": "SQLite database operations (enable only for DB work)",
+        "description": "SQLiteデータベース操作（DB操作時のみ）",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": False,
@@ -133,7 +133,7 @@ SERVER_METADATA = {
     # Auth required servers
     "tavily": {
         "name": "Tavily",
-        "description": "AI search and real-time intelligence (disable Fetch to avoid overlap)",
+        "description": "AI検索とリアルタイム情報取得（Fetch無効化推奨）",
         "category": "auth-required",
         "apiKeyRequired": True,
         "recommended": True,
@@ -141,7 +141,7 @@ SERVER_METADATA = {
     },
     "stripe": {
         "name": "Stripe",
-        "description": "Stripe payments and subscription management",
+        "description": "Stripe決済とサブスクリプション管理",
         "category": "auth-required",
         "apiKeyRequired": True,
         "recommended": False,
@@ -149,7 +149,7 @@ SERVER_METADATA = {
     },
     "figma": {
         "name": "Figma",
-        "description": "Figma design files and prototype management",
+        "description": "Figmaデザインファイルとプロトタイプ管理",
         "category": "auth-required",
         "apiKeyRequired": True,
         "recommended": False,
@@ -159,7 +159,7 @@ SERVER_METADATA = {
     # Disabled but available
     "supabase": {
         "name": "Supabase",
-        "description": "Supabase database and auth (for Supabase projects)",
+        "description": "Supabaseデータベースと認証（Supabase開発時）",
         "category": "disabled",
         "apiKeyRequired": True,
         "recommended": True,
@@ -167,7 +167,7 @@ SERVER_METADATA = {
     },
     "supabase-selfhost": {
         "name": "Supabase Self-host",
-        "description": "Self-hosted Supabase integration (PostgREST + PostgreSQL)",
+        "description": "Self-hosted Supabase（PostgREST + PostgreSQL）連携",
         "category": "custom",
         "apiKeyRequired": True,
         "recommended": False,
@@ -175,7 +175,7 @@ SERVER_METADATA = {
     },
     "slack": {
         "name": "Slack",
-        "description": "Slack messages and channel management",
+        "description": "Slackメッセージとチャンネル管理",
         "category": "disabled",
         "apiKeyRequired": True,
         "recommended": False,
@@ -183,7 +183,7 @@ SERVER_METADATA = {
     },
     "github": {
         "name": "GitHub",
-        "description": "GitHub repositories and issue management (when working in GitHub)",
+        "description": "GitHubリポジトリとIssue管理（GitHub操作時）",
         "category": "disabled",
         "apiKeyRequired": True,
         "recommended": True,
@@ -191,7 +191,7 @@ SERVER_METADATA = {
     },
     "notion": {
         "name": "Notion",
-        "description": "Notion pages and database automation",
+        "description": "Notionページとデータベース操作",
         "category": "disabled",
         "apiKeyRequired": True,
         "recommended": False,
@@ -199,7 +199,7 @@ SERVER_METADATA = {
     },
     "brave-search": {
         "name": "Brave Search",
-        "description": "Privacy-focused web search (avoid when Tavily is enabled)",
+        "description": "プライバシー重視のウェブ検索（Tavily併用時は非推奨）",
         "category": "disabled",
         "apiKeyRequired": True,
         "recommended": False,
@@ -207,7 +207,7 @@ SERVER_METADATA = {
     },
     "sentry": {
         "name": "Sentry",
-        "description": "Error tracking and performance monitoring",
+        "description": "エラー追跡とパフォーマンス監視",
         "category": "disabled",
         "apiKeyRequired": True,
         "recommended": False,
@@ -215,7 +215,7 @@ SERVER_METADATA = {
     },
     "twilio": {
         "name": "Twilio",
-        "description": "SMS and voice APIs",
+        "description": "SMS/音声通話API",
         "category": "disabled",
         "apiKeyRequired": True,
         "recommended": False,
@@ -223,7 +223,7 @@ SERVER_METADATA = {
     },
     "mongodb": {
         "name": "MongoDB",
-        "description": "MongoDB database access",
+        "description": "MongoDBデータベース接続",
         "category": "disabled",
         "apiKeyRequired": True,
         "recommended": False,
@@ -231,7 +231,7 @@ SERVER_METADATA = {
     },
     "mcp-postgres-server": {
         "name": "PostgreSQL",
-        "description": "PostgreSQL database access",
+        "description": "PostgreSQLデータベース接続",
         "category": "disabled",
         "apiKeyRequired": True,
         "recommended": False,
