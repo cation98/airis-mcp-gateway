@@ -2,6 +2,7 @@
 Configuration validation tests (fast, Docker-compatible)
 """
 import json
+import os
 from pathlib import Path
 
 
@@ -69,7 +70,8 @@ def test_gateway_mcp_json_valid():
     gateway_cfg = servers["airis-mcp-gateway"]
     assert "url" in gateway_cfg, "Gateway URL not configured"
     # API Proxy with OpenMCP Schema Partitioning (75-90% token reduction)
-    # Editor → API Proxy (localhost:9000) → MCP Gateway (mcp-gateway:9090)
-    assert gateway_cfg["url"] == "http://localhost:9000/api/v1/mcp/sse", f"Unexpected Gateway URL: {gateway_cfg['url']}"
+    # Editor → API Proxy (GATEWAY_API_URL) → MCP Gateway (mcp-gateway:9090)
+    expected_url = f"{os.getenv('GATEWAY_API_URL', 'http://gateway.localhost/api')}/v1/mcp/sse"
+    assert gateway_cfg["url"] == expected_url, f"Unexpected Gateway URL: {gateway_cfg['url']}"
 
     print(f"\n✅ Gateway URL: {gateway_cfg['url']}")

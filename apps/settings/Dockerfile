@@ -37,7 +37,7 @@ COPY --from=builder /monorepo/apps/settings/out /usr/share/nginx/html
 
 # Custom nginx config for SPA routing
 RUN echo 'server { \
-    listen 80; \
+    listen 5173; \
     server_name _; \
     root /usr/share/nginx/html; \
     index index.html; \
@@ -45,7 +45,7 @@ RUN echo 'server { \
         try_files $uri $uri/ /index.html; \
     } \
     location /api { \
-        proxy_pass http://api:8000; \
+        proxy_pass http://api:9000; \
         proxy_http_version 1.1; \
         proxy_set_header Upgrade $http_upgrade; \
         proxy_set_header Connection "upgrade"; \
@@ -56,6 +56,6 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+EXPOSE 5173
 
 CMD ["nginx", "-g", "daemon off;"]

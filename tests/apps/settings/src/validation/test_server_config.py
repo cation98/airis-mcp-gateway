@@ -87,8 +87,8 @@ def test_supabase_selfhost_schema_valid():
     from apps.settings.src.validation.server_config import validateServerConfig
 
     config = {
-        "PG_DSN": "postgres://mcp_ro:password@host.docker.internal:5432/postgres",
-        "POSTGREST_URL": "http://host.docker.internal:54321/rest/v1",
+        "PG_DSN": "postgres://mcp_ro:password@postgres:5432/postgres",
+        "POSTGREST_URL": "http://postgrest:3000/rest/v1",
         "POSTGREST_JWT": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature",
         "READ_ONLY": "true",
         "FEATURES": "database,docs,postgrest"
@@ -104,7 +104,7 @@ def test_supabase_selfhost_schema_invalid_dsn():
 
     config = {
         "PG_DSN": "invalid_dsn",
-        "POSTGREST_URL": "http://host.docker.internal:54321/rest/v1",
+        "POSTGREST_URL": "http://postgrest:3000/rest/v1",
         "POSTGREST_JWT": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.signature"
     }
 

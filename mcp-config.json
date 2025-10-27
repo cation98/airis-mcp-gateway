@@ -1,7 +1,7 @@
 {
   "mcpGateway": {
     "addr": ":9090",
-    "baseURL": "http://localhost:9090",
+    "baseURL": "http://mcp-gateway:9090",
     "name": "AIRIS MCP Gateway",
     "version": "1.0.0",
     "type": "sse"
@@ -57,14 +57,14 @@
       "command": "sh",
       "args": [
         "-c",
-        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://host.docker.internal:18002} -v ${HOST_REPO_DIR}/servers/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOST_REPO_DIR}/servers/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
       ]
     },
     "self-management": {
       "command": "sh",
       "args": [
         "-c",
-        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e GATEWAY_API_URL=${GATEWAY_API_URL:-http://host.docker.internal:9090/api} -v ${HOST_REPO_DIR}/servers/self-management:/app:ro -w /app node:24-alpine node dist/index.js"
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e GATEWAY_API_URL=${GATEWAY_API_URL:-http://mcp-gateway:9090/api} -v ${HOST_REPO_DIR}/servers/self-management:/app:ro -w /app node:24-alpine node dist/index.js"
       ]
     },
     "__comment_disabled": "=== DISABLED (auth required - enable via frontend UI) ===",

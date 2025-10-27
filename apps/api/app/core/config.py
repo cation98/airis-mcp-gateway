@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     PROJECT_ROOT: Path = DEFAULT_PROJECT_ROOT
     MCP_CONFIG_PATH: Path = DEFAULT_MCP_CONFIG
     MCP_GATEWAY_URL: str = "http://mcp-gateway:9090"
+    GATEWAY_PUBLIC_URL: str = "http://gateway.localhost"
+    GATEWAY_API_URL: str = "http://gateway.localhost/api"
+    UI_PUBLIC_URL: str = "http://ui.gateway.localhost"
     MASTER_KEY_HEX: str | None = None
 
     # API
@@ -31,11 +34,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # CORS
-    CORS_ORIGINS: list[str] = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://settings.airis.traefik",
-    ]
+    CORS_ORIGINS: list[str] = []
 
     class Config:
         env_file = ".env"
@@ -43,3 +42,9 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+if not settings.CORS_ORIGINS:
+    settings.CORS_ORIGINS = [
+        settings.UI_PUBLIC_URL,
+        settings.GATEWAY_PUBLIC_URL,
+    ]

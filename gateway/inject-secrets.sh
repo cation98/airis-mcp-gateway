@@ -3,7 +3,7 @@
 
 set -e
 
-API_URL="${API_URL:-http://api:8000}"
+API_URL="${API_URL:-http://api:9000}"
 MAX_RETRIES=30
 RETRY_INTERVAL=2
 

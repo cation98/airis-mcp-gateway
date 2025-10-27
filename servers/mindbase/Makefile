@@ -13,7 +13,7 @@ export DOCKER_BUILDKIT := 1
 
 # Project settings
 PROJECT := mindbase-mcp-server
-MINDBASE_API_URL ?= http://host.docker.internal:18002
+MINDBASE_API_URL ?= http://mindbase-api:18002
 
 # Colors
 GREEN := \033[0;32m

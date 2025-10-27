@@ -13,8 +13,10 @@ Prerequisites:
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
-cp .env.example .env        # adjust ports or encryption key if needed
-make up
+cp .env.example .env        # adjust listen ports or public domains if needed
+make up                     # internal-only (Docker DNS)
+# Optional: publish to localhost during development
+# make up-dev
 ```
 
 `make up` will:
@@ -24,9 +26,9 @@ make up
 - start everything in the background and print running endpoints
 
 When it finishes you should see:
-- Gateway SSE endpoint → `http://localhost:${GATEWAY_PORT:-9090}`
-- FastAPI docs → `http://localhost:${API_PORT:-8001}/docs`
-- Settings UI → `http://localhost:${UI_PORT:-5173}`
+- Gateway SSE endpoint → `http://gateway.localhost/sse`
+- FastAPI docs → `http://gateway.localhost/api/docs`
+- Settings UI → `http://ui.gateway.localhost`
 
 Need a quick health check? Run `make doctor` to verify Docker availability and toolchain shims.
 
@@ -36,7 +38,8 @@ Need a quick health check? Run `make doctor` to verify Docker availability and t
 
 | Command | What it does |
 |---------|--------------|
-| `make up` | Build + start all services (idempotent) |
+| `make up` | Build + start all services (internal-only networking) |
+| `make up-dev` | Start with temporary localhost publishing (9090/9000/5173) |
 | `make down` | Stop containers, keep volumes |
 | `make clean` | Stop everything and drop local volumes |
 | `make logs` | Stream logs from every service |
@@ -49,14 +52,14 @@ All commands run through docker-compose using the auto-detected workspace paths.
 
 ## 🔧 Configuration
 
-- `.env` centralises ports (`GATEWAY_PORT`, `API_PORT`, `UI_PORT`), database credentials, and the encryption master key. The defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
-- `make generate-mcp-config` renders `mcp.json` from `mcp.json.template`, swapping `${API_PORT}` and other variables. It runs automatically before `make up`, so no manual edits required.
+- `.env` centralises container listen ports (`GATEWAY_LISTEN_PORT`, `API_LISTEN_PORT`, `UI_LISTEN_PORT`), public domains (`GATEWAY_PUBLIC_URL`, `UI_PUBLIC_URL`, `GATEWAY_API_URL`), database credentials, and the encryption master key. Defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
+- `make generate-mcp-config` renders `mcp.json` from `mcp.json.template`, swapping `${GATEWAY_API_URL}` and other variables. It runs automatically before `make up`, so no manual edits required.
 - Secrets stay out of `.env`: save API keys via the Settings UI. They are encrypted with Fernet using `ENCRYPTION_MASTER_KEY` and stored in Postgres; the Gateway fetches and injects them on startup.
 - Project paths are auto-detected by `make` and injected as:
   - `HOST_WORKSPACE_DIR` → parent directory containing your clones
   - `CONTAINER_WORKSPACE_ROOT` → `/workspace/host`
   - `CONTAINER_PROJECT_ROOT` → `/workspace/host/<repo>`
-- Internal wiring between containers defaults to `http://api:8000` for the FastAPI service and `http://mcp-gateway:9090` for the gateway. Override with `API_INTERNAL_URL`, `MINDBASE_API_URL`, or `GATEWAY_API_URL` if your topology changes.
+- Internal wiring between containers defaults to `http://api:9000` for the FastAPI service and `http://mcp-gateway:9090` for the gateway. Override with `API_INTERNAL_URL`, `MINDBASE_API_URL`, or `GATEWAY_API_URL` if your topology changes.
 
 Need additional MCP servers? Add them via the Settings UI or edit `profiles/` and restart with `make up`.
 
@@ -71,6 +74,7 @@ Need additional MCP servers? Add them via the Settings UI or edit `profiles/` an
 | Build all workspaces | `make build` |
 | Lint / Typecheck / Test | `make lint` / `make typecheck` / `make test-ui` |
 | Run backend tests | `docker compose --profile test run --rm test` or `pytest tests/` |
+| Enforce host-port policy | `make check-host-ports` |
 
 The `node`, `pnpm`, and `supabase` binaries under `bin/` are shims that route into the toolchain container, so the host stays clean.
 
@@ -94,7 +98,8 @@ All containerised servers use environment-aware commands (`HOST_WORKSPACE_DIR`, 
 
 ## 🧀 Troubleshooting Cheats
 
-- **Ports already in use** → edit `GATEWAY_PORT`, `API_PORT`, or `UI_PORT` in `.env`, then `make up`.
+- **Need localhost access** → run `make up-dev` (adds temporary `ports:` bindings).
+- **Change internal bindings** → update `*_LISTEN_PORT` in `.env`, then `make restart`.
 - **Docker daemon unavailable** → run `make doctor` for context; ensure Docker Desktop/OrbStack is running.
 - **MindBase / Supabase directories missing** → create adjacent clones or override `HOST_SUPABASE_DIR` in `.env`.
 - **Changing profiles** → tweak `profiles/*.json` or toggle servers in the UI, then hit “Restart Gateway” or call `POST /api/v1/gateway/restart`.

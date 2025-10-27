@@ -5,6 +5,7 @@ Tests verify that UI state changes (enabled/disabled) are permanently
 persisted to PostgreSQL database and survive container restarts.
 """
 import asyncio
+import os
 import pytest
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -15,7 +16,7 @@ from app.core.config import settings
 from app.crud import mcp_server as crud
 
 # API base URL (container internal)
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = os.getenv("API_INTERNAL_URL", "http://api:9000")
 
 # Create test engine with NullPool (no connection pooling = no cache)
 test_engine = create_async_engine(

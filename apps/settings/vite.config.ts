@@ -80,7 +80,7 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://api:8000',
+        target: 'http://api:9000',
         changeOrigin: true,
         ws: true
       }
