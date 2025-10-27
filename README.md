@@ -13,14 +13,15 @@ Prerequisites:
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
-cp .env.example .env        # adjust ports if they clash
+cp .env.example .env        # adjust ports or encryption key if needed
 make up
 ```
 
 `make up` will:
+- generate `mcp.json` from `mcp.json.template` (port/env-aware)
 - build the Gateway, API, UI, and bundled MCP servers
 - seed the database (MindBase + Self-Management shipped by default)
-- start everything in the background and print the running endpoints
+- start everything in the background and print running endpoints
 
 When it finishes you should see:
 - Gateway SSE endpoint → `http://localhost:${GATEWAY_PORT:-9090}`
@@ -48,8 +49,9 @@ All commands run through docker-compose using the auto-detected workspace paths.
 
 ## 🔧 Configuration
 
-- `.env` controls host ports, database credentials, and optional overrides. The defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
-- Secrets stay out of `.env`: save API keys via the Settings UI. They are AES-GCM encrypted in Postgres (`MASTER_KEY_HEX`) and hot-reloaded into the gateway without restarts.
+- `.env` centralises ports (`GATEWAY_PORT`, `API_PORT`, `UI_PORT`), database credentials, and the encryption master key. The defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
+- `make generate-mcp-config` renders `mcp.json` from `mcp.json.template`, swapping `${API_PORT}` and other variables. It runs automatically before `make up`, so no manual edits required.
+- Secrets stay out of `.env`: save API keys via the Settings UI. They are encrypted with Fernet using `ENCRYPTION_MASTER_KEY` and stored in Postgres; the Gateway fetches and injects them on startup.
 - Project paths are auto-detected by `make` and injected as:
   - `HOST_WORKSPACE_DIR` → parent directory containing your clones
   - `CONTAINER_WORKSPACE_ROOT` → `/workspace/host`
@@ -78,11 +80,11 @@ The `node`, `pnpm`, and `supabase` binaries under `bin/` are shims that route in
 
 Enabled by default after `make up`:
 - `filesystem` – read-only access to your workspace (mounted at `/workspace/host`)
-- `context7`, `puppeteer`, `sqlite`
-- MindBase (knowledge graph) and Self-Management servers (built from `servers/`)
+- `context7`, `serena`, `mindbase`, `sequentialthinking`, `time`, `fetch`, `git`, `memory`
+- Self-Management server (dynamic enable/disable orchestration, built from `servers/self-management`)
 
 Disabled-but-ready via UI toggle:
-- Supabase self-host, Tavily, Notion, Stripe, Twilio, GitHub, etc.
+- Supabase self-host, Tavily, Notion, Stripe, Twilio, GitHub, Puppeteer, SQLite, etc.
 
 Workflow: save credentials → run “Test connection” → enable. Failures are blocked automatically so the gateway stays healthy.
 
