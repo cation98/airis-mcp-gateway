@@ -22,11 +22,11 @@ export function TipsModal({ onClose }: TipsModalProps) {
           </div>
 
           <div className="space-y-6">
-            {/* 公式推奨設定（APIなし） */}
+            {/* おすすめセット（API不要） */}
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-green-800 mb-3 flex items-center">
                 <i className="ri-star-line mr-2"></i>
-                公式推奨設定（APIなし）- 初回起動時
+                おすすめMCPセット（API不要）
               </h3>
               
               <div className="space-y-4 text-sm">
@@ -66,11 +66,11 @@ export function TipsModal({ onClose }: TipsModalProps) {
               </div>
             </div>
 
-            {/* 公式推奨設定（APIあり） */}
+            {/* おすすめセット（APIあり） */}
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-purple-800 mb-3 flex items-center">
                 <i className="ri-star-fill mr-2"></i>
-                公式推奨設定（APIあり）
+                おすすめMCPセット（API利用時）
               </h3>
               
               <div className="space-y-4 text-sm">

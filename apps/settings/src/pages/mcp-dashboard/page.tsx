@@ -374,32 +374,26 @@ export default function MCPDashboard() {
     }
   };
 
-  const applyOfficialRecommended = (withApi: boolean = false) => {
-    setServers(prev => prev.map(server => {
-      // 公式推奨（APIなし）の設定
-      const officialNoApi = [
-        'sequentialthinking', 'time', 'fetch', 'git', 'memory',
-        'filesystem', 'context7', 'serena', 'mindbase'
-      ];
-      
-      // 公式推奨（APIあり）の追加設定
-      const officialWithApi = ['tavily', 'supabase', 'github', 'brave-search'];
-      
-      if (officialNoApi.includes(server.id)) {
-        return { ...server, enabled: true, status: 'connected' as const };
-      }
-      
-      if (withApi && officialWithApi.includes(server.id) && server.apiKey) {
-        return { ...server, enabled: true, status: 'connected' as const };
-      }
-      
-      return { ...server, enabled: false, status: 'disconnected' as const };
-    }));
-  };
-
   const activeServers = servers.filter(s => s.enabled && s.status === 'connected');
-  const needsApiKey = servers.filter(s => s.apiKeyRequired && !s.apiKey);
-  const disabledServers = servers.filter(s => !s.enabled && (!s.apiKeyRequired || s.apiKey));
+  const officialRecommendedOrder = [
+    'filesystem',
+    'context7',
+    'serena',
+    'mindbase',
+    'sequentialthinking',
+    'time',
+    'fetch',
+    'git',
+    'memory',
+    'tavily',
+    'supabase',
+    'github',
+    'brave-search',
+  ];
+  const recommendedServers = officialRecommendedOrder
+    .map(id => servers.find(server => server.id === id))
+    .filter((server): server is typeof servers[number] => Boolean(server));
+  const disabledServers = servers.filter(s => !s.enabled);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -416,24 +410,6 @@ export default function MCPDashboard() {
                 <span className="text-green-600 font-medium">{activeServers.length}</span>
                 <span className="text-gray-500 mx-1">/</span>
                 <span className="text-gray-600">{servers.length} アクティブ</span>
-              </div>
-              
-              {/* 公式推奨設定ボタン */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => applyOfficialRecommended(false)}
-                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                >
-                  <i className="ri-star-line mr-1"></i>
-                  公式推奨（APIなし）
-                </button>
-                <button
-                  onClick={() => applyOfficialRecommended(true)}
-                  className="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
-                >
-                  <i className="ri-star-fill mr-1"></i>
-                  公式推奨（APIあり）
-                </button>
               </div>
 
               {/* Tipsボタン */}
@@ -506,12 +482,12 @@ export default function MCPDashboard() {
 
           {/* APIキー設定が必要 */}
           <div>
-            <h3 className="text-sm font-semibold text-orange-700 mb-3 flex items-center">
-              <i className="ri-key-line mr-2"></i>
-              APIキー設定が必要 ({needsApiKey.length})
+            <h3 className="text-sm font-semibold text-blue-700 mb-3 flex items-center">
+              <i className="ri-star-line mr-2"></i>
+              おすすめMCPサーバー ({recommendedServers.length})
             </h3>
             <div className="space-y-3">
-              {needsApiKey.map(server => (
+              {recommendedServers.map(server => (
                 <MCPServerCard
                   key={server.id}
                   server={server}
