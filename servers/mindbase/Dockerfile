@@ -3,7 +3,7 @@
 # ================================
 # TypeScript Builder (pnpm-based)
 
-FROM node:22-alpine
+FROM node:23-alpine
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate

@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     PROJECT_ROOT: Path = DEFAULT_PROJECT_ROOT
     MCP_CONFIG_PATH: Path = DEFAULT_MCP_CONFIG
     MCP_GATEWAY_URL: str = "http://mcp-gateway:9090"
+    MASTER_KEY_HEX: str | None = None
 
     # API
     API_V1_PREFIX: str = "/api/v1"
