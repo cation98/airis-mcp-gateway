@@ -11,7 +11,10 @@ async def restart_gateway():
     """Restart MCP Gateway to apply new secrets"""
     try:
         # Docker Compose restart command
-        project_root = os.getenv("PROJECT_ROOT", "/workspace/github/airis-mcp-gateway")
+        project_root = os.getenv(
+            "PROJECT_ROOT",
+            os.getenv("CONTAINER_PROJECT_ROOT", "/workspace/project")
+        )
 
         result = subprocess.run(
             ["docker", "compose", "restart", "mcp-gateway"],
@@ -49,7 +52,10 @@ async def restart_gateway():
 async def gateway_status():
     """Get MCP Gateway status"""
     try:
-        project_root = os.getenv("PROJECT_ROOT", "/workspace/github/airis-mcp-gateway")
+        project_root = os.getenv(
+            "PROJECT_ROOT",
+            os.getenv("CONTAINER_PROJECT_ROOT", "/workspace/project")
+        )
 
         result = subprocess.run(
             ["docker", "compose", "ps", "mcp-gateway"],

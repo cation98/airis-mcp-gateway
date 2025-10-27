@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+exec docker compose run --rm \
+  --profile cli \
+  -e UID="${UID:-$(id -u)}" \
+  -e GID="${GID:-$(id -g)}" \
+  node bash -lc 'corepack enable; corepack prepare pnpm@10.14.0 --activate >/dev/null 2>&1; pnpm "$@"' pnpm "$@"

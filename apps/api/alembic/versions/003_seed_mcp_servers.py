@@ -30,17 +30,11 @@ def upgrade() -> None:
         {
             'name': 'filesystem',
             'enabled': True,
-            'command': 'docker',
-            'args': [
-                'run', '--rm', '-i',
-                '--network', 'airis-mcp-gateway_default',
-                '-v', '/Users/kazuki/github:/workspace:ro',
-                'node:24-alpine',
-                'sh', '-c', 'npx -y @modelcontextprotocol/server-filesystem /workspace'
-            ],
+            'command': 'npx',
+            'args': ['-y', '@modelcontextprotocol/server-filesystem', '/workspace/host'],
             'env': None,
-            'description': 'File system operations for workspace (Docker isolated, read-only)',
-            'category': 'Docker Server'
+            'description': 'File system operations for workspace (inside gateway container, read-only)',
+            'category': 'Gateway NPX'
         },
         {
             'name': 'context7',
@@ -54,16 +48,13 @@ def upgrade() -> None:
         {
             'name': 'serena',
             'enabled': True,
-            'command': 'docker',
+            'command': 'sh',
             'args': [
-                'run', '--rm', '-i',
-                '--network', 'airis-mcp-gateway_default',
-                '-v', '/Users/kazuki/github:/workspaces/projects:rw',
-                'ghcr.io/oraios/serena:latest',
-                'serena', 'start-mcp-server',
-                '--context', 'ide-assistant',
-                '--enable-web-dashboard', 'false',
-                '--enable-gui-log-window', 'false'
+                '-c',
+                'docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} '
+                '-v ${HOST_WORKSPACE_DIR}:/workspaces/projects:rw '
+                'ghcr.io/oraios/serena:latest serena start-mcp-server '
+                '--context ide-assistant --enable-web-dashboard false --enable-gui-log-window false'
             ],
             'env': None,
             'description': 'Serena IDE assistant via Docker',
@@ -90,15 +81,13 @@ def upgrade() -> None:
         {
             'name': 'mindbase',
             'enabled': True,
-            'command': 'docker',
+            'command': 'sh',
             'args': [
-                'run', '--rm', '-i',
-                '--network', 'airis-mcp-gateway_default',
-                '-e', 'MINDBASE_API_URL=http://host.docker.internal:18002',
-                '-v', '/Users/kazuki/github/airis-mcp-gateway/servers/mindbase:/app:ro',
-                '-w', '/app',
-                'node:24-alpine',
-                'node', 'dist/index.js'
+                '-c',
+                'docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} '
+                '-e MINDBASE_API_URL=${MINDBASE_API_URL:-http://host.docker.internal:18002} '
+                '-v ${HOST_REPO_DIR}/servers/mindbase:/app:ro '
+                '-w /app node:24-alpine node dist/index.js'
             ],
             'env': None,
             'description': 'Mindbase knowledge graph operations',
@@ -134,19 +123,13 @@ def upgrade() -> None:
         {
             'name': 'supabase-selfhost',
             'enabled': False,
-            'command': 'docker',
+            'command': 'sh',
             'args': [
-                'run', '--rm', '-i',
-                '--network', 'airis-mcp-gateway_default',
-                '-e', 'PG_DSN',
-                '-e', 'POSTGREST_URL',
-                '-e', 'POSTGREST_JWT',
-                '-e', 'READ_ONLY',
-                '-e', 'FEATURES',
-                '-v', '/Users/kazuki/github/airis-mcp-supabase-selfhost:/app:ro',
-                '-w', '/app',
-                'node:24-alpine',
-                'node', 'dist/server.js'
+                '-c',
+                'docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} '
+                '-e PG_DSN -e POSTGREST_URL -e POSTGREST_JWT -e READ_ONLY -e FEATURES '
+                '-v ${HOST_SUPABASE_DIR:-${HOST_WORKSPACE_DIR}/airis-mcp-supabase-selfhost}:/app:ro '
+                '-w /app node:24-alpine node dist/server.js'
             ],
             'env': None,
             'description': 'Self-hosted Supabase (PostgREST + PostgreSQL)',
