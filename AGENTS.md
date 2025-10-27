@@ -12,6 +12,7 @@
 - `pnpm build` / `pnpm typecheck` / `pnpm lint` – produce artifacts, run `tsc --noEmit`, and enforce ESLint 9 rules.
 - `pnpm test` – execute package-level test suites.
 - `make up` / `make down` / `make logs` – orchestrate the Docker stack; use `pytest tests/` for API coverage runs.
+- CLI shims (`pnpm` / `node` / `supabase <cmd>`) all run under the shared `cli` profile, so failures never impact the core gateway stack.
 
 ## Coding Style & Naming Conventions
 - TypeScript/React: Two-space indentation, functional components in PascalCase (e.g., `MultiFieldConfigModal.tsx`), hooks in `useCamelCase`. Validate with `pnpm lint` and `pnpm typecheck`; Tailwind utility order may stay default.

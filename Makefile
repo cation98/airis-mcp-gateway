@@ -6,6 +6,9 @@
 
 .DEFAULT_GOAL := help
 
+.SHELLFLAGS := -eu -o pipefail -c
+MAKEFLAGS   += --no-builtin-rules --warn-undefined-variables
+
 # ========== Environment Settings ==========
 # Load .env file for port configurations
 -include .env
@@ -13,6 +16,15 @@ export
 
 export COMPOSE_DOCKER_CLI_BUILD := 1
 export DOCKER_BUILDKIT := 1
+export PATH := $(PWD)/bin:$(PATH)
+
+DC := docker compose
+NODE_SVC := node
+SUPA_SVC := supabase
+PNPM_VER := 10.14.0
+NODE_VER := 22
+DEV_PORT ?= 5173
+CLI_PROFILE := cli
 
 # Auto-detect project name from directory
 PROJECT ?= $(notdir $(shell pwd))
@@ -27,19 +39,83 @@ NC := \033[0m
 # ========== Help ==========
 .PHONY: help
 help:
-	@echo ""
-	@echo "$(BLUE)Available Commands:$(NC)"
-	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
-	@echo ""
-	@echo "$(YELLOW)Project: $(PROJECT)$(NC)"
-	@echo ""
+	@awk 'BEGIN{FS=":.*##"; printf "\nTargets:\n"} /^[a-zA-Z0-9_-]+:.*##/{printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo "\nProject: $(PROJECT)"
+
+.PHONY: doctor
+doctor: ## 開発前ヘルスチェック
+	@echo ">> Docker reachable?"
+	@docker version >/dev/null
+	@echo ">> Compose services"
+	@$(DC) ls || true
+	@echo ">> Node $(NODE_VER) & pnpm $(PNPM_VER) inside container"
+	@$(DC) --profile $(CLI_PROFILE) run --rm \
+		-e UID=$$(id -u) -e GID=$$(id -g) \
+		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; node -v; pnpm -v'
+
+# ========== Workspace Tooling ==========
+
+.PHONY: deps install-deps
+deps install-deps: ## Node依存をコンテナ内pnpmで解決
+	@$(DC) --profile $(CLI_PROFILE) run --rm \
+		-e UID=$$(id -u) -e GID=$$(id -g) \
+		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm install --frozen-lockfile'
+
+.PHONY: dev
+dev: ## 設定UIの開発サーバー (pnpm dev)
+	@$(DC) --profile $(CLI_PROFILE) run --rm \
+		-p $(DEV_PORT):$(DEV_PORT) \
+		-e UID=$$(id -u) -e GID=$$(id -g) \
+		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm dev -- --host 0.0.0.0 --port $(DEV_PORT)'
+
+.PHONY: build
+build: ## ワークスペース全体をビルド
+	@$(DC) --profile $(CLI_PROFILE) run --rm \
+		-e UID=$$(id -u) -e GID=$$(id -g) \
+		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm build'
+
+.PHONY: lint
+lint: ## ESLintを実行
+	@$(DC) --profile $(CLI_PROFILE) run --rm \
+		-e UID=$$(id -u) -e GID=$$(id -g) \
+		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm lint'
+
+.PHONY: typecheck
+typecheck: ## TypeScript型チェック
+	@$(DC) --profile $(CLI_PROFILE) run --rm \
+		-e UID=$$(id -u) -e GID=$$(id -g) \
+		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm typecheck'
+
+.PHONY: test-ui
+test-ui: ## フロントエンドテスト (pnpm test)
+	@$(DC) --profile $(CLI_PROFILE) run --rm \
+		-e UID=$$(id -u) -e GID=$$(id -g) \
+		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm test'
+
+# ========== Supabase / Tooling ==========
+
+.PHONY: supa-up
+supa-up: ## Supabase CLIコンテナを起動
+	@$(DC) --profile $(CLI_PROFILE) up -d $(SUPA_SVC)
+
+.PHONY: supa-down
+supa-down: ## Supabase CLIコンテナを停止
+	@$(DC) --profile $(CLI_PROFILE) stop $(SUPA_SVC) || true
+
+.PHONY: typegen
+typegen: ## DB→TS型生成を実行
+	@mkdir -p libs/types-supabase/src
+	@$(DC) --profile $(CLI_PROFILE) run --rm \
+		--user $$(id -u):$$(id -g) \
+		-e UID=$$(id -u) -e GID=$$(id -g) \
+		$(SUPA_SVC) supabase gen types typescript --local > libs/types-supabase/src/index.ts
 
 # ========== Core Commands ==========
 
 .PHONY: up
 up: ## Start all services
 	@echo "$(GREEN)Starting services...$(NC)"
-	@docker compose up -d --build --remove-orphans
+	@$(DC) up -d --build --remove-orphans
 	@echo "$(GREEN)✅ All services started$(NC)"
 	@echo "🔗 Gateway: http://localhost:$${GATEWAY_PORT}"
 	@echo "🗄️  Database: internal only"
@@ -49,7 +125,7 @@ up: ## Start all services
 .PHONY: down
 down: ## Stop all services
 	@echo "$(YELLOW)Stopping services...$(NC)"
-	@docker compose down --remove-orphans
+	@$(DC) down --remove-orphans
 	@echo "$(GREEN)✅ Stopped$(NC)"
 
 .PHONY: restart
@@ -57,20 +133,26 @@ restart: down up ## Full restart
 
 .PHONY: logs
 logs: ## Show logs (all services)
-	@docker compose logs -f
+	@$(DC) logs -f
 
 .PHONY: logs-%
 logs-%: ## Show logs for specific service
-	@docker compose logs -f $*
+	@$(DC) logs -f $*
 
 .PHONY: ps
 ps: ## Show container status
-	@docker compose ps
+	@$(DC) ps
 
 # ========== Clean Commands ==========
 
 .PHONY: clean
-clean: ## Clean Mac host garbage - ALL build artifacts should be in Docker volumes
+clean: ## Stop containers & drop development volumes
+	@echo "$(YELLOW)🧹 Removing containers and development volumes...$(NC)"
+	@$(DC) down -v --remove-orphans
+	@echo "$(GREEN)✅ Docker volumes reset$(NC)"
+
+.PHONY: clean-host
+clean-host: ## Clean Mac host garbage - ALL build artifacts should be in Docker volumes
 	@echo "$(YELLOW)🧹 Cleaning Mac host garbage (Docker-First violation artifacts)...$(NC)"
 	@echo "$(YELLOW)   ⚠️  These files should NOT exist on Mac host in Docker-First dev$(NC)"
 	@find . -name "node_modules" -type d -prune -exec rm -rf {} + 2>/dev/null || true
@@ -91,8 +173,9 @@ clean: ## Clean Mac host garbage - ALL build artifacts should be in Docker volum
 
 .PHONY: clean-all
 clean-all: ## Complete cleanup (WARNING: destroys data)
-	@echo "$(YELLOW)⚠️  WARNING: This will destroy all data (volumes)$(NC)"
-	@docker compose down -v --remove-orphans
+	@echo "$(YELLOW)⚠️  WARNING: This will destroy all data (volumes + host cache)$(NC)"
+	@$(MAKE) clean
+	@$(MAKE) clean-host
 	@echo "$(GREEN)✅ Complete cleanup done$(NC)"
 
 # ========== Info ==========
@@ -103,8 +186,8 @@ info: ## Show available MCP servers
 	@grep -A 2 '"mcpServers"' mcp-config.json | grep -o '"[^"]*":' | sed 's/[":,]//g' | tail -n +2
 
 .PHONY: config
-config: ## Show effective docker compose configuration
-	@docker compose config
+config: ## Show effective Docker Compose configuration
+	@$(DC) config
 
 # ========== Profile Management ==========
 
@@ -195,55 +278,55 @@ profile-minimal: ## Switch to Minimal profile (filesystem, context7 only)
 
 .PHONY: ui-build
 ui-build: ## Build Settings UI image
-	@docker compose build settings-ui
+	@$(DC) build settings-ui
 	@echo "$(GREEN)✅ Settings UI image built$(NC)"
 
 .PHONY: ui-up
 ui-up: ## Start Settings UI
-	@docker compose up -d settings-ui
+	@$(DC) up -d settings-ui
 	@echo "$(GREEN)✅ Settings UI started$(NC)"
 	@echo "🎨 http://localhost:$${UI_PORT}"
 
 .PHONY: ui-down
 ui-down: ## Stop Settings UI
-	@docker compose stop settings-ui
+	@$(DC) stop settings-ui
 	@echo "$(GREEN)🛑 Settings UI stopped$(NC)"
 
 .PHONY: ui-logs
 ui-logs: ## Show Settings UI logs
-	@docker compose logs -f settings-ui
+	@$(DC) logs -f settings-ui
 
 .PHONY: ui-shell
 ui-shell: ## Enter Settings UI shell
-	@docker compose exec settings-ui sh
+	@$(DC) exec settings-ui sh
 
 # ========== API ==========
 
 .PHONY: api-build
 api-build: ## Build API image
-	@docker compose build api
+	@$(DC) build api
 	@echo "$(GREEN)✅ API image built$(NC)"
 
 .PHONY: api-logs
 api-logs: ## Show API logs
-	@docker compose logs -f api
+	@$(DC) logs -f api
 
 .PHONY: api-shell
 api-shell: ## Enter API shell
-	@docker compose exec api bash
+	@$(DC) exec api bash
 
 # ========== MindBase MCP Server ==========
 
 .PHONY: mindbase-build
 mindbase-build: ## Build MindBase MCP Server (TypeScript → dist/)
 	@echo "$(BLUE)🔨 Building MindBase MCP Server...$(NC)"
-	@docker compose --profile builder up --build -d mindbase-builder
+	@$(DC) --profile builder up --build -d mindbase-builder
 	@echo "$(YELLOW)⏳ Waiting for build to complete...$(NC)"
 	@timeout 120 sh -c 'until [ -f servers/mindbase/dist/index.js ]; do printf "."; sleep 1; done' || (echo "$(RED)❌ Build timeout$(NC)"; exit 1)
 	@echo ""
 	@echo "$(GREEN)✅ MindBase MCP Server built$(NC)"
 	@ls -lh servers/mindbase/dist/
-	@docker compose --profile builder stop mindbase-builder
+	@$(DC) --profile builder stop mindbase-builder
 
 .PHONY: mindbase-clean
 mindbase-clean: ## Clean MindBase build artifacts
@@ -255,19 +338,19 @@ mindbase-clean: ## Clean MindBase build artifacts
 
 .PHONY: db-migrate
 db-migrate: ## Run database migrations
-	@docker compose exec api alembic upgrade head
+	@$(DC) exec api alembic upgrade head
 	@echo "$(GREEN)✅ Database migrations applied$(NC)"
 
 .PHONY: db-shell
 db-shell: ## Enter PostgreSQL shell
-	@docker compose exec postgres psql -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-mcp_gateway}
+	@$(DC) exec postgres psql -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-mcp_gateway}
 
 # ========== Test ==========
 
 .PHONY: test
 test: ## Run tests in Docker
 	@echo "$(BLUE)🧪 Running tests in Docker...$(NC)"
-	@docker compose run --rm test
+	@$(DC) run --rm test
 	@echo "$(GREEN)✅ Tests completed$(NC)"
 
 # ========== Token Measurement ==========
@@ -285,7 +368,7 @@ measure-tokens: ## Measure token reduction (OpenMCP Pattern validation)
 		exit 1; \
 	fi
 	@echo "$(GREEN)✅ Protocol log found$(NC)"
-	@docker compose --profile measurement run --rm measurement
+	@$(DC) --profile measurement run --rm measurement
 	@echo ""
 	@echo "$(GREEN)📄 Report generated:$(NC)"
 	@cat docs/research/token_measurement_report.md
@@ -429,7 +512,7 @@ install-dev: ## Install with UI/API (development mode, imports existing configs)
 	@echo "$(YELLOW)🚀 Step 2: Starting all services...$(NC)"
 	@$(MAKE) up
 	@echo "$(YELLOW)⏳ Waiting for all services (max 60s)...$(NC)"
-	@timeout 60 sh -c 'until docker compose ps | grep -q "healthy.*healthy.*healthy"; do printf "."; sleep 1; done' || (echo "$(YELLOW)⚠️  Some services might not be healthy yet$(NC)")
+	@timeout 60 sh -c "until $(DC) ps | grep -q 'healthy.*healthy.*healthy'; do printf '.'; sleep 1; done" || (echo "$(YELLOW)⚠️  Some services might not be healthy yet$(NC)")
 	@echo ""
 	@echo "$(GREEN)✅ Services started$(NC)"
 	@echo ""

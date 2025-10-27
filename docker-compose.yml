@@ -105,6 +105,32 @@ services:
       start_period: 10s
 
 
+  # Node.js toolchain container for pnpm/node/npm shims
+  node:
+    image: node:22-bookworm
+    container_name: airis-mcp-gateway-node
+    working_dir: /workspace
+    profiles:
+      - cli
+    entrypoint: null
+    volumes:
+      - .:/workspace:cached
+      - node_modules:/workspace/node_modules
+      - pnpm-store:/workspace/.pnpm-store
+
+
+  # Supabase CLI container routed through bin/supabase shim
+  supabase:
+    image: ghcr.io/supabase/cli:latest
+    container_name: airis-mcp-gateway-supabase
+    working_dir: /workspace
+    profiles:
+      - cli
+    volumes:
+      - .:/workspace:cached
+      - supabase_data:/workspace/supabase
+
+
   # MindBase MCP Server Builder
   # Builds TypeScript → dist/ (read-only artifact for MCP config)
   mindbase-builder:
@@ -189,4 +215,10 @@ volumes:
   mindbase_node_modules:
     driver: local
   self_management_node_modules:
+    driver: local
+  node_modules:
+    driver: local
+  pnpm-store:
+    driver: local
+  supabase_data:
     driver: local
