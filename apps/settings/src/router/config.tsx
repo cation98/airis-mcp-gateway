@@ -1,11 +1,11 @@
 
-import { RouteObject } from 'react-router-dom';
 import { lazy } from 'react';
 
 const MCPDashboard = lazy(() => import('../pages/mcp-dashboard/page'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 
-const routes: RouteObject[] = [
+// React Router v7 route configuration
+const routes = [
   {
     path: '/',
     element: <MCPDashboard />

@@ -22,9 +22,14 @@ DC := docker compose
 NODE_SVC := node
 SUPA_SVC := supabase
 PNPM_VER := 10.19.0
-NODE_VER := 23
+NODE_VER := 24
 DEV_PORT ?= 5173
 CLI_PROFILE := cli
+PNPM_BOOTSTRAP := set -euo pipefail; \
+	corepack enable >/dev/null 2>&1; \
+	corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; \
+	PNPM_BIN="$$(corepack which pnpm)"; \
+	export PATH="$$(dirname "$$PNPM_BIN")":$$PATH;
 
 # Auto-detect project name from directory
 HOST_REPO_DIR := $(shell pwd)
@@ -65,7 +70,7 @@ doctor: ## 開発前ヘルスチェック
 	@echo ">> Node $(NODE_VER) & pnpm $(PNPM_VER) inside container"
 	@$(DC) --profile $(CLI_PROFILE) run --rm \
 		-e UID=$$(id -u) -e GID=$$(id -g) \
-		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; node -v; pnpm -v'
+		$(NODE_SVC) bash -lc '$(PNPM_BOOTSTRAP) node -v && pnpm --version'
 
 # ========== Workspace Tooling ==========
 
@@ -73,38 +78,38 @@ doctor: ## 開発前ヘルスチェック
 deps install-deps: ## Node依存をコンテナ内pnpmで解決
 	@$(DC) --profile $(CLI_PROFILE) run --rm \
 		-e UID=$$(id -u) -e GID=$$(id -g) \
-		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm install --frozen-lockfile'
+		$(NODE_SVC) bash -lc '$(PNPM_BOOTSTRAP) pnpm install --frozen-lockfile'
 
 .PHONY: dev
 dev: ## 設定UIの開発サーバー (pnpm dev)
 	@$(DC) --profile $(CLI_PROFILE) run --rm \
 		-p $(DEV_PORT):$(DEV_PORT) \
 		-e UID=$$(id -u) -e GID=$$(id -g) \
-		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm dev -- --host 0.0.0.0 --port $(DEV_PORT)'
+		$(NODE_SVC) bash -lc '$(PNPM_BOOTSTRAP) pnpm dev -- --host 0.0.0.0 --port $(DEV_PORT)'
 
 .PHONY: build
 build: ## ワークスペース全体をビルド
 	@$(DC) --profile $(CLI_PROFILE) run --rm \
 		-e UID=$$(id -u) -e GID=$$(id -g) \
-		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm build'
+		$(NODE_SVC) bash -lc '$(PNPM_BOOTSTRAP) pnpm build'
 
 .PHONY: lint
 lint: ## ESLintを実行
 	@$(DC) --profile $(CLI_PROFILE) run --rm \
 		-e UID=$$(id -u) -e GID=$$(id -g) \
-		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm lint'
+		$(NODE_SVC) bash -lc '$(PNPM_BOOTSTRAP) pnpm lint'
 
 .PHONY: typecheck
 typecheck: ## TypeScript型チェック
 	@$(DC) --profile $(CLI_PROFILE) run --rm \
 		-e UID=$$(id -u) -e GID=$$(id -g) \
-		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm typecheck'
+		$(NODE_SVC) bash -lc '$(PNPM_BOOTSTRAP) pnpm typecheck'
 
 .PHONY: test-ui
 test-ui: ## フロントエンドテスト (pnpm test)
 	@$(DC) --profile $(CLI_PROFILE) run --rm \
 		-e UID=$$(id -u) -e GID=$$(id -g) \
-		$(NODE_SVC) bash -lc 'corepack enable; corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; pnpm test'
+		$(NODE_SVC) bash -lc '$(PNPM_BOOTSTRAP) pnpm test'
 
 # ========== Supabase / Tooling ==========
 
@@ -126,8 +131,14 @@ typegen: ## DB→TS型生成を実行
 
 # ========== Core Commands ==========
 
+.PHONY: generate-mcp-config
+generate-mcp-config: ## Generate mcp.json from template
+	@echo "$(BLUE)Generating mcp.json from template...$(NC)"
+	@envsubst < mcp.json.template > mcp.json
+	@echo "$(GREEN)✅ mcp.json generated (API_PORT=$${API_PORT})$(NC)"
+
 .PHONY: up
-up: ## Start all services
+up: generate-mcp-config ## Start all services
 	@echo "$(GREEN)Starting services...$(NC)"
 	@$(DC) up -d --build --remove-orphans
 	@echo "$(GREEN)✅ All services started$(NC)"

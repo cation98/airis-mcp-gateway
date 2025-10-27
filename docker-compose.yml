@@ -1,5 +1,8 @@
 name: airis-mcp-gateway
 
+# IMPORTANT: Use `make up` to start services (auto-sets required environment variables)
+# Running `docker compose up` directly will show warnings about unset variables.
+
 services:
   # AIRIS MCP Gateway - すべてのMCPサーバーを統合
   mcp-gateway:
@@ -85,6 +88,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-mcp_gateway}
       - DEBUG=${API_DEBUG:-true}
+      - ENCRYPTION_MASTER_KEY=${ENCRYPTION_MASTER_KEY}
       - PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
       - HOST_REPO_DIR=${HOST_REPO_DIR}
       - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR}
@@ -127,7 +131,7 @@ services:
 
   # Node.js toolchain container for pnpm/node/npm shims
   node:
-    image: node:22-bookworm
+    image: node:24-bookworm
     container_name: airis-mcp-gateway-node
     working_dir: ${CONTAINER_PROJECT_ROOT}
     profiles:

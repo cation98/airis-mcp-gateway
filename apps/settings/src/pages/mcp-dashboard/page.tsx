@@ -392,7 +392,7 @@ export default function MCPDashboard() {
   ];
   const recommendedServers = officialRecommendedOrder
     .map(id => servers.find(server => server.id === id))
-    .filter((server): server is typeof servers[number] => Boolean(server));
+    .filter((server): server is typeof servers[number] => Boolean(server && !server.enabled));
   const disabledServers = servers.filter(s => !s.enabled);
 
   return (

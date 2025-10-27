@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "airis-mcp-gateway": {
-      "url": "http://localhost:8001/api/v1/mcp/sse",
+      "url": "http://localhost:${API_PORT}/api/v1/mcp/sse",
       "description": "All MCP servers via unified Gateway (25 servers, 75-90% token reduction via OpenMCP schema partitioning)"
     }
   }

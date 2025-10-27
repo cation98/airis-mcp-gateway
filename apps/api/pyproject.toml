@@ -5,7 +5,7 @@ description = "AIRIS MCP Gateway API Server"
 requires-python = ">=3.12"
 
 dependencies = [
-    "fastapi>=0.115.0",
+    "fastapi>=0.120.0",
     "uvicorn[standard]>=0.32.0",
     "sqlalchemy>=2.0.35",
     "alembic>=1.13.3",
@@ -13,7 +13,7 @@ dependencies = [
     "pydantic>=2.10.0",
     "pydantic-settings>=2.6.0",
     "cryptography>=43.0.0",
-    "python-dotenv>=1.0.1",
+    "python-dotenv>=1.2.1",
 ]
 
 [project.optional-dependencies]

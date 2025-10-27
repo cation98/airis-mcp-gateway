@@ -5,7 +5,7 @@
 # ------------------------------
 # Stage 1: Build (pnpm + Vite)
 # ------------------------------
-FROM node:23-alpine AS builder
+FROM node:24-alpine AS builder
 
 # pnpm installation
 RUN corepack enable && corepack prepare pnpm@latest --activate

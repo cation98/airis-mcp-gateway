@@ -7,12 +7,12 @@
 - Shared Docker entrypoints live in `gateway/`, bundled MCP servers in `servers/`, profile presets in `profiles/`, and integration suites in `tests/`.
 
 ## Build, Test, and Development Commands
-- `pnpm install` – bootstrap workspaces (Node 20+, pnpm 9+).
-- `pnpm dev` – run the settings UI at `http://localhost:5173`.
-- `pnpm build` / `pnpm typecheck` / `pnpm lint` – produce artifacts, run `tsc --noEmit`, and enforce ESLint 9 rules.
-- `pnpm test` – execute package-level test suites.
+- `make deps` – bootstrap pnpm workspaces inside the Node toolchain container (alias: `make install-deps`).
+- `make dev` – run the settings UI (`pnpm dev`) at `http://localhost:5173`.
+- `make build` / `make typecheck` / `make lint` – build artifacts, run `tsc --noEmit`, and enforce ESLint 9 rules (all containerised).
+- `make test-ui` – execute pnpm-managed UI test suites in Docker.
 - `make up` / `make down` / `make logs` – orchestrate the Docker stack; use `pytest tests/` for API coverage runs.
-- CLI shims (`pnpm` / `node` / `supabase <cmd>`) all run under the shared `cli` profile, so failures never impact the core gateway stack.
+- CLI shims (`pnpm` / `node` / `supabase <cmd>`) intentionally fail and redirect to the Make targets so LLMs follow the container-first workflow.
 
 ## Coding Style & Naming Conventions
 - TypeScript/React: Two-space indentation, functional components in PascalCase (e.g., `MultiFieldConfigModal.tsx`), hooks in `useCamelCase`. Validate with `pnpm lint` and `pnpm typecheck`; Tailwind utility order may stay default.
@@ -27,5 +27,5 @@
 
 ## Commit & Pull Request Guidelines
 - Follow Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`) as in repository history; keep unrelated work in separate commits.
-- PRs should include a short summary, linked issue or roadmap item, commands run (`pnpm lint`, `pytest tests/`), and screenshots for UI updates.
+- PRs should include a short summary, linked issue or roadmap item, commands run (`make lint`, `pytest tests/`), and screenshots for UI updates.
 - Flag migrations or secret-store implications in the description and request cross-package reviewers early.

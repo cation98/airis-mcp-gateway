@@ -3,7 +3,7 @@
 # ================================
 # TypeScript Builder (npm-based)
 
-FROM node:23-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 

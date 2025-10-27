@@ -27,7 +27,7 @@ This workspace is **Docker-first** and **Makefile-driven**. Keep the host as cle
 The legacy operational targets (`make up`, `make install`, profile toggles, etc.) continue to work and now reuse the `$(DC)` helper so they automatically benefit from the same Docker Compose routing.
 
 ## Docker Toolchain Services
-- **`node` service**: `node:22-bookworm` image mounted at `/workspace` with dedicated `node_modules` / `.pnpm-store` volumes. CLI targets call `corepack enable` + `corepack prepare pnpm@$(PNPM_VER)` on each run so the pnpm CLI is provisioned inside the container without touching the host.
+- **`node` service**: `node:24-bookworm` image mounted at `/workspace` with `node_modules` / `.pnpm-store` volumes keeping dependencies inside Docker. Every CLI target runs `corepack enable` + `corepack prepare pnpm@$(PNPM_VER)` before executing `pnpm …`, so the pnpm CLI is provisioned on-demand in the container without touching the host.
 - **`supabase` service**: `ghcr.io/supabase/cli:latest` image backed by the `supabase_data` volume. Invocations go through the optional `cli` profile so missing credentials or private images never break `make up`.
 
 Both services sit behind the Docker Compose `cli` profile, so `make up` never starts them automatically; the make targets enable the profile only for the duration of each command.
