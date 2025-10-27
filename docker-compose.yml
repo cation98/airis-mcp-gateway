@@ -217,8 +217,8 @@ services:
     volumes:
       - .:/workspace:ro
     command: >
-      sh -c "pip install -q pytest pytest-asyncio &&
-             pytest tests/test_config.py apps/api/tests/unit/ -v -o addopts=''"
+      sh -c "pip install -q fastapi sqlalchemy alembic asyncpg aiosqlite pydantic pydantic-settings cryptography python-dotenv pytest pytest-asyncio httpx &&
+             PYTHONPATH=/workspace/apps/api pytest tests/test_config.py apps/api/tests/unit/ -v -o addopts=''"
     profiles:
       - test
 
