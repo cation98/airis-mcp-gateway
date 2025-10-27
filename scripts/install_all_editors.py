@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 
-GATEWAY_PUBLIC_URL = os.getenv("GATEWAY_PUBLIC_URL", "http://gateway.localhost")
+GATEWAY_PUBLIC_URL = os.getenv("GATEWAY_PUBLIC_URL", "http://gateway.localhost:9090")
 GATEWAY_SSE_URL = f"{GATEWAY_PUBLIC_URL.rstrip('/')}/sse"
 
 

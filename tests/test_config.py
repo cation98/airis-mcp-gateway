@@ -71,7 +71,7 @@ def test_gateway_mcp_json_valid():
     assert "url" in gateway_cfg, "Gateway URL not configured"
     # API Proxy with OpenMCP Schema Partitioning (75-90% token reduction)
     # Editor → API Proxy (GATEWAY_API_URL) → MCP Gateway (mcp-gateway:9090)
-    expected_url = f"{os.getenv('GATEWAY_API_URL', 'http://gateway.localhost/api')}/v1/mcp/sse"
+    expected_url = f"{os.getenv('GATEWAY_API_URL', 'http://gateway.localhost:9090/api')}/v1/mcp/sse"
     assert gateway_cfg["url"] == expected_url, f"Unexpected Gateway URL: {gateway_cfg['url']}"
 
     print(f"\n✅ Gateway URL: {gateway_cfg['url']}")

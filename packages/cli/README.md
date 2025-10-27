@@ -66,9 +66,9 @@ airis-gateway update
 ## Access URLs
 
 After installation:
-- **Gateway**: http://gateway.localhost
-- **Settings UI**: http://ui.gateway.localhost
-- **API Docs**: http://gateway.localhost/api/docs
+- **Gateway**: http://gateway.localhost:9090
+- **Settings UI**: http://ui.gateway.localhost:5173
+- **API Docs**: http://gateway.localhost:9090/api/docs
 - *(Need localhost ports? Run `make up-dev` inside the repository.)*
 
 ## Requirements

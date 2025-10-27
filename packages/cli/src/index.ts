@@ -14,9 +14,9 @@ const program = new Command();
 const GATEWAY_DIR = join(homedir(), '.airis-mcp-gateway');
 const REPO_URL = 'https://github.com/agiletec-inc/airis-mcp-gateway.git';
 
-const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? 'http://gateway.localhost';
-const UI_PUBLIC_URL = process.env.UI_PUBLIC_URL ?? 'http://ui.gateway.localhost';
-const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://gateway.localhost/api';
+const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? 'http://gateway.localhost:9090';
+const UI_PUBLIC_URL = process.env.UI_PUBLIC_URL ?? 'http://ui.gateway.localhost:5173';
+const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://gateway.localhost:9090/api';
 
 program
   .name('airis-gateway')

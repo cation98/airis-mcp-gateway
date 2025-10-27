@@ -121,6 +121,6 @@ if [ -f "$GATEWAY_DIR/.env" ]; then
     set +a
 fi
 
-GATEWAY_PUBLIC_URL="${GATEWAY_PUBLIC_URL:-http://gateway.localhost}"
-UI_PUBLIC_URL="${UI_PUBLIC_URL:-http://ui.gateway.localhost}"
-GATEWAY_API_URL="${GATEWAY_API_URL:-http://gateway.localhost/api}"
+GATEWAY_PUBLIC_URL="${GATEWAY_PUBLIC_URL:-http://gateway.localhost:9090}"
+UI_PUBLIC_URL="${UI_PUBLIC_URL:-http://ui.gateway.localhost:5173}"
+GATEWAY_API_URL="${GATEWAY_API_URL:-http://gateway.localhost:9090/api}"

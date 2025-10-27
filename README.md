@@ -26,9 +26,9 @@ make up                     # internal-only (Docker DNS)
 - start everything in the background and print running endpoints
 
 When it finishes you should see:
-- Gateway SSE endpoint → `http://gateway.localhost/sse`
-- FastAPI docs → `http://gateway.localhost/api/docs`
-- Settings UI → `http://ui.gateway.localhost`
+- Gateway SSE endpoint → `http://gateway.localhost:9090/sse`
+- FastAPI docs → `http://gateway.localhost:9090/api/docs`
+- Settings UI → `http://ui.gateway.localhost:5173`
 
 Need a quick health check? Run `make doctor` to verify Docker availability and toolchain shims.
 
