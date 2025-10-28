@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react-swc'
 import { resolve } from 'node:path'
 import AutoImport from 'unplugin-auto-import/vite'
@@ -11,7 +12,9 @@ export default defineConfig({
    __BASE_PATH__: JSON.stringify(base),
    __IS_PREVIEW__: JSON.stringify(isPreview)
   },
-  plugins: [react(),
+  plugins: [
+    tailwindcss(),
+    react(),
     AutoImport({
       imports: [
         {

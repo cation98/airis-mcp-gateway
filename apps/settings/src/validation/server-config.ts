@@ -66,7 +66,7 @@ export const supabaseSelfhostSchema = z.object({
     .refine((value) => !value || /^(true|false)$/i.test(value.trim()), 'READ_ONLY must be "true" or "false"'),
   FEATURES: z.string()
     .optional()
-    .refine((value) => !value || /^[a-z][a-z\-]*(,[a-z][a-z\-]*)*$/.test(value.toLowerCase()), 'Invalid feature flag list')
+    .refine((value) => !value || /^[a-z][a-z-]*(,[a-z][a-z-]*)*$/.test(value.toLowerCase()), 'Invalid feature flag list')
 });
 
 export const slackSchema = z.object({
@@ -116,7 +116,9 @@ export const postgresqlSchema = z.object({
 });
 
 // Schema registry
-export const SERVER_VALIDATION_SCHEMAS: Record<string, z.ZodObject<any>> = {
+type ServerSchema = z.ZodObject<Record<string, z.ZodTypeAny>>;
+
+export const SERVER_VALIDATION_SCHEMAS: Record<string, ServerSchema> = {
   tavily: tavilySchema,
   stripe: stripeSchema,
   figma: figmaSchema,
@@ -145,20 +147,24 @@ export function validateServerConfig(
     return { success: true }; // No validation schema = valid
   }
 
-  try {
-    schema.parse(config);
+  const result = schema.safeParse(config);
+
+  if (result.success) {
     return { success: true };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const errors: Record<string, string> = {};
-      error.errors.forEach((err) => {
-        const fieldName = err.path[0] as string;
-        errors[fieldName] = err.message;
-      });
-      return { success: false, errors };
-    }
-    return { success: false, errors: { _general: 'Validation failed' } };
   }
+
+  const errors: Record<string, string> = {};
+
+  result.error.issues.forEach((issue) => {
+    const [firstSegment] = issue.path;
+    if (typeof firstSegment === 'string') {
+      errors[firstSegment] = issue.message;
+    }
+  });
+
+  return Object.keys(errors).length > 0
+    ? { success: false, errors }
+    : { success: false, errors: { _general: 'Validation failed' } };
 }
 
 /**
@@ -175,17 +181,18 @@ export function validateField(
     return { valid: true };
   }
 
-  try {
-    const fieldSchema = schema.shape[fieldName];
-    if (fieldSchema) {
-      fieldSchema.parse(value);
-      return { valid: true };
-    }
-    return { valid: true }; // Field not in schema = valid
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { valid: false, error: error.errors[0]?.message };
-    }
-    return { valid: false, error: 'Validation failed' };
+  const shape = schema.shape as Record<string, z.ZodTypeAny>;
+  const fieldSchema = shape[fieldName];
+
+  if (!fieldSchema) {
+    return { valid: true };
   }
+
+  const result = fieldSchema.safeParse(value);
+  if (result.success) {
+    return { valid: true };
+  }
+
+  const message = result.error.issues[0]?.message ?? 'Validation failed';
+  return { valid: false, error: message };
 }

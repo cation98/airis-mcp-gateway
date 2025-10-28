@@ -1,0 +1,25 @@
+const dashboard = {
+  'dashboard.language.label': 'Language',
+  'dashboard.language.ariaLabel': 'Select interface language',
+  'dashboard.header.title': 'MCP Gateway Dashboard',
+  'dashboard.header.subtitle': 'MCP server management - {{count}} servers',
+  'dashboard.header.activeSummary': '{{active}} / {{total}} active',
+  'dashboard.actions.tips': 'Tips',
+  'dashboard.actions.showConfigGenerator': 'Generate config',
+  'dashboard.actions.hideConfigGenerator': 'Hide config generator',
+  'dashboard.sections.active': 'Active ({{count}})',
+  'dashboard.sections.recommended': 'Recommended MCP servers ({{count}})',
+  'dashboard.sections.disabled': 'Disabled ({{count}})',
+  'dashboard.alerts.credentialsMissing': 'No credentials found for this server. Configure the API key before enabling it.',
+  'dashboard.alerts.validationRequestFailed': 'Failed to send validation request.',
+  'dashboard.alerts.validationFailed': 'Connection test failed: {{message}}\n\nMake sure the API key is correct.',
+  'dashboard.alerts.validationSuccess': 'Connection succeeded: {{message}}',
+  'dashboard.alerts.unknownServer': 'Unknown server: {{id}}',
+  'dashboard.alerts.saveStateFailed': 'Failed to save server state.',
+  'dashboard.alerts.apiKeySaved': 'Saved the API key. Restarting the Gateway...',
+  'dashboard.alerts.configSaved': 'Configuration saved. Restarting the Gateway...',
+  'dashboard.alerts.gatewayRestartSuccess': 'Gateway restarted. Tools are ready to use.',
+  'dashboard.alerts.gatewayRestartFailure': 'Failed to restart the Gateway. Please restart it manually.',
+};
+
+export default dashboard;

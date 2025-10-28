@@ -27,9 +27,7 @@ DEV_PORT ?= 5173
 CLI_PROFILE := cli
 PNPM_BOOTSTRAP := set -euo pipefail; \
 	corepack enable >/dev/null 2>&1; \
-	corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; \
-	PNPM_BIN="$$(corepack which pnpm)"; \
-	export PATH="$$(dirname "$$PNPM_BIN")":$$PATH;
+	corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1;
 
 # Auto-detect project name from directory
 HOST_REPO_DIR := $(shell pwd)

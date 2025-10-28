@@ -1,0 +1,25 @@
+const dashboard = {
+  'dashboard.language.label': '言語',
+  'dashboard.language.ariaLabel': '表示言語を選択',
+  'dashboard.header.title': 'MCP Gateway ダッシュボード',
+  'dashboard.header.subtitle': 'MCPサーバー管理 - {{count}}個のサーバー',
+  'dashboard.header.activeSummary': '{{active}} / {{total}} アクティブ',
+  'dashboard.actions.tips': 'Tips',
+  'dashboard.actions.showConfigGenerator': '設定生成',
+  'dashboard.actions.hideConfigGenerator': '設定生成を閉じる',
+  'dashboard.sections.active': 'アクティブ ({{count}})',
+  'dashboard.sections.recommended': 'おすすめMCPサーバー ({{count}})',
+  'dashboard.sections.disabled': '無効化 ({{count}})',
+  'dashboard.alerts.credentialsMissing': 'このサーバーの資格情報が見つかりません。APIキーを設定してから再度有効化してください。',
+  'dashboard.alerts.validationRequestFailed': '接続テストのリクエストに失敗しました。',
+  'dashboard.alerts.validationFailed': '接続テスト失敗: {{message}}\n\nAPIキーが正しいか確認してください。',
+  'dashboard.alerts.validationSuccess': '接続成功: {{message}}',
+  'dashboard.alerts.unknownServer': '不明なサーバー: {{id}}',
+  'dashboard.alerts.saveStateFailed': 'サーバー状態の保存に失敗しました。',
+  'dashboard.alerts.apiKeySaved': 'APIキーを保存しました。Gatewayを再起動しています...',
+  'dashboard.alerts.configSaved': '設定を保存しました。Gatewayを再起動しています...',
+  'dashboard.alerts.gatewayRestartSuccess': 'Gateway再起動完了。ツールが利用可能になりました。',
+  'dashboard.alerts.gatewayRestartFailure': 'Gateway再起動に失敗しました。手動で再起動してください。',
+};
+
+export default dashboard;
