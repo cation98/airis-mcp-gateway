@@ -1,0 +1,47 @@
+name: Sync main to next
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Prepare sync branch from next
+        run: |
+          git fetch origin next
+          git checkout -B sync/main-to-next origin/next
+          git merge --no-ff origin/main -m "chore: sync next with main" || { \
+            echo "::error::Merge conflicts detected. Resolve manually."; \
+            exit 1; \
+          }
+
+      - name: Create pull request into next
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: sync next with main"
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          title: "chore: sync next with main"
+          body: |
+            Automated PR to keep `next` up to date with `main`.
+
+            This was triggered by a push to `main`.
+          base: next
+          branch: sync/main-to-next
+          delete-branch: true
