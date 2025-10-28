@@ -80,11 +80,11 @@ echo -e "${GREEN}✅ Configuration symlink created${NC}"
 
 # Step 6: Verify
 echo "Verifying installation..."
-if curl -sf http://localhost:9090/ > /dev/null; then
+if curl -sf "$GATEWAY_PUBLIC_URL/" > /dev/null; then
     echo -e "${GREEN}✅ Gateway responding${NC}"
 else
     echo -e "${YELLOW}⚠️  Gateway may need more time to start${NC}"
-    echo "Wait a moment and check: curl http://localhost:9090/"
+    echo "Wait a moment and check: curl $GATEWAY_PUBLIC_URL/"
 fi
 
 # Step 7: Display container status
@@ -102,9 +102,11 @@ echo "  2. Run: ${BLUE}/mcp${NC}"
 echo "  3. Verify: ${GREEN}airis-mcp-gateway${NC} appears in the list"
 echo ""
 echo -e "${BLUE}Access URLs:${NC}"
-echo "  Gateway:     http://localhost:9090"
-echo "  Settings UI: http://localhost:5173"
-echo "  API Docs:    http://localhost:8001/docs"
+echo "  Gateway:     $GATEWAY_PUBLIC_URL"
+echo "  Settings UI: $UI_PUBLIC_URL"
+echo "  API Docs:    $GATEWAY_API_URL/docs"
+echo ""
+echo "💡 Want internal-only mode? Run 'make up-dev' in the repository."
 echo ""
 echo -e "${BLUE}Management Commands:${NC}"
 echo "  Status:   ${BLUE}docker ps${NC}"
@@ -112,3 +114,13 @@ echo "  Logs:     ${BLUE}docker logs airis-mcp-gateway${NC}"
 echo "  Restart:  ${BLUE}docker compose restart${NC}"
 echo "  Stop:     ${BLUE}docker compose down${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+if [ -f "$GATEWAY_DIR/.env" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$GATEWAY_DIR/.env"
+    set +a
+fi
+
+GATEWAY_PUBLIC_URL="${GATEWAY_PUBLIC_URL:-http://gateway.localhost:9090}"
+UI_PUBLIC_URL="${UI_PUBLIC_URL:-http://ui.gateway.localhost:5173}"
+GATEWAY_API_URL="${GATEWAY_API_URL:-http://gateway.localhost:9090/api}"

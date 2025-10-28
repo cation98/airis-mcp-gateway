@@ -14,6 +14,10 @@ const program = new Command();
 const GATEWAY_DIR = join(homedir(), '.airis-mcp-gateway');
 const REPO_URL = 'https://github.com/agiletec-inc/airis-mcp-gateway.git';
 
+const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? 'http://gateway.localhost:9090';
+const UI_PUBLIC_URL = process.env.UI_PUBLIC_URL ?? 'http://ui.gateway.localhost:5173';
+const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://gateway.localhost:9090/api';
+
 program
   .name('airis-gateway')
   .description('AIRIS MCP Gateway - Unified MCP server management')
@@ -109,7 +113,8 @@ program
     console.log(chalk.blue('Next steps:'));
     console.log('  1. ' + chalk.yellow('Restart all editors') + ' (Claude Code, Cursor, Zed, etc.)');
     console.log('  2. Test MCP tools in any editor');
-    console.log('  3. Access Settings UI: ' + chalk.cyan('http://localhost:5173'));
+    console.log('  3. Access Settings UI: ' + chalk.cyan(UI_PUBLIC_URL));
+    console.log('     ' + chalk.gray("(Need internal-only mode? Run 'make up-dev'.)"));
     console.log('\n');
   });
 
@@ -151,8 +156,9 @@ program
     try {
       execSync('make up', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Gateway started');
-      console.log(chalk.cyan('\n🔗 Gateway: http://localhost:9090'));
-      console.log(chalk.cyan('🎨 Settings UI: http://localhost:5173'));
+      console.log(chalk.cyan('\n🔗 Gateway (public): ' + GATEWAY_PUBLIC_URL));
+      console.log(chalk.cyan('🎨 Settings UI: ' + UI_PUBLIC_URL));
+      console.log(chalk.gray("💡 Need internal-only networking? Run 'make up-dev'."));
     } catch (error) {
       spinner.fail('Failed to start');
       console.error(chalk.red(`Error: ${error}`));

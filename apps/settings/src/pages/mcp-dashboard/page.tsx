@@ -1,10 +1,12 @@
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MCPServerCard } from './components/MCPServerCard';
 import { ConfigEditor } from './components/ConfigEditor';
 import { TipsModal } from './components/TipsModal';
 import { MultiFieldConfigModal } from './components/MultiFieldConfigModal';
 import { getServerConfigSchema } from '../../types/mcp-config';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
 
 interface MCPServer {
   id: string;
@@ -22,10 +24,142 @@ interface MCPServer {
   builtin: boolean;
 }
 
-interface SecretValue {
+interface SecretValueEntry {
   key_name: string;
   value: string;
 }
+
+interface ServerApiEntry {
+  id: string;
+  name: string;
+  description: string;
+  command: string | null;
+  args?: string[];
+  env?: Record<string, string> | null;
+  apiKeyRequired: boolean;
+  category: string;
+  recommended: boolean;
+  builtin: boolean;
+}
+
+interface SecretEntry {
+  server_name: string;
+  key_name: string;
+}
+
+interface ServerStateEntry {
+  server_id: string;
+  enabled: boolean;
+}
+
+interface ValidationResponse {
+  valid: boolean;
+  message?: string;
+}
+
+interface ApiErrorResponse {
+  detail?: string;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isStringRecord = (value: unknown): value is Record<string, string> =>
+  isRecord(value) && Object.values(value).every((item) => typeof item === 'string');
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string');
+
+const isServerApiEntry = (value: unknown): value is ServerApiEntry => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.description === 'string' &&
+    (typeof value.command === 'string' || value.command === null) &&
+    (value.args === undefined || isStringArray(value.args)) &&
+    (value.env === undefined || value.env === null || isStringRecord(value.env)) &&
+    typeof value.apiKeyRequired === 'boolean' &&
+    typeof value.category === 'string' &&
+    typeof value.recommended === 'boolean' &&
+    typeof value.builtin === 'boolean'
+  );
+};
+
+const parseServerList = (value: unknown): ServerApiEntry[] => {
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const rawServers = (value as { servers?: unknown }).servers;
+  if (!Array.isArray(rawServers)) {
+    return [];
+  }
+
+  return rawServers.filter(isServerApiEntry);
+};
+
+const isSecretEntry = (value: unknown): value is SecretEntry =>
+  isRecord(value) &&
+  typeof value.server_name === 'string' &&
+  typeof value.key_name === 'string';
+
+const parseSecretEntries = (value: unknown): SecretEntry[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(isSecretEntry);
+};
+
+const isSecretValueEntry = (value: unknown): value is SecretValueEntry =>
+  isRecord(value) &&
+  typeof value.key_name === 'string' &&
+  typeof value.value === 'string';
+
+const parseSecretValueEntries = (value: unknown): SecretValueEntry[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(isSecretValueEntry);
+};
+
+const isServerStateEntry = (value: unknown): value is ServerStateEntry =>
+  isRecord(value) &&
+  typeof value.server_id === 'string' &&
+  typeof value.enabled === 'boolean';
+
+const parseServerStates = (value: unknown): ServerStateEntry[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(isServerStateEntry);
+};
+
+const isValidationResponse = (value: unknown): value is ValidationResponse =>
+  isRecord(value) &&
+  typeof value.valid === 'boolean' &&
+  (value.message === undefined || typeof value.message === 'string');
+
+const parseValidationResponse = (value: unknown): ValidationResponse | null =>
+  isValidationResponse(value) ? value : null;
+
+const isApiErrorResponse = (value: unknown): value is ApiErrorResponse =>
+  isRecord(value) && (value.detail === undefined || typeof value.detail === 'string');
+
+const extractErrorDetail = async (response: Response, fallback: string) => {
+  try {
+    const data: unknown = await response.json();
+    if (isApiErrorResponse(data) && data.detail) {
+      return data.detail;
+    }
+  } catch {
+    // Ignore JSON parse errors and use fallback
+  }
+  return fallback;
+};
 
 const rawApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api/v1';
 const API_BASE = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
@@ -41,20 +175,19 @@ export default function MCPDashboard() {
   const [showTips, setShowTips] = useState(false);
   const [configModalServer, setConfigModalServer] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation();
 
-  const fetchServerSecretConfig = async (serverId: string) => {
+  const fetchServerSecretConfig = async (serverId: string): Promise<Record<string, string>> => {
     try {
       const response = await apiFetch(`/secrets/${serverId}/values`);
       if (!response.ok) {
         return {};
       }
-      const data = await response.json();
-      if (!Array.isArray(data)) {
-        return {};
-      }
+      const data: unknown = await response.json().catch(() => null);
+      const secretValues = parseSecretValueEntries(data);
 
       const config: Record<string, string> = {};
-      (data as SecretValue[]).forEach((secret) => {
+      secretValues.forEach((secret) => {
         if (secret.key_name && typeof secret.value === 'string') {
           config[secret.key_name] = secret.value;
         }
@@ -66,7 +199,7 @@ export default function MCPDashboard() {
     }
   };
 
-  const persistServerState = async (serverId: string, enabled: boolean) => {
+  const persistServerState = async (serverId: string, enabled: boolean): Promise<boolean> => {
     try {
       const response = await apiFetch(`/server-states/${serverId}`, {
         method: 'PUT',
@@ -80,7 +213,7 @@ export default function MCPDashboard() {
     }
   };
 
-  const upsertSecret = async (serverName: string, keyName: string, value: string) => {
+  const upsertSecret = async (serverName: string, keyName: string, value: string): Promise<void> => {
     const createResponse = await apiFetch('/secrets/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -106,17 +239,15 @@ export default function MCPDashboard() {
         return;
       }
 
-      const error = await updateResponse.json().catch(() => ({}));
-      const message = error?.detail ?? `Failed to update ${keyName}`;
+      const message = await extractErrorDetail(updateResponse, `Failed to update ${keyName}`);
       throw new Error(message);
     }
 
-    const error = await createResponse.json().catch(() => ({}));
-    const message = error?.detail ?? `Failed to save ${keyName}`;
+    const message = await extractErrorDetail(createResponse, `Failed to save ${keyName}`);
     throw new Error(message);
   };
 
-  const restartGateway = async () => {
+  const restartGateway = async (): Promise<boolean> => {
     try {
       const response = await apiFetch('/gateway/restart', { method: 'POST' });
       return response.ok;
@@ -137,17 +268,19 @@ export default function MCPDashboard() {
           setIsLoading(false);
           return;
         }
-        const serversData = await serversResponse.json();
-        const serverList = serversData.servers || [];
+        const serversDataRaw: unknown = await serversResponse.json().catch(() => null);
+        const serverList = parseServerList(serversDataRaw);
 
         // Load saved secrets
         const secretsResponse = await apiFetch('/secrets/');
-        const secretsData = secretsResponse.ok ? await secretsResponse.json() : { secrets: [] };
-        const savedSecrets = secretsData.secrets || [];
+        const secretsDataRaw: unknown = secretsResponse.ok ? await secretsResponse.json().catch(() => null) : null;
+        const savedSecrets = isRecord(secretsDataRaw)
+          ? parseSecretEntries((secretsDataRaw as { secrets?: unknown }).secrets)
+          : [];
 
         // Group secrets by server_name
         const secretsByServer: Record<string, string[]> = {};
-        savedSecrets.forEach((secret: any) => {
+        savedSecrets.forEach((secret) => {
           if (!secretsByServer[secret.server_name]) {
             secretsByServer[secret.server_name] = [];
           }
@@ -156,17 +289,19 @@ export default function MCPDashboard() {
 
         // Load server states (toggle persistence)
         const statesResponse = await apiFetch('/server-states/');
-        const statesData = statesResponse.ok ? await statesResponse.json() : { server_states: [] };
-        const serverStates = statesData.server_states || [];
+        const statesDataRaw: unknown = statesResponse.ok ? await statesResponse.json().catch(() => null) : null;
+        const serverStates = isRecord(statesDataRaw)
+          ? parseServerStates((statesDataRaw as { server_states?: unknown }).server_states)
+          : [];
 
         // Create state lookup map
         const statesByServer: Record<string, boolean> = {};
-        serverStates.forEach((state: any) => {
+        serverStates.forEach((state) => {
           statesByServer[state.server_id] = state.enabled;
         });
 
         // Merge server list with secrets and toggle states
-        const mergedServers: MCPServer[] = serverList.map((server: any) => {
+        const mergedServers: MCPServer[] = serverList.map((server) => {
           const hasSecrets = secretsByServer[server.id]?.length > 0;
           const hasState = server.id in statesByServer;
 
@@ -182,10 +317,10 @@ export default function MCPDashboard() {
             id: server.id,
             name: server.name,
             description: server.description,
-            enabled: enabled,
-            command: typeof server.command === 'string' ? server.command : '',
-            args: Array.isArray(server.args) ? server.args.map(String) : [],
-            env: server?.env ?? null,
+            enabled,
+            command: server.command ?? '',
+            args: Array.isArray(server.args) ? server.args : [],
+            env: server.env ?? null,
             apiKeyRequired: server.apiKeyRequired,
             apiKey: hasSecrets ? 'configured' : undefined,
             status: enabled ? ('connected' as const) : ('disconnected' as const),
@@ -203,10 +338,10 @@ export default function MCPDashboard() {
       }
     };
 
-    loadServerData();
+    void loadServerData();
   }, []);
 
-  const toggleServer = async (id: string) => {
+  const toggleServer = async (id: string): Promise<void> => {
     const currentServer = servers.find(s => s.id === id);
     if (!currentServer) return;
 
@@ -216,7 +351,7 @@ export default function MCPDashboard() {
       const config = await fetchServerSecretConfig(id);
 
       if (Object.keys(config).length === 0) {
-        alert('このサーバーの資格情報が見つかりません。APIキーを設定してから再度有効化してください。');
+        alert(t('dashboard.alerts.credentialsMissing'));
         return;
       }
 
@@ -231,20 +366,27 @@ export default function MCPDashboard() {
         });
 
         if (!validateResponse.ok) {
-          alert('接続テストのリクエストに失敗しました。');
+          alert(t('dashboard.alerts.validationRequestFailed'));
           return;
         }
 
-        const validation = await validateResponse.json();
+        const validationRaw: unknown = await validateResponse.json().catch(() => null);
+        const validation = parseValidationResponse(validationRaw);
+        if (!validation) {
+          alert(t('dashboard.alerts.validationRequestFailed'));
+          return;
+        }
+
         if (!validation.valid) {
-          alert(`接続テスト失敗: ${validation.message}\n\nAPIキーが正しいか確認してください。`);
+          alert(t('dashboard.alerts.validationFailed', { message: validation.message ?? '' }));
           return;
         }
 
-        alert(`接続成功: ${validation.message}`);
+        alert(t('dashboard.alerts.validationSuccess', { message: validation.message ?? '' }));
       } catch (error) {
         console.error('Validation error:', error);
-        alert(`エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const message = error instanceof Error ? error.message : t('common.feedback.unknownError');
+        alert(t('common.feedback.error', { message }));
         return;
       }
     }
@@ -258,7 +400,7 @@ export default function MCPDashboard() {
     const persisted = await persistServerState(id, newEnabledState);
 
     if (!persisted) {
-      console.error('Failed to persist server state');
+      console.error(t('dashboard.alerts.saveStateFailed'));
       setServers(prev => prev.map(server =>
         server.id === id
           ? { ...server, enabled: currentServer.enabled, status: currentServer.status }
@@ -267,7 +409,7 @@ export default function MCPDashboard() {
     }
   };
 
-  const updateApiKey = async (id: string, apiKey: string) => {
+  const updateApiKey = async (id: string, apiKey: string): Promise<void> => {
     // Check if server has multiple fields configuration
     const schema = getServerConfigSchema(id);
 
@@ -289,7 +431,7 @@ export default function MCPDashboard() {
 
     const keyName = keyNameMap[id];
     if (!keyName) {
-      alert(`Unknown server: ${id}`);
+      alert(t('dashboard.alerts.unknownServer', { id }));
       return;
     }
 
@@ -300,7 +442,7 @@ export default function MCPDashboard() {
       // Save enabled state to DB
       const persisted = await persistServerState(id, true);
       if (!persisted) {
-        throw new Error('サーバー状態の保存に失敗しました。');
+        throw new Error(t('dashboard.alerts.saveStateFailed'));
       }
 
       // Update local state
@@ -316,62 +458,73 @@ export default function MCPDashboard() {
       ));
 
       // Restart Gateway to apply changes
-      alert('APIキーを保存しました。Gatewayを再起動しています...');
+      alert(t('dashboard.alerts.apiKeySaved'));
 
       const restarted = await restartGateway();
       if (restarted) {
-        alert('Gateway再起動完了！ツールが利用可能になりました。');
+        alert(t('dashboard.alerts.gatewayRestartSuccess'));
       } else {
-        alert('Gateway再起動に失敗しました。手動で再起動してください。');
+        alert(t('dashboard.alerts.gatewayRestartFailure'));
       }
 
     } catch (error) {
-      alert(`エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : t('common.feedback.unknownError');
+      alert(t('common.feedback.error', { message }));
     }
   };
 
-  const saveMultiFieldConfig = async (serverId: string, config: Record<string, string>) => {
-    try {
-      // Save all fields to API
-      for (const [keyName, value] of Object.entries(config)) {
-        if (typeof value !== 'string' || value.trim() === '') {
-          continue;
-        }
-        await upsertSecret(serverId, keyName, value);
+  const saveMultiFieldConfig = async (serverId: string, config: Record<string, string>): Promise<void> => {
+    for (const [keyName, value] of Object.entries(config)) {
+      if (typeof value !== 'string' || value.trim() === '') {
+        continue;
       }
-
-      // Save enabled state to DB
-      const persisted = await persistServerState(serverId, true);
-      if (!persisted) {
-        throw new Error('サーバー状態の保存に失敗しました。');
-      }
-
-      // Update local state
-      setServers(prev => prev.map(server =>
-        server.id === serverId
-          ? {
-              ...server,
-              apiKey: 'configured',
-              enabled: true,
-              status: 'connected' as const
-            }
-          : server
-      ));
-
-      // Restart Gateway to apply changes
-      alert('設定を保存しました。Gatewayを再起動しています...');
-
-      const restarted = await restartGateway();
-
-      if (restarted) {
-        alert('Gateway再起動完了！ツールが利用可能になりました。');
-      } else {
-        alert('Gateway再起動に失敗しました。手動で再起動してください。');
-      }
-
-    } catch (error) {
-      throw error; // Re-throw for modal to handle
+      await upsertSecret(serverId, keyName, value);
     }
+
+    // Save enabled state to DB
+    const persisted = await persistServerState(serverId, true);
+    if (!persisted) {
+      throw new Error(t('dashboard.alerts.saveStateFailed'));
+    }
+
+    // Update local state
+    setServers(prev => prev.map(server =>
+      server.id === serverId
+        ? {
+            ...server,
+            apiKey: 'configured',
+            enabled: true,
+            status: 'connected' as const
+          }
+        : server
+    ));
+
+    // Restart Gateway to apply changes
+    alert(t('dashboard.alerts.configSaved'));
+
+    const restarted = await restartGateway();
+
+    if (restarted) {
+      alert(t('dashboard.alerts.gatewayRestartSuccess'));
+    } else {
+      alert(t('dashboard.alerts.gatewayRestartFailure'));
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <span className="text-sm text-gray-600">{t('common.status.loading')}</span>
+      </div>
+    );
+  }
+
+  const handleToggleServer = (id: string) => {
+    void toggleServer(id);
+  };
+
+  const handleUpdateApiKey = (id: string, apiKey: string) => {
+    void updateApiKey(id, apiKey);
   };
 
   const activeServers = servers.filter(s => s.enabled && s.status === 'connected');
@@ -400,35 +553,31 @@ export default function MCPDashboard() {
       {/* ヘッダー */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">MCP Gateway Dashboard</h1>
-              <p className="text-sm text-gray-600">MCPサーバー管理 - {servers.length}個のサーバー</p>
+              <h1 className="text-xl font-bold text-gray-900">{t('dashboard.header.title')}</h1>
+              <p className="text-sm text-gray-600">
+                {t('dashboard.header.subtitle', { count: servers.length })}
+              </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-sm">
-                <span className="text-green-600 font-medium">{activeServers.length}</span>
-                <span className="text-gray-500 mx-1">/</span>
-                <span className="text-gray-600">{servers.length} アクティブ</span>
+            <div className="flex flex-wrap items-center gap-3 justify-end">
+              <div className="text-sm text-gray-600">
+                {t('dashboard.header.activeSummary', { active: activeServers.length, total: servers.length })}
               </div>
-
-              {/* Tipsボタン */}
+              <LanguageSwitcher />
               <button
                 onClick={() => setShowTips(true)}
-                className="px-3 py-1.5 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-7
-
-                00 transition-colors whitespace-nowrap"
+                className="px-3 py-1.5 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700 transition-colors whitespace-nowrap"
               >
                 <i className="ri-lightbulb-line mr-1"></i>
-                Tips
+                {t('dashboard.actions.tips')}
               </button>
-
               <button
                 onClick={() => setShowConfigEditor(!showConfigEditor)}
                 className="px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap"
               >
                 <i className="ri-code-line mr-1"></i>
-                設定生成
+                {showConfigEditor ? t('dashboard.actions.hideConfigGenerator') : t('dashboard.actions.showConfigGenerator')}
               </button>
             </div>
           </div>
@@ -461,57 +610,54 @@ export default function MCPDashboard() {
         })()}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* アクティブなサーバー */}
           <div>
             <h3 className="text-sm font-semibold text-green-700 mb-3 flex items-center">
               <i className="ri-checkbox-circle-fill mr-2"></i>
-              アクティブ ({activeServers.length})
+              {t('dashboard.sections.active', { count: activeServers.length })}
             </h3>
             <div className="space-y-3">
               {activeServers.map(server => (
                 <MCPServerCard
                   key={server.id}
                   server={server}
-                  onToggle={toggleServer}
-                  onUpdateApiKey={updateApiKey}
+                  onToggle={handleToggleServer}
+                  onUpdateApiKey={handleUpdateApiKey}
                   compact={true}
                 />
               ))}
             </div>
           </div>
 
-          {/* APIキー設定が必要 */}
           <div>
             <h3 className="text-sm font-semibold text-blue-700 mb-3 flex items-center">
               <i className="ri-star-line mr-2"></i>
-              おすすめMCPサーバー ({recommendedServers.length})
+              {t('dashboard.sections.recommended', { count: recommendedServers.length })}
             </h3>
             <div className="space-y-3">
               {recommendedServers.map(server => (
                 <MCPServerCard
                   key={server.id}
                   server={server}
-                  onToggle={toggleServer}
-                  onUpdateApiKey={updateApiKey}
+                  onToggle={handleToggleServer}
+                  onUpdateApiKey={handleUpdateApiKey}
                   compact={true}
                 />
               ))}
             </div>
           </div>
 
-          {/* 無効化されたサーバー */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
               <i className="ri-stop-circle-line mr-2"></i>
-              無効化 ({disabledServers.length})
+              {t('dashboard.sections.disabled', { count: disabledServers.length })}
             </h3>
             <div className="space-y-3">
               {disabledServers.map(server => (
                 <MCPServerCard
                   key={server.id}
                   server={server}
-                  onToggle={toggleServer}
-                  onUpdateApiKey={updateApiKey}
+                  onToggle={handleToggleServer}
+                  onUpdateApiKey={handleUpdateApiKey}
                   compact={true}
                 />
               ))}

@@ -3,8 +3,8 @@
 OpenMCP Lazy Loading Patternのトークン削減効果を測定
 
 比較:
-1. Docker MCP Gateway (http://localhost:9090/sse) - オリジナル
-2. FastAPI Proxy (http://localhost:8001/api/v1/mcp/sse) - Schema Partitioned
+1. Docker MCP Gateway (http://gateway.localhost:9090/sse) - オリジナル
+2. FastAPI Proxy (http://gateway.localhost:9090/api/v1/mcp/sse) - Schema Partitioned
 """
 
 import asyncio
@@ -131,7 +131,7 @@ async def main():
 
     # 2. FastAPI Proxy（Schema Partitioned）
     print("\n📊 Step 2: Fetch from FastAPI Proxy (Schema Partitioned)")
-    proxy_data = await fetch_tools_via_gateway("http://localhost:8000/api/v1/mcp/sse")
+    proxy_data = await fetch_tools_via_gateway("http://gateway.localhost:9090/api/v1/mcp/sse")
 
     if not proxy_data:
         print("❌ Failed to fetch from Proxy")

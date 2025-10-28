@@ -66,9 +66,10 @@ airis-gateway update
 ## Access URLs
 
 After installation:
-- **Gateway**: http://localhost:9090
-- **Settings UI**: http://localhost:5173 (manage MCP servers)
-- **API Docs**: http://localhost:8001/docs
+- **Gateway**: http://gateway.localhost:9090
+- **Settings UI**: http://ui.gateway.localhost:5173
+- **API Docs**: http://gateway.localhost:9090/api/docs
+- *(Need internal-only networking? Run `make up-dev` inside the repository.)*
 
 ## Requirements
 

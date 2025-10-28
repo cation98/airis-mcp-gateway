@@ -190,15 +190,15 @@ export const SERVER_CONFIG_SCHEMAS: Record<string, ServerConfigSchema> = {
         key: 'PG_DSN',
         label: 'PostgreSQL DSN',
         type: 'text',
-        placeholder: 'postgres://user:password@host:5432/postgres',
+        placeholder: 'postgres://user:password@postgres:5432/postgres',
         required: true,
-        helpText: 'Use read-only role. Example: postgres://mcp_ro:password@host.docker.internal:5432/postgres'
+        helpText: 'Use read-only role. Example: postgres://mcp_ro:password@postgres:5432/postgres'
       },
       {
         key: 'POSTGREST_URL',
         label: 'PostgREST URL',
         type: 'url',
-        placeholder: 'http://host.docker.internal:54321/rest/v1',
+        placeholder: 'http://postgrest:3000/rest/v1',
         required: true,
         helpText: 'Self-hosted Supabase PostgREST endpoint (rest/v1)'
       },

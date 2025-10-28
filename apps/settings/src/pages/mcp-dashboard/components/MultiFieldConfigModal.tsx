@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ServerConfigSchema, ConfigField } from '../../../types/mcp-config';
+import { useTranslation } from 'react-i18next';
+import type { ServerConfigSchema, ConfigField } from '../../../types/mcp-config';
 import { validateServerConfig, validateField } from '../../../validation/server-config';
 
 interface MultiFieldConfigModalProps {
@@ -14,6 +15,7 @@ export function MultiFieldConfigModal({ schema, onSave, onClose }: MultiFieldCon
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const { t } = useTranslation();
 
   const handleChange = (key: string, value: string) => {
     setValues(prev => ({ ...prev, [key]: value }));
@@ -26,15 +28,15 @@ export function MultiFieldConfigModal({ schema, onSave, onClose }: MultiFieldCon
         if (validation.valid) {
           delete newErrors[key];
         } else {
-          newErrors[key] = validation.error || 'Invalid value';
+          newErrors[key] = validation.error || t('multiFieldConfigModal.errors.invalidValue');
         }
         return newErrors;
       });
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
     // Validate all fields with Zod
     const validation = validateServerConfig(schema.id, values);
@@ -49,7 +51,8 @@ export function MultiFieldConfigModal({ schema, onSave, onClose }: MultiFieldCon
       await onSave(values);
       onClose();
     } catch (error) {
-      alert(`保存エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : t('common.feedback.unknownError');
+      alert(t('multiFieldConfigModal.feedback.saveError', { message }));
     } finally {
       setIsSaving(false);
     }
@@ -92,10 +95,12 @@ export function MultiFieldConfigModal({ schema, onSave, onClose }: MultiFieldCon
         {/* Header */}
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{schema.name} 設定</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              {t('multiFieldConfigModal.title', { name: schema.name })}
+            </h2>
             <p className="text-sm text-gray-600 mt-1">
-              {schema.configType === 'multiple' && `${schema.fields.length}個の設定項目`}
-              {schema.configType === 'connection_string' && '接続文字列の設定'}
+              {schema.configType === 'multiple' && t('multiFieldConfigModal.summary.multiple', { count: schema.fields.length })}
+              {schema.configType === 'connection_string' && t('multiFieldConfigModal.summary.connectionString')}
             </p>
           </div>
           <button
@@ -108,7 +113,7 @@ export function MultiFieldConfigModal({ schema, onSave, onClose }: MultiFieldCon
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={(event) => { void handleSubmit(event); }} className="p-6 space-y-6">
           {schema.fields.map((field) => (
             <div key={field.key} className="space-y-2">
               <label className="block">
@@ -129,7 +134,7 @@ export function MultiFieldConfigModal({ schema, onSave, onClose }: MultiFieldCon
                       className="text-xs text-blue-600 hover:text-blue-800 transition-colors"
                     >
                       <i className="ri-eye-line mr-1"></i>
-                      表示切替
+                      {t('multiFieldConfigModal.toggleVisibility')}
                     </button>
                   )}
                 </div>
@@ -164,7 +169,7 @@ export function MultiFieldConfigModal({ schema, onSave, onClose }: MultiFieldCon
               className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               disabled={isSaving}
             >
-              キャンセル
+              {t('common.actions.cancel')}
             </button>
             <button
               type="submit"
@@ -174,12 +179,12 @@ export function MultiFieldConfigModal({ schema, onSave, onClose }: MultiFieldCon
               {isSaving ? (
                 <>
                   <i className="ri-loader-4-line animate-spin"></i>
-                  保存中...
+                  {t('multiFieldConfigModal.actions.saving')}
                 </>
               ) : (
                 <>
                   <i className="ri-save-line"></i>
-                  保存してGateway再起動
+                  {t('multiFieldConfigModal.actions.saveAndRestart')}
                 </>
               )}
             </button>

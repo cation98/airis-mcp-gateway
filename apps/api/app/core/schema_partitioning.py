@@ -112,6 +112,10 @@ class SchemaPartitioner:
                     if "default" in value:
                         new_prop["default"] = value["default"]
 
+                    # 配列の場合は items を再帰的に軽量化
+                    if value.get("type") == "array" and isinstance(value.get("items"), dict):
+                        new_prop["items"] = self.partition_schema(value["items"], max(depth - 1, 0))
+
                     # ネストしたpropertiesは削除（type情報のみ残る）
                     # これによりトークン削減
 

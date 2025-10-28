@@ -85,7 +85,7 @@ def upgrade() -> None:
             'args': [
                 '-c',
                 'docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} '
-                '-e MINDBASE_API_URL=${MINDBASE_API_URL:-http://host.docker.internal:18002} '
+                '-e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} '
                 '-v ${HOST_REPO_DIR}/servers/mindbase:/app:ro '
                 '-w /app node:24-alpine node dist/index.js'
             ],

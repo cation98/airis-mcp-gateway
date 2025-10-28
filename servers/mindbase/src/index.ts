@@ -3,7 +3,7 @@
 /**
  * MindBase MCP Server
  *
- * Wraps MindBase REST API (http://localhost:18002) for MCP protocol integration
+ * Wraps MindBase REST API (default: http://mindbase-api:18002) for MCP protocol integration
  * Provides semantic search and conversation storage via qwen3-embedding:8b
  */
 
@@ -17,7 +17,7 @@ import { simpleGit } from "simple-git";
 import path from "path";
 
 // MindBase API configuration
-const MINDBASE_API_BASE = process.env.MINDBASE_API_URL || "http://localhost:18002";
+const MINDBASE_API_BASE = process.env.MINDBASE_API_URL || "http://mindbase-api:18002";
 
 // Repository detection utility
 interface RepositoryInfo {

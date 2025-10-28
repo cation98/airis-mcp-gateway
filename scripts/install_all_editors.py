@@ -12,13 +12,17 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 
+GATEWAY_PUBLIC_URL = os.getenv("GATEWAY_PUBLIC_URL", "http://gateway.localhost:9090")
+GATEWAY_SSE_URL = f"{GATEWAY_PUBLIC_URL.rstrip('/')}/sse"
+
+
 class EditorInstaller:
     """Unified installer for all MCP-compatible editors"""
 
     GATEWAY_CONFIG = {
         "mcpServers": {
             "airis-mcp-gateway": {
-                "url": "http://localhost:9090/sse",
+                "url": GATEWAY_SSE_URL,
                 "description": "All MCP servers via unified Gateway (25 servers, zero-token baseline)"
             }
         }
@@ -134,7 +138,7 @@ class EditorInstaller:
                 settings["context_servers"] = {
                     "airis-mcp-gateway": {
                         "command": "curl",
-                        "args": ["-N", "http://localhost:9090/sse"]
+                        "args": ["-N", GATEWAY_SSE_URL]
                     }
                 }
 

@@ -160,8 +160,7 @@ async def mcp_sse_proxy(request: Request):
     """
     MCP SSE Proxy Endpoint
 
-    Claude Code connects here:
-    "url": "http://localhost:8001/mcp/sse"
+    Claude Code connects via the public API URL (`${GATEWAY_API_URL}/v1/mcp/sse`)
     """
     return StreamingResponse(
         proxy_sse_stream(request),

@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface MCPServer {
   id: string;
@@ -26,13 +27,16 @@ interface MCPServerCardProps {
 export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = false }: MCPServerCardProps) {
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
+  const { t } = useTranslation();
+  const paddingClass = compact ? 'p-3' : 'p-4';
+  const descriptionClass = compact ? 'text-[11px]' : 'text-xs';
 
   const commandPreview = (() => {
     const parts = [
       server.command,
       ...(Array.isArray(server.args) ? server.args.slice(0, 2) : [])
     ].filter(Boolean);
-    return parts.length > 0 ? parts.join(' ') : 'builtin';
+    return parts.length > 0 ? parts.join(' ') : t('serverCard.commandPreview.builtin');
   })();
 
   useEffect(() => {
@@ -65,7 +69,7 @@ export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = fals
   };
 
   return (
-    <div className={`bg-white rounded-lg border transition-all p-3 ${
+    <div className={`bg-white rounded-lg border transition-all ${paddingClass} ${
       server.enabled ? 'border-blue-200 shadow-sm' : 'border-gray-200'
     }`}>
       {/* ヘッダー */}
@@ -77,12 +81,12 @@ export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = fals
             {server.recommended && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                 <i className="ri-star-fill mr-1 text-xs"></i>
-                おすすめ
+                {t('serverCard.badge.recommended')}
               </span>
             )}
         </div>
-          <p className="text-xs text-gray-600 truncate">{server.description}</p>
-          <div className="text-xs text-gray-500 mt-1 truncate">
+          <p className={`${descriptionClass} text-gray-600 truncate`}>{server.description}</p>
+          <div className="text-[11px] text-gray-500 mt-1 truncate">
             {commandPreview}
           </div>
         </div>
@@ -118,7 +122,7 @@ export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = fals
               }`}
             >
               <i className={`${server.apiKey ? 'ri-key-fill' : 'ri-key-line'} mr-1`}></i>
-              {server.apiKey ? 'APIキー設定済み' : 'APIキーを設定'}
+              {server.apiKey ? t('serverCard.buttons.configured') : t('serverCard.buttons.configure')}
             </button>
           ) : (
             <div className="space-y-2">
@@ -126,7 +130,7 @@ export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = fals
                 type="password"
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="APIキーを入力"
+                placeholder={t('serverCard.inputs.apiKeyPlaceholder')}
                 className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               />
               <div className="flex gap-1">
@@ -134,13 +138,13 @@ export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = fals
                   onClick={handleApiKeySubmit}
                   className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
                 >
-                  保存
+                  {t('common.actions.save')}
                 </button>
                 <button
                   onClick={() => setShowApiKeyInput(false)}
                   className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors whitespace-nowrap"
                 >
-                  キャンセル
+                  {t('common.actions.cancel')}
                 </button>
               </div>
             </div>

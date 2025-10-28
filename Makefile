@@ -27,9 +27,7 @@ DEV_PORT ?= 5173
 CLI_PROFILE := cli
 PNPM_BOOTSTRAP := set -euo pipefail; \
 	corepack enable >/dev/null 2>&1; \
-	corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1; \
-	PNPM_BIN="$$(corepack which pnpm)"; \
-	export PATH="$$(dirname "$$PNPM_BIN")":$$PATH;
+	corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1;
 
 # Auto-detect project name from directory
 HOST_REPO_DIR := $(shell pwd)
@@ -70,7 +68,7 @@ doctor: ## 開発前ヘルスチェック
 	@echo ">> Node $(NODE_VER) & pnpm $(PNPM_VER) inside container"
 	@$(DC) --profile $(CLI_PROFILE) run --rm \
 		-e UID=$$(id -u) -e GID=$$(id -g) \
-		$(NODE_SVC) bash -lc '$(PNPM_BOOTSTRAP) node -v && pnpm --version'
+		$(NODE_SVC) bash -lc '$(PNPM_BOOTSTRAP) node -v; corepack pnpm --version'
 
 # ========== Workspace Tooling ==========
 
@@ -135,17 +133,34 @@ typegen: ## DB→TS型生成を実行
 generate-mcp-config: ## Generate mcp.json from template
 	@echo "$(BLUE)Generating mcp.json from template...$(NC)"
 	@envsubst < mcp.json.template > mcp.json
-	@echo "$(GREEN)✅ mcp.json generated (API_PORT=$${API_PORT})$(NC)"
+	@echo "$(GREEN)✅ mcp.json generated (GATEWAY_API_URL=$${GATEWAY_API_URL})$(NC)"
+
+.PHONY: check-host-ports
+check-host-ports: ## Verify source files do not reference localhost or host.docker.internal
+	@scripts/check-no-host-ports.sh
 
 .PHONY: up
-up: generate-mcp-config ## Start all services
-	@echo "$(GREEN)Starting services...$(NC)"
+up: generate-mcp-config ## Start all services with localhost publishing
+	@echo "$(GREEN)Starting services with host port bindings...$(NC)"
+	@$(DC) -f docker-compose.yml -f docker-compose.dev.yml up -d --build --remove-orphans
+	@echo "$(GREEN)✅ All services started (localhost accessible)$(NC)"
+	@echo "🔗 Gateway:     $${GATEWAY_PUBLIC_URL}"
+	@echo "🚀 API (proxy): $${GATEWAY_API_URL}"
+	@echo "🎨 Settings UI: $${UI_PUBLIC_URL}"
+	@echo ""
+	@echo "🧠 Internal DNS: http://mcp-gateway:$${GATEWAY_LISTEN_PORT}, http://api:$${API_LISTEN_PORT}, http://settings-ui:$${UI_LISTEN_PORT}"
+	@echo "💡 Need internal-only networking? Run 'make up-dev'."
+
+.PHONY: up-dev
+up-dev: generate-mcp-config ## Start all services (internal-only networking)
+	@echo "$(GREEN)Starting services (internal DNS only)...$(NC)"
 	@$(DC) up -d --build --remove-orphans
-	@echo "$(GREEN)✅ All services started$(NC)"
-	@echo "🔗 Gateway: http://localhost:$${GATEWAY_PORT}"
-	@echo "🗄️  Database: internal only"
-	@echo "🚀 API: http://localhost:$${API_PORT} (docs: /docs)"
-	@echo "🎨 UI: http://localhost:$${UI_PORT}"
+	@echo "$(GREEN)✅ All services started (internal mode)$(NC)"
+	@echo "🔗 Gateway (internal DNS): http://mcp-gateway:$${GATEWAY_LISTEN_PORT}"
+	@echo "🧠 API (internal DNS):     http://api:$${API_LISTEN_PORT}"
+	@echo "🎨 UI (internal DNS):      http://settings-ui:$${UI_LISTEN_PORT}"
+	@echo ""
+	@echo "💡 Need localhost access? Run 'make up'."
 
 .PHONY: down
 down: ## Stop all services
@@ -310,7 +325,8 @@ ui-build: ## Build Settings UI image
 ui-up: ## Start Settings UI
 	@$(DC) up -d settings-ui
 	@echo "$(GREEN)✅ Settings UI started$(NC)"
-	@echo "🎨 http://localhost:$${UI_PORT}"
+	@echo "🎨 Internal URL: http://settings-ui:$${UI_LISTEN_PORT}"
+	@echo "💡 Need localhost access? Run 'make up'."
 
 .PHONY: ui-down
 ui-down: ## Stop Settings UI
@@ -438,9 +454,9 @@ install-claude: ## Install and register with Claude Code (one-command setup)
 	@echo "  3. Verify: $(GREEN)airis-mcp-gateway$(NC) appears in list"
 	@echo ""
 	@echo "$(BLUE)Access URLs:$(NC)"
-	@echo "  Gateway:     http://localhost:$${GATEWAY_PORT}"
-	@echo "  Settings UI: http://localhost:$${UI_PORT}"
-	@echo "  API Docs:    http://localhost:$${API_PORT}/docs"
+	@echo "  Gateway:     $${GATEWAY_PUBLIC_URL}"
+	@echo "  Settings UI: $${UI_PUBLIC_URL}"
+	@echo "  API Docs:    $${GATEWAY_API_URL}/docs"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 .PHONY: uninstall-claude
@@ -480,8 +496,8 @@ verify-claude: ## Verify Claude Code installation
 	fi
 	@echo ""
 	@echo "Checking connectivity..."
-	@if curl -sf http://localhost:$${GATEWAY_PORT}/ > /dev/null; then \
-		echo "$(GREEN)✅ Gateway responding at http://localhost:$${GATEWAY_PORT}$(NC)"; \
+	@if curl -sf $${GATEWAY_PUBLIC_URL}/ > /dev/null; then \
+		echo "$(GREEN)✅ Gateway responding at $${GATEWAY_PUBLIC_URL}$(NC)"; \
 	else \
 		echo "$(RED)❌ Gateway not responding$(NC)"; \
 		exit 1; \
@@ -521,9 +537,9 @@ install: ## Install AIRIS Gateway (imports existing IDE configs automatically)
 	@echo "  2. Test MCP tools - all share unified Gateway!"
 	@echo ""
 	@echo "$(BLUE)Access URLs:$(NC)"
-	@echo "  Gateway:     http://localhost:$${GATEWAY_PORT}"
-	@echo "  Settings UI: http://localhost:$${UI_PORT}"
-	@echo "  API Docs:    http://localhost:$${API_PORT}/docs"
+	@echo "  Gateway:     $${GATEWAY_PUBLIC_URL}"
+	@echo "  Settings UI: $${UI_PUBLIC_URL}"
+	@echo "  API Docs:    $${GATEWAY_API_URL}/docs"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 .PHONY: install-dev
@@ -551,9 +567,9 @@ install-dev: ## Install with UI/API (development mode, imports existing configs)
 	@cat /tmp/airis_import_summary.txt 2>/dev/null | grep -A 20 "Found MCP Servers" || echo "  No existing configs found (fresh install)"
 	@echo ""
 	@echo "$(GREEN)Web Dashboard:$(NC)"
-	@echo "  🎨 Settings UI: http://localhost:$${UI_PORT}"
-	@echo "  📊 API Docs:    http://localhost:$${API_PORT}/docs"
-	@echo "  🔗 Gateway:     http://localhost:$${GATEWAY_PORT}"
+	@echo "  🎨 Settings UI: $${UI_PUBLIC_URL}"
+	@echo "  📊 API Docs:    $${GATEWAY_API_URL}/docs"
+	@echo "  🔗 Gateway:     $${GATEWAY_PUBLIC_URL}"
 	@echo ""
 	@echo "$(BLUE)Features:$(NC)"
 	@echo "  - Toggle MCP servers ON/OFF via UI"
@@ -563,7 +579,7 @@ install-dev: ## Install with UI/API (development mode, imports existing configs)
 	@echo ""
 	@echo "$(BLUE)Next Steps:$(NC)"
 	@echo "  1. $(YELLOW)Restart ALL editors$(NC)"
-	@echo "  2. Open http://localhost:$${UI_PORT} to customize"
+	@echo "  2. Open $${UI_PUBLIC_URL} to customize"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 .PHONY: install-import

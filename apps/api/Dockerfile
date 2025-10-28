@@ -27,11 +27,11 @@ COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
 
 # Expose port
-EXPOSE 8000
+EXPOSE 9000
 
-# Health check
+# Health check (respects API_LISTEN_PORT env if provided)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+  CMD python -c "import os, urllib.request; port=os.environ.get('API_LISTEN_PORT', '9000'); urllib.request.urlopen(f'http://localhost:{port}/health')"
 
 # Run FastAPI with uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${API_LISTEN_PORT:-9000} --reload"]

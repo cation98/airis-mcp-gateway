@@ -1,19 +1,13 @@
-# Development overrides for Settings UI and API
 services:
+  mcp-gateway:
+    # Dev-only host publishing. Base compose stays internal.
+    ports:
+      - "${GATEWAY_LISTEN_PORT:-9090}:${GATEWAY_LISTEN_PORT:-9090}"
+
   api:
-    volumes:
-      - ./apps/api/alembic:/app/alembic:rw
+    ports:
+      - "${API_LISTEN_PORT:-9000}:${API_LISTEN_PORT:-9000}"
 
   settings-ui:
-    build:
-      context: ./apps/settings
-      dockerfile: Dockerfile.dev
-      target: development
-    volumes:
-      - ./apps/settings:/app:rw
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-    command: pnpm dev --host 0.0.0.0 --port 3000
     ports:
-      - "${UI_PORT}:3000"
+      - "${UI_LISTEN_PORT:-5173}:${UI_LISTEN_PORT:-5173}"
