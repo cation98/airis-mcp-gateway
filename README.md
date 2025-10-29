@@ -14,19 +14,21 @@ Prerequisites:
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
 cp .env.example .env        # adjust listen ports or public domains if needed
-make up                     # localhost publishing (9090/9000/5173)
-# Optional: internal-only mode (Docker DNS only)
-# make up-dev
+make install                # unified install (build, start, editor registration)
+# Optional: dev profile with UI/API preview
+# make install-dev
 ```
 
-`make up` will:
+`make install` will:
+- import any existing MCP configs from Claude, Cursor, or Zed and back them up
 - generate `mcp.json` from `mcp.json.template` (port/env-aware)
 - build the Gateway, API, UI, and bundled MCP servers
 - seed the database (MindBase + Self-Management shipped by default)
+- run all database migrations automatically via Alembic
 - start everything in the background and print running endpoints
 
 When it finishes you should see:
-- Gateway SSE endpoint → `http://gateway.localhost:9090/sse`
+- Gateway SSE endpoint → `http://gateway.localhost:9090/api/v1/mcp/sse`
 - FastAPI docs → `http://gateway.localhost:9090/api/docs`
 - Settings UI → `http://ui.gateway.localhost:5173`
 
@@ -38,13 +40,14 @@ Need a quick health check? Run `make doctor` to verify Docker availability and t
 
 | Command | What it does |
 |---------|--------------|
-| `make up` | Build + start all services (localhost publishing 9090/9000/5173) |
+| `make install` | Full install: build/start services and register every editor |
+| `make restart` | Full stop/start cycle (no editor import) |
+| `make up` | Start services only (advanced/CI use) |
 | `make up-dev` | Start with internal-only networking (Docker DNS only) |
 | `make down` | Stop containers, keep volumes |
 | `make clean` | Stop everything and drop local volumes |
 | `make logs` | Stream logs from every service |
 | `make ps` | Show container status |
-| `make restart` | Full stop/start cycle |
 
 All commands run through docker-compose using the auto-detected workspace paths. No Homebrew tap or local Node install required.
 
@@ -53,7 +56,7 @@ All commands run through docker-compose using the auto-detected workspace paths.
 ## 🔧 Configuration
 
 - `.env` centralises container listen ports (`GATEWAY_LISTEN_PORT`, `API_LISTEN_PORT`, `UI_LISTEN_PORT`), public domains (`GATEWAY_PUBLIC_URL`, `UI_PUBLIC_URL`, `GATEWAY_API_URL`), database credentials, and the encryption master key. Defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
-- `make generate-mcp-config` renders `mcp.json` from `mcp.json.template`, swapping `${GATEWAY_API_URL}` and other variables. It runs automatically before `make up`, so no manual edits required.
+- `make generate-mcp-config` renders `mcp.json` from `mcp.json.template`, swapping `${GATEWAY_API_URL}` and other variables. It runs automatically inside `make install`, so no manual edits required.
 - Secrets stay out of `.env`: save API keys via the Settings UI. They are encrypted with Fernet using `ENCRYPTION_MASTER_KEY` and stored in Postgres; the Gateway fetches and injects them on startup.
 - Project paths are auto-detected by `make` and injected as:
   - `HOST_WORKSPACE_DIR` → parent directory containing your clones
@@ -61,7 +64,7 @@ All commands run through docker-compose using the auto-detected workspace paths.
   - `CONTAINER_PROJECT_ROOT` → `/workspace/host/<repo>`
 - Internal wiring between containers defaults to `http://api:9000` for the FastAPI service and `http://mcp-gateway:9090` for the gateway. Override with `API_INTERNAL_URL`, `MINDBASE_API_URL`, or `GATEWAY_API_URL` if your topology changes.
 
-Need additional MCP servers? Add them via the Settings UI or edit `profiles/` and restart with `make up`.
+Need additional MCP servers? Add them via the Settings UI or edit `profiles/` and re-run `make install` (or `make restart` if configs stay the same).
 
 ---
 
@@ -82,7 +85,7 @@ The `node`, `pnpm`, and `supabase` binaries under `bin/` are shims that route in
 
 ## 🔌 Bundled MCP Servers
 
-Enabled by default after `make up`:
+Enabled by default after `make install`:
 - `filesystem` – read-only access to your workspace (mounted at `/workspace/host`)
 - `context7`, `serena`, `mindbase`, `sequentialthinking`, `time`, `fetch`, `git`, `memory`
 - Self-Management server (dynamic enable/disable orchestration, built from `servers/self-management`)
@@ -98,7 +101,7 @@ All containerised servers use environment-aware commands (`HOST_WORKSPACE_DIR`, 
 
 ## 🧀 Troubleshooting Cheats
 
-- **Need internal-only networking** → run `make up-dev` (no host port bindings).
+- **Need internal-only networking** → run `make up-dev` (no host port bindings) after the initial `make install`.
 - **Change internal bindings** → update `*_LISTEN_PORT` in `.env`, then `make restart`.
 - **Docker daemon unavailable** → run `make doctor` for context; ensure Docker Desktop/OrbStack is running.
 - **MindBase / Supabase directories missing** → create adjacent clones or override `HOST_SUPABASE_DIR` in `.env`.

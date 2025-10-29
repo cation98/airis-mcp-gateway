@@ -25,6 +25,9 @@ COPY tests ./tests
 # Copy Alembic migrations
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
+COPY entrypoint.sh ./entrypoint.sh
+
+RUN chmod +x ./entrypoint.sh
 
 # Expose port
 EXPOSE 9000
@@ -33,5 +36,5 @@ EXPOSE 9000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD python -c "import os, urllib.request; port=os.environ.get('API_LISTEN_PORT', '9000'); urllib.request.urlopen(f'http://localhost:{port}/health')"
 
-# Run FastAPI with uvicorn
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${API_LISTEN_PORT:-9000} --reload"]
+# Run migrations then start FastAPI
+ENTRYPOINT ["./entrypoint.sh"]
