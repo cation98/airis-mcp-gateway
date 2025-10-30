@@ -38,9 +38,9 @@ export const SERVER_CONFIG_SCHEMAS: Record<string, ServerConfigSchema> = {
         key: 'TAVILY_API_KEY',
         label: 'API Key',
         type: 'password',
-        placeholder: 'tvly-xxxxxxxxxxxxxxxxxx',
+        placeholder: 'tvly_xxxxxxxxxxxxxxxxxx',
         required: true,
-        validation: /^tvly-[A-Za-z0-9]{32,}$/,
+        validation: /^tvly[-_][A-Za-z0-9_-]{16,}$/,
         helpText: 'Get your API key from https://tavily.com/dashboard'
       }
     ]
@@ -59,6 +59,38 @@ export const SERVER_CONFIG_SCHEMAS: Record<string, ServerConfigSchema> = {
         required: true,
         validation: /^sk_(test|live)_[A-Za-z0-9]{24,}$/,
         helpText: 'Use test key for development, live key for production'
+      }
+    ]
+  },
+
+  magic: {
+    id: 'magic',
+    name: 'Magic',
+    configType: 'single',
+    fields: [
+      {
+        key: 'TWENTYFIRST_API_KEY',
+        label: 'TwentyFirst API Key',
+        type: 'password',
+        placeholder: 'Enter your TwentyFirst API key',
+        required: true,
+        helpText: 'Required for @21st-dev/magic MCP server'
+      }
+    ]
+  },
+
+  'morphllm-fast-apply': {
+    id: 'morphllm-fast-apply',
+    name: 'MorphLLM Fast Apply',
+    configType: 'single',
+    fields: [
+      {
+        key: 'MORPH_API_KEY',
+        label: 'Morph API Key',
+        type: 'password',
+        placeholder: 'Enter your MORPH_API_KEY',
+        required: true,
+        helpText: 'Required for @morph-llm/morph-fast-apply MCP server'
       }
     ]
   },

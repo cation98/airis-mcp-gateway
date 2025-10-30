@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MCPServerCard } from './components/MCPServerCard';
+import { MCPServerCard, ConflictNotice } from './components/MCPServerCard';
 import { ConfigEditor } from './components/ConfigEditor';
 import { TipsModal } from './components/TipsModal';
 import { MultiFieldConfigModal } from './components/MultiFieldConfigModal';
@@ -60,6 +60,21 @@ interface ValidationResponse {
 interface ApiErrorResponse {
   detail?: string;
 }
+
+const CONFLICT_RULES: Record<string, { conflictsWith: string[]; messageKey: string }> = {
+  tavily: {
+    conflictsWith: ['fetch', 'brave-search'],
+    messageKey: 'dashboard.alerts.conflicts.tavily',
+  },
+  fetch: {
+    conflictsWith: ['tavily'],
+    messageKey: 'dashboard.alerts.conflicts.fetch',
+  },
+  'brave-search': {
+    conflictsWith: ['tavily'],
+    messageKey: 'dashboard.alerts.conflicts.braveSearch',
+  },
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -391,6 +406,19 @@ export default function MCPDashboard() {
       }
     }
 
+    if (newEnabledState) {
+      const rule = CONFLICT_RULES[id];
+      if (rule) {
+        const conflictingActiveServers = servers.filter(
+          (server) => rule.conflictsWith.includes(server.id) && server.enabled,
+        );
+        if (conflictingActiveServers.length > 0) {
+          const names = conflictingActiveServers.map((server) => server.name).join(', ');
+          alert(t(rule.messageKey, { server: names }));
+        }
+      }
+    }
+
     setServers(prev => prev.map(server =>
       server.id === id
         ? { ...server, enabled: newEnabledState, status: newEnabledState ? 'connected' : 'disconnected' }
@@ -422,6 +450,8 @@ export default function MCPDashboard() {
     // Single field configuration - legacy flow
     const keyNameMap: Record<string, string> = {
       'tavily': 'TAVILY_API_KEY',
+      'magic': 'TWENTYFIRST_API_KEY',
+      'morphllm-fast-apply': 'MORPH_API_KEY',
       'stripe': 'STRIPE_SECRET_KEY',
       'figma': 'FIGMA_ACCESS_TOKEN',
       'github': 'GITHUB_PERSONAL_ACCESS_TOKEN',
@@ -528,25 +558,22 @@ export default function MCPDashboard() {
   };
 
   const activeServers = servers.filter(s => s.enabled && s.status === 'connected');
-  const officialRecommendedOrder = [
-    'filesystem',
-    'context7',
-    'serena',
-    'mindbase',
-    'sequentialthinking',
-    'time',
-    'fetch',
-    'git',
-    'memory',
-    'tavily',
-    'supabase',
-    'github',
-    'brave-search',
-  ];
-  const recommendedServers = officialRecommendedOrder
-    .map(id => servers.find(server => server.id === id))
-    .filter((server): server is typeof servers[number] => Boolean(server && !server.enabled));
   const disabledServers = servers.filter(s => !s.enabled);
+
+  const resolveConflicts = (server: MCPServer): ConflictNotice[] => {
+    const rule = CONFLICT_RULES[server.id];
+    if (!rule) {
+      return [];
+    }
+    return rule.conflictsWith.map((otherId) => {
+      const counterpart = servers.find((item) => item.id === otherId);
+      return {
+        id: otherId,
+        message: t(rule.messageKey, { server: counterpart?.name ?? otherId }),
+        active: Boolean(counterpart?.enabled),
+      };
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -609,7 +636,7 @@ export default function MCPDashboard() {
           ) : null;
         })()}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
             <h3 className="text-sm font-semibold text-green-700 mb-3 flex items-center">
               <i className="ri-checkbox-circle-fill mr-2"></i>
@@ -622,24 +649,7 @@ export default function MCPDashboard() {
                   server={server}
                   onToggle={handleToggleServer}
                   onUpdateApiKey={handleUpdateApiKey}
-                  compact={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold text-blue-700 mb-3 flex items-center">
-              <i className="ri-star-line mr-2"></i>
-              {t('dashboard.sections.recommended', { count: recommendedServers.length })}
-            </h3>
-            <div className="space-y-3">
-              {recommendedServers.map(server => (
-                <MCPServerCard
-                  key={server.id}
-                  server={server}
-                  onToggle={handleToggleServer}
-                  onUpdateApiKey={handleUpdateApiKey}
+                  conflicts={resolveConflicts(server)}
                   compact={true}
                 />
               ))}
@@ -658,6 +668,7 @@ export default function MCPDashboard() {
                   server={server}
                   onToggle={handleToggleServer}
                   onUpdateApiKey={handleUpdateApiKey}
+                  conflicts={resolveConflicts(server)}
                   compact={true}
                 />
               ))}

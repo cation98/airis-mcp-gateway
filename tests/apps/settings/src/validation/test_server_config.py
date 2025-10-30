@@ -22,13 +22,63 @@ def test_tavily_schema_invalid_format():
     from apps.settings.src.validation.server_config import validateServerConfig
 
     config = {
-        "TAVILY_API_KEY": "invalid_key_format"
+        "TAVILY_API_KEY": "tvly-invalid"
     }
 
     result = validateServerConfig("tavily", config)
     assert result["success"] is False
     assert "TAVILY_API_KEY" in result["errors"]
     assert "format" in result["errors"]["TAVILY_API_KEY"].lower()
+
+
+def test_magic_schema_valid():
+    """Test valid Magic API key"""
+    from apps.settings.src.validation.server_config import validateServerConfig
+
+    config = {
+        "TWENTYFIRST_API_KEY": "tfsk_test_magic_key"
+    }
+
+    result = validateServerConfig("magic", config)
+    assert result["success"] is True
+
+
+def test_magic_schema_invalid_empty():
+    """Magic API key should not accept empty value"""
+    from apps.settings.src.validation.server_config import validateServerConfig
+
+    config = {
+        "TWENTYFIRST_API_KEY": ""
+    }
+
+    result = validateServerConfig("magic", config)
+    assert result["success"] is False
+    assert "TWENTYFIRST_API_KEY" in result["errors"]
+
+
+def test_morph_schema_valid():
+    """Test valid MorphLLM API key"""
+    from apps.settings.src.validation.server_config import validateServerConfig
+
+    config = {
+        "MORPH_API_KEY": "morph_test_key_value"
+    }
+
+    result = validateServerConfig("morphllm-fast-apply", config)
+    assert result["success"] is True
+
+
+def test_morph_schema_invalid_empty():
+    """MorphLLM API key should not accept empty value"""
+    from apps.settings.src.validation.server_config import validateServerConfig
+
+    config = {
+        "MORPH_API_KEY": ""
+    }
+
+    result = validateServerConfig("morphllm-fast-apply", config)
+    assert result["success"] is False
+    assert "MORPH_API_KEY" in result["errors"]
 
 
 def test_stripe_schema_valid():
@@ -206,7 +256,7 @@ def test_validate_field_failure():
     """Test single field validation - failure case"""
     from apps.settings.src.validation.server_config import validateField
 
-    result = validateField("tavily", "TAVILY_API_KEY", "invalid_format")
+    result = validateField("tavily", "TAVILY_API_KEY", "tvly-invalid")
 
     assert result["valid"] is False
     assert result.get("error") is not None

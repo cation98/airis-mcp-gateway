@@ -8,7 +8,7 @@ class APIKeyValidator:
 
     # API Key patterns
     PATTERNS = {
-        "TAVILY_API_KEY": r"^tvly-[A-Za-z0-9]{32,}$",
+        "TAVILY_API_KEY": r"^tvly[-_][A-Za-z0-9_-]{16,}$",
         "STRIPE_SECRET_KEY": r"^sk_(test|live)_[A-Za-z0-9]{24,}$",
         "FIGMA_ACCESS_TOKEN": r"^figd_[A-Za-z0-9_-]{40,}$",
         "GITHUB_PERSONAL_ACCESS_TOKEN": r"^gh[ps]_[A-Za-z0-9]{36,}$",

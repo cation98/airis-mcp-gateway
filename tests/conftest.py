@@ -70,5 +70,5 @@ def valid_twilio_config():
 def invalid_tavily_config():
     """Invalid Tavily configuration"""
     return {
-        "TAVILY_API_KEY": "invalid_key_format"
+        "TAVILY_API_KEY": "tvly-invalid"
     }

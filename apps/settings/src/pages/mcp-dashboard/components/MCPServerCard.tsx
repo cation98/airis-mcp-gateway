@@ -17,14 +17,27 @@ interface MCPServer {
   recommended?: boolean;
 }
 
+export interface ConflictNotice {
+  id: string;
+  message: string;
+  active: boolean;
+}
+
 interface MCPServerCardProps {
   server: MCPServer;
   onToggle: (id: string) => void;
   onUpdateApiKey: (id: string, apiKey: string) => void;
   compact?: boolean;
+  conflicts?: ConflictNotice[];
 }
 
-export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = false }: MCPServerCardProps) {
+export function MCPServerCard({
+  server,
+  onToggle,
+  onUpdateApiKey,
+  compact = false,
+  conflicts = [],
+}: MCPServerCardProps) {
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const { t } = useTranslation();
@@ -68,6 +81,39 @@ export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = fals
     }
   };
 
+  const hasEnvRequirements = Boolean(server.env && Object.keys(server.env).length > 0);
+
+  const headerBadges = [];
+
+  if (server.apiKeyRequired) {
+    headerBadges.push({
+      key: 'api-required',
+      icon: 'ri-key-2-line',
+      text: t('serverCard.badge.apiKeyRequired'),
+      className: 'bg-amber-100 text-amber-800 border border-amber-200',
+    });
+  } else if (!hasEnvRequirements) {
+    headerBadges.push({
+      key: 'no-setup',
+      icon: 'ri-flashlight-fill',
+      text: t('serverCard.badge.noSetupNeeded'),
+      className: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+    });
+  }
+
+  if (server.recommended) {
+    headerBadges.push({
+      key: 'recommended',
+      icon: 'ri-star-smile-line',
+      text: t('serverCard.badge.recommended'),
+      className: 'bg-blue-50 text-blue-700 border border-blue-200',
+    });
+  }
+
+  const conflictTooltip = conflicts.map((conflict) => `• ${conflict.message}`).join('\n');
+  const hasConflicts = conflicts.length > 0;
+  const activeConflicts = conflicts.filter(conflict => conflict.active);
+
   return (
     <div className={`bg-white rounded-lg border transition-all ${paddingClass} ${
       server.enabled ? 'border-blue-200 shadow-sm' : 'border-gray-200'
@@ -78,13 +124,32 @@ export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = fals
           <div className="flex items-center gap-2 mb-1">
             <h4 className="font-medium text-gray-900 text-sm truncate">{server.name}</h4>
             <i className={`${getStatusIcon()} text-xs ${getStatusColor()}`}></i>
-            {server.recommended && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                <i className="ri-star-fill mr-1 text-xs"></i>
-                {t('serverCard.badge.recommended')}
+            {hasConflicts && (
+              <span
+                className="inline-flex items-center justify-center"
+                title={conflictTooltip}
+              >
+                <i
+                  className={`ri-alert-line text-xs ${
+                    activeConflicts.length > 0 ? 'text-amber-600' : 'text-gray-400'
+                  }`}
+                ></i>
               </span>
             )}
-        </div>
+          </div>
+          {headerBadges.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              {headerBadges.map(badge => (
+                <span
+                  key={badge.key}
+                  className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${badge.className}`}
+                >
+                  <i className={`${badge.icon} mr-1 text-xs`}></i>
+                  {badge.text}
+                </span>
+              ))}
+            </div>
+          )}
           <p className={`${descriptionClass} text-gray-600 truncate`}>{server.description}</p>
           <div className="text-[11px] text-gray-500 mt-1 truncate">
             {commandPreview}
@@ -149,6 +214,15 @@ export function MCPServerCard({ server, onToggle, onUpdateApiKey, compact = fals
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {activeConflicts.length > 0 && (
+        <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 flex items-start gap-2">
+          <i className="ri-alert-fill mt-0.5"></i>
+          <span>
+            {activeConflicts.map(conflict => conflict.message).join(' ')}
+          </span>
         </div>
       )}
     </div>

@@ -30,12 +30,46 @@
         "@upstash/context7-mcp"
       ]
     },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    },
     "serena": {
       "command": "sh",
       "args": [
         "-c",
         "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -v ${HOST_WORKSPACE_DIR}:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
       ]
+    },
+    "magic": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@21st-dev/magic"
+      ],
+      "env": {
+        "TWENTYFIRST_API_KEY": "${TWENTYFIRST_API_KEY}"
+      }
+    },
+    "morphllm-fast-apply": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@morph-llm/morph-fast-apply"
+      ],
+      "env": {
+        "MORPH_API_KEY": "${MORPH_API_KEY}"
+      }
     },
     "puppeteer": {
       "command": "npx",
@@ -78,6 +112,13 @@
       "env": {
         "TAVILY_API_KEY": "${TAVILY_API_KEY}"
       }
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
     },
     "__comment_database": "=== DATABASE & BACKEND ===",
     "__disabled_supabase": {

@@ -20,6 +20,9 @@ const dashboard = {
   'dashboard.alerts.configSaved': '設定を保存しました。Gatewayを再起動しています...',
   'dashboard.alerts.gatewayRestartSuccess': 'Gateway再起動完了。ツールが利用可能になりました。',
   'dashboard.alerts.gatewayRestartFailure': 'Gateway再起動に失敗しました。手動で再起動してください。',
+  'dashboard.alerts.conflicts.tavily': 'Tavilyは{{server}}と役割が重なります。両方ONの場合はどちらかをOFFにしてください。',
+  'dashboard.alerts.conflicts.fetch': 'FetchはTavilyと検索範囲が重複します。必要に応じてどちらか片方のみを有効にしてください。',
+  'dashboard.alerts.conflicts.braveSearch': 'Brave Searchは{{server}}と重複します。検索プロバイダは1つだけONにすることをおすすめします。',
 };
 
 export default dashboard;

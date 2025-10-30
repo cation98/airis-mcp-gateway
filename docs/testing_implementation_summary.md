@@ -235,7 +235,7 @@ Failure → Show Error → Keep Disabled
 **After**: Strict regex patterns
 
 Examples:
-- Tavily: `^tvly-[A-Za-z0-9]{32,}$`
+- Tavily: `^tvly[-_][A-Za-z0-9_-]{16,}$`
 - Stripe: `^sk_(test|live)_[A-Za-z0-9]{24,}$`
 - GitHub: `^gh[ps]_[A-Za-z0-9]{36,}$`
 - Twilio Account SID: `^AC[a-f0-9]{32}$`

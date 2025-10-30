@@ -7,7 +7,7 @@ import { z } from 'zod';
 export const tavilySchema = z.object({
   TAVILY_API_KEY: z.string()
     .min(1, 'API Key is required')
-    .regex(/^tvly-[A-Za-z0-9]{32,}$/, 'Invalid Tavily API key format')
+    .regex(/^tvly[-_][A-Za-z0-9_-]{16,}$/, 'Invalid Tavily API key format')
 });
 
 export const stripeSchema = z.object({
@@ -38,6 +38,16 @@ export const braveSearchSchema = z.object({
   BRAVE_API_KEY: z.string()
     .min(1, 'API Key is required')
     .regex(/^BSA[A-Za-z0-9]+$/, 'Invalid Brave API key format')
+});
+
+export const magicSchema = z.object({
+  TWENTYFIRST_API_KEY: z.string()
+    .min(1, 'API Key is required')
+});
+
+export const morphSchema = z.object({
+  MORPH_API_KEY: z.string()
+    .min(1, 'API Key is required')
 });
 
 // Multiple field schemas
@@ -125,6 +135,8 @@ export const SERVER_VALIDATION_SCHEMAS: Record<string, ServerSchema> = {
   github: githubSchema,
   notion: notionSchema,
   'brave-search': braveSearchSchema,
+  magic: magicSchema,
+  'morphllm-fast-apply': morphSchema,
   supabase: supabaseSchema,
   'supabase-selfhost': supabaseSelfhostSchema,
   slack: slackSchema,

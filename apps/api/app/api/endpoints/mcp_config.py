@@ -83,7 +83,15 @@ SERVER_METADATA = {
     },
     "context7": {
         "name": "Context7",
-        "description": "Official library docs and code examples (required)",
+        "description": "Official documentation lookup",
+        "category": "gateway",
+        "apiKeyRequired": False,
+        "recommended": True,
+        "builtin": False
+    },
+    "sequential-thinking": {
+        "name": "Sequential Thinking",
+        "description": "Token-efficient reasoning",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": True,
@@ -91,7 +99,7 @@ SERVER_METADATA = {
     },
     "serena": {
         "name": "Serena",
-        "description": "Semantic code analysis and intelligent editing (recommended)",
+        "description": "Session persistence and memory",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": True,
@@ -99,7 +107,7 @@ SERVER_METADATA = {
     },
     "mindbase": {
         "name": "Mindbase",
-        "description": "Long-term memory and failure learning system (recommended)",
+        "description": "Cross-session learning (zero-footprint)",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": True,
@@ -121,6 +129,14 @@ SERVER_METADATA = {
         "recommended": False,
         "builtin": False
     },
+    "playwright": {
+        "name": "Playwright",
+        "description": "JavaScript-heavy content extraction",
+        "category": "gateway",
+        "apiKeyRequired": False,
+        "recommended": True,
+        "builtin": False
+    },
     "sqlite": {
         "name": "SQLite",
         "description": "SQLite database operations (enable only for DB work)",
@@ -133,10 +149,26 @@ SERVER_METADATA = {
     # Auth required servers
     "tavily": {
         "name": "Tavily",
-        "description": "AI search and real-time intelligence (disable Fetch to avoid overlap)",
+        "description": "Primary web search for deep research",
         "category": "auth-required",
         "apiKeyRequired": True,
         "recommended": True,
+        "builtin": False
+    },
+    "magic": {
+        "name": "Magic",
+        "description": "UI component generation",
+        "category": "auth-required",
+        "apiKeyRequired": True,
+        "recommended": True,
+        "builtin": False
+    },
+    "morphllm-fast-apply": {
+        "name": "MorphLLM Fast Apply",
+        "description": "Pattern-based refactoring and bulk code updates",
+        "category": "auth-required",
+        "apiKeyRequired": True,
+        "recommended": False,
         "builtin": False
     },
     "stripe": {
@@ -203,6 +235,14 @@ SERVER_METADATA = {
         "category": "disabled",
         "apiKeyRequired": True,
         "recommended": False,
+        "builtin": False
+    },
+    "chrome-devtools": {
+        "name": "Chrome DevTools",
+        "description": "Performance analysis",
+        "category": "gateway",
+        "apiKeyRequired": False,
+        "recommended": True,
         "builtin": False
     },
     "sentry": {

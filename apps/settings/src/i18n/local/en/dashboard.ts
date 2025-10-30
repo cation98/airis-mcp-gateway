@@ -20,6 +20,9 @@ const dashboard = {
   'dashboard.alerts.configSaved': 'Configuration saved. Restarting the Gateway...',
   'dashboard.alerts.gatewayRestartSuccess': 'Gateway restarted. Tools are ready to use.',
   'dashboard.alerts.gatewayRestartFailure': 'Failed to restart the Gateway. Please restart it manually.',
+  'dashboard.alerts.conflicts.tavily': 'Tavily overlaps with {{server}}. Disable {{server}} after enabling Tavily if both are on.',
+  'dashboard.alerts.conflicts.fetch': 'Fetch duplicates Tavily search. Consider turning one of them off.',
+  'dashboard.alerts.conflicts.braveSearch': 'Brave Search overlaps with {{server}}. Keep only one search provider enabled.',
 };
 
 export default dashboard;
