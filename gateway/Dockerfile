@@ -5,10 +5,10 @@ FROM docker/mcp-gateway:latest
 
 LABEL maintainer="AIRIS MCP Gateway Team"
 LABEL description="AIRIS MCP Gateway - Centralized MCP Server routing with 11+ integrated servers"
-LABEL version="1.0.0"
+LABEL version="1.3.0"
 
 # AIRIS-specific environment variables
-ENV AIRIS_VERSION="1.0.0"
+ENV AIRIS_VERSION="1.3.0"
 ENV AIRIS_MCP_GATEWAY="true"
 
 # Copy secret injection script

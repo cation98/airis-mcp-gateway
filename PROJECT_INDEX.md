@@ -1,9 +1,9 @@
 # AIRIS MCP Gateway - Project Index
 
-**Version**: 1.2.0
+**Version**: 1.3.0
 **Type**: Monorepo (pnpm workspace)
 **Purpose**: Unified MCP server management with zero-token startup and encrypted secrets
-**Last Updated**: 2025-10-21
+**Last Updated**: 2025-10-23
 
 ---
 

@@ -337,7 +337,7 @@ def test_partition_preserves_const(partitioner):
         "properties": {
             "version": {
                 "type": "string",
-                "const": "1.0.0",
+                "const": "1.3.0",
                 "description": "API version"
             }
         }
@@ -345,7 +345,7 @@ def test_partition_preserves_const(partitioner):
 
     result = partitioner.partition_schema(schema)
 
-    assert result["properties"]["version"]["const"] == "1.0.0"
+    assert result["properties"]["version"]["const"] == "1.3.0"
 
 
 def test_partition_empty_schema(partitioner):

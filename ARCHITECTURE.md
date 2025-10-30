@@ -2,7 +2,7 @@
 
 **Maintained by**: Agiletec Inc.
 **Last Updated**: 2025-10-15
-**Version**: 1.0.0 (Phase 1 MVP)
+**Version**: 1.3.0 (Phase 1 MVP)
 
 ---
 
