@@ -1,6 +1,6 @@
 name: airis-mcp-gateway
 
-# IMPORTANT: Use `make up` to start services (auto-sets required environment variables)
+# IMPORTANT: Use `make install` (or `make up` for advanced use) to start services (auto-sets required environment variables)
 # Running `docker compose up` directly will show warnings about unset variables.
 
 services:

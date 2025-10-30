@@ -57,55 +57,30 @@ program
       spinner.warn('Could not update (continuing with current version)');
     }
 
-    // Step 3: Start Docker containers
+    const installCmd = options.claudeOnly ? 'make install-claude' : 'make install';
+
+    // Step 3: Run unified install (Docker + editors)
     if (options.docker !== false) {
-      spinner.start('Starting Docker containers...');
+      spinner.start('Running unified install (Docker + editor configs)...');
       try {
-        execSync('make up', { cwd: GATEWAY_DIR, stdio: 'pipe' });
-        spinner.succeed('Docker containers started');
+        execSync(installCmd, { cwd: GATEWAY_DIR, stdio: 'inherit' });
+        spinner.succeed('Gateway ready and editors configured');
       } catch (error) {
-        spinner.fail('Failed to start Docker containers');
+        spinner.fail('Unified install failed');
         console.error(chalk.red('Please ensure Docker is running and try again'));
         process.exit(1);
       }
-
-      // Wait for health check
-      spinner.start('Waiting for Gateway to become healthy...');
-      let healthy = false;
-      for (let i = 0; i < 60; i++) {
-        try {
-          const status = execSync(
-            'docker inspect --format "{{.State.Health.Status}}" airis-mcp-gateway',
-            { encoding: 'utf-8' }
-          ).trim();
-
-          if (status === 'healthy') {
-            healthy = true;
-            break;
-          }
-        } catch {}
-
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      if (!healthy) {
-        spinner.fail('Gateway failed to become healthy');
-        console.error(chalk.red('Please check logs with: docker logs airis-mcp-gateway'));
+    } else {
+      // Step 4: Configure editors only (no Docker restart)
+      spinner.start('Configuring editors only...');
+      try {
+        execSync(installCmd, { cwd: GATEWAY_DIR, stdio: 'inherit' });
+        spinner.succeed('Editors configured');
+      } catch (error) {
+        spinner.fail('Failed to configure editors');
+        console.error(chalk.red(`Error: ${error}`));
         process.exit(1);
       }
-      spinner.succeed('Gateway is healthy');
-    }
-
-    // Step 4: Configure editors
-    spinner.start('Configuring editors...');
-    try {
-      const installCmd = options.claudeOnly ? 'make install-claude' : 'make install';
-      execSync(installCmd, { cwd: GATEWAY_DIR, stdio: 'inherit' });
-      spinner.succeed('Editors configured');
-    } catch (error) {
-      spinner.fail('Failed to configure editors');
-      console.error(chalk.red(`Error: ${error}`));
-      process.exit(1);
     }
 
     // Success message

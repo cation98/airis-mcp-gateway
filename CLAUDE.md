@@ -106,7 +106,10 @@ AIRIS MCP Gateway is a centralized management system for MCP (Model Context Prot
 
 ### Essential Operations
 ```bash
-# Start all services (Gateway + PostgreSQL + API + UI)
+# Install + start all services (Gateway + PostgreSQL + API + UI)
+make install
+
+# Start services only (advanced restart without editor import)
 make up
 
 # Stop all services
@@ -461,7 +464,7 @@ make ui-logs
 ### Clean slate restart
 ```bash
 make clean-all  # ⚠️ DESTROYS ALL DATA (volumes)
-make up
+make install
 ```
 
 ## Important Notes

@@ -6,10 +6,12 @@ Automatically replaces all editor MCP configs with AIRIS Gateway
 
 import json
 import os
+import re
 import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 GATEWAY_PUBLIC_URL = os.getenv("GATEWAY_PUBLIC_URL", "http://gateway.localhost:9090")
@@ -27,6 +29,7 @@ class EditorInstaller:
             }
         }
     }
+    GATEWAY_SERVER_NAME = "airis-mcp-gateway"
 
     EDITOR_CONFIGS = {
         "claude-code": {
@@ -48,6 +51,11 @@ class EditorInstaller:
             "name": "Zed",
             "path": "~/.config/zed/settings.json",
             "format": "zed_settings",
+        },
+        "codex": {
+            "name": "Codex CLI",
+            "path": "~/.codex/config.toml",
+            "format": "codex_toml",
         },
     }
 
@@ -104,6 +112,9 @@ class EditorInstaller:
         path = Path(editor["path"])
 
         try:
+            if editor["format"] == "codex_toml":
+                return self._install_codex_config(path)
+
             if editor["format"] == "mcp_json":
                 # Simple replacement: mcp.json format
                 with open(path, "w") as f:
@@ -151,6 +162,76 @@ class EditorInstaller:
         except Exception as e:
             print(f"   ❌ Failed to update {editor['name']}: {e}")
             return False
+
+    def _install_codex_config(self, path: Path) -> bool:
+        """Install AIRIS Gateway into Codex CLI config via codex mcp commands"""
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            existing_text = path.read_text(encoding="utf-8") if path.exists() else ""
+        except Exception as exc:
+            print(f"   ❌ Failed to read Codex config: {exc}")
+            return False
+
+        updated_text = self._ensure_codex_experimental_flag(existing_text)
+        if updated_text != existing_text:
+            try:
+                path.write_text(updated_text, encoding="utf-8")
+            except Exception as exc:
+                print(f"   ❌ Failed to update Codex config: {exc}")
+                return False
+
+        try:
+            get_proc = subprocess.run(
+                ["codex", "mcp", "get", self.GATEWAY_SERVER_NAME],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except FileNotFoundError:
+            print("   ❌ Codex CLI not found on PATH (expected 'codex').")
+            return False
+
+        if get_proc.returncode == 0:
+            subprocess.run(
+                ["codex", "mcp", "remove", self.GATEWAY_SERVER_NAME],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+
+        add_proc = subprocess.run(
+            [
+                "codex",
+                "mcp",
+                "add",
+                "--url",
+                self.GATEWAY_CONFIG["mcpServers"][self.GATEWAY_SERVER_NAME]["url"],
+                self.GATEWAY_SERVER_NAME,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+
+        if add_proc.returncode != 0:
+            error_msg = (add_proc.stderr or add_proc.stdout).strip()
+            print(f"   ❌ Failed to register Codex MCP server: {error_msg or 'unknown error'}")
+            return False
+
+        return True
+
+    @staticmethod
+    def _ensure_codex_experimental_flag(text: str) -> str:
+        """Ensure experimental_use_rmcp_client is enabled in Codex config"""
+        pattern = re.compile(r"^\s*experimental_use_rmcp_client\s*=.*$", re.MULTILINE)
+        if pattern.search(text):
+            return pattern.sub("experimental_use_rmcp_client = true", text)
+
+        if text.strip():
+            return text.rstrip() + "\n\nexperimental_use_rmcp_client = true\n"
+
+        return "experimental_use_rmcp_client = true\n"
 
     def install_all(self) -> bool:
         """Main installation flow"""
