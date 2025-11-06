@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Bundled a Traefik reverse proxy container so `gateway.localhost`, `api.gateway.localhost`, and `ui.gateway.localhost` resolve consistently on every OS without relying on external infrastructure.
+
 ### Planned for Phase 2 (Stabilization)
 - Real-world testing and validation
 - Error handling improvements (retry, fallback)
