@@ -173,6 +173,7 @@ services:
       - ./servers/mindbase/src:/app/src:ro
       - ./servers/mindbase/tsconfig.json:/app/tsconfig.json:ro
       - ./servers/mindbase/package.json:/app/package.json:ro
+      - ./servers/mindbase/pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
       # Build output (write to host for MCP Server usage)
       - ./servers/mindbase/dist:/app/dist:rw
       # Dependencies (isolated in Docker)

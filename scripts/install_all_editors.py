@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Dict, List
 
 
-GATEWAY_PUBLIC_URL = os.getenv("GATEWAY_PUBLIC_URL", "http://gateway.localhost:9090")
-GATEWAY_SSE_URL = f"{GATEWAY_PUBLIC_URL.rstrip('/')}/sse"
+GATEWAY_API_URL = os.getenv("GATEWAY_API_URL", "http://api.gateway.localhost:9100/api")
+GATEWAY_SSE_URL = f"{GATEWAY_API_URL.rstrip('/')}/v1/mcp/sse"
 
 
 class EditorInstaller:
@@ -172,7 +172,7 @@ class EditorInstaller:
             print(f"   ❌ Failed to read Codex config: {exc}")
             return False
 
-        updated_text = self._ensure_codex_experimental_flag(existing_text)
+        updated_text = self._ensure_codex_feature_flags(existing_text)
         if updated_text != existing_text:
             try:
                 path.write_text(updated_text, encoding="utf-8")
@@ -199,13 +199,20 @@ class EditorInstaller:
                 check=False,
             )
 
+        codex_url = os.getenv("CODEX_GATEWAY_URL")
+        if not codex_url:
+            codex_url = self.GATEWAY_CONFIG["mcpServers"][self.GATEWAY_SERVER_NAME]["url"].rstrip("/")
+            if codex_url.endswith("/sse"):
+                codex_url = codex_url[: -len("/sse")]
         add_proc = subprocess.run(
             [
                 "codex",
                 "mcp",
                 "add",
+                "--enable",
+                "rmcp_client",
                 "--url",
-                self.GATEWAY_CONFIG["mcpServers"][self.GATEWAY_SERVER_NAME]["url"],
+                codex_url,
                 self.GATEWAY_SERVER_NAME,
             ],
             stdout=subprocess.PIPE,
@@ -222,16 +229,59 @@ class EditorInstaller:
         return True
 
     @staticmethod
-    def _ensure_codex_experimental_flag(text: str) -> str:
-        """Ensure experimental_use_rmcp_client is enabled in Codex config"""
+    def _ensure_codex_feature_flags(text: str) -> str:
+        """Ensure Codex config enables rmcp_client and drops deprecated flags"""
         pattern = re.compile(r"^\s*experimental_use_rmcp_client\s*=.*$", re.MULTILINE)
-        if pattern.search(text):
-            return pattern.sub("experimental_use_rmcp_client = true", text)
+        text = pattern.sub("", text)
 
-        if text.strip():
-            return text.rstrip() + "\n\nexperimental_use_rmcp_client = true\n"
+        lines = text.splitlines()
+        output_lines = []
+        features_found = False
+        rmcp_set = False
+        i = 0
 
-        return "experimental_use_rmcp_client = true\n"
+        while i < len(lines):
+            line = lines[i]
+            stripped = line.strip()
+            if stripped == "[features]":
+                features_found = True
+                output_lines.append(line)
+                i += 1
+                while i < len(lines):
+                    next_line = lines[i]
+                    next_stripped = next_line.strip()
+                    if next_stripped.startswith("[") and next_stripped.endswith("]"):
+                        if not rmcp_set:
+                            output_lines.append("rmcp_client = true")
+                            rmcp_set = True
+                        break
+                    if next_stripped.startswith("rmcp_client"):
+                        output_lines.append("rmcp_client = true")
+                        rmcp_set = True
+                    else:
+                        output_lines.append(next_line)
+                    i += 1
+                else:
+                    if not rmcp_set:
+                        output_lines.append("rmcp_client = true")
+                        rmcp_set = True
+                continue
+
+            output_lines.append(line)
+            i += 1
+
+        if not features_found:
+            if output_lines and output_lines[-1].strip():
+                output_lines.append("")
+            output_lines.append("[features]")
+            output_lines.append("rmcp_client = true")
+        elif not rmcp_set:
+            output_lines.append("rmcp_client = true")
+
+        result = "\n".join(output_lines)
+        if not result.endswith("\n"):
+            result += "\n"
+        return result
 
     def install_all(self) -> bool:
         """Main installation flow"""

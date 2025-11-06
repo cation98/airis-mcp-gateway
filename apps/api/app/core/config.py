@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     MCP_CONFIG_PATH: Path = DEFAULT_MCP_CONFIG
     MCP_GATEWAY_URL: str = "http://mcp-gateway:9090"
     GATEWAY_PUBLIC_URL: str = "http://gateway.localhost:9090"
-    GATEWAY_API_URL: str = "http://gateway.localhost:9090/api"
+    GATEWAY_API_URL: str = "http://api.gateway.localhost:9100/api"
     UI_PUBLIC_URL: str = "http://ui.gateway.localhost:5173"
     MASTER_KEY_HEX: str | None = None
 

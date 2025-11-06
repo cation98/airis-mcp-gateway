@@ -16,7 +16,7 @@ const REPO_URL = 'https://github.com/agiletec-inc/airis-mcp-gateway.git';
 
 const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? 'http://gateway.localhost:9090';
 const UI_PUBLIC_URL = process.env.UI_PUBLIC_URL ?? 'http://ui.gateway.localhost:5173';
-const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://gateway.localhost:9090/api';
+const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://api.gateway.localhost:9100/api';
 
 program
   .name('airis-gateway')

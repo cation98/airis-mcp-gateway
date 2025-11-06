@@ -28,7 +28,7 @@
 claude mcp add --transport sse <name> <url>
 
 # 例: AIRIS MCP Gateway
-claude mcp add --transport sse airis-mcp-gateway http://localhost:9090/sse
+claude mcp add --transport sse airis-mcp-gateway http://localhost:9090/api/v1/mcp/sse
 ```
 
 ### 設定ファイル場所
@@ -173,7 +173,7 @@ start_gateway() {
 # Step 3: Register with Claude Code
 register_claude() {
   echo "📝 Registering with Claude Code..."
-  claude mcp add --transport sse airis-mcp-gateway http://localhost:9090/sse
+  claude mcp add --transport sse airis-mcp-gateway http://localhost:9090/api/v1/mcp/sse
   echo "✅ Registered"
 }
 
@@ -242,7 +242,7 @@ def _install_docker_mcp_gateway(self, server_info, config):
         raise Exception("Gateway failed to become healthy")
 
     # 4. Verify SSE endpoint
-    response = requests.get("http://localhost:9090/sse")
+    response = requests.get("http://localhost:9090/api/v1/mcp/sse")
     if response.status_code not in [200, 301, 302]:
         raise Exception(f"Gateway SSE endpoint not responding: {response.status_code}")
 

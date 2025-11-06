@@ -26,7 +26,7 @@ if [ -f "$GATEWAY_DIR/.env" ]; then
 fi
 
 export GATEWAY_PUBLIC_URL="${GATEWAY_PUBLIC_URL:-http://gateway.localhost:9090}"
-export GATEWAY_API_URL="${GATEWAY_API_URL:-http://gateway.localhost:9090/api}"
+export GATEWAY_API_URL="${GATEWAY_API_URL:-http://api.gateway.localhost:9100/api}"
 export UI_PUBLIC_URL="${UI_PUBLIC_URL:-http://ui.gateway.localhost:5173}"
 
 echo "Checking prerequisites..."

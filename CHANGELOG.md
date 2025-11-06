@@ -26,6 +26,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Official editor integrations
 - Enterprise features
 
+## [1.3.0] - 2025-10-30
+
+### Added
+- Imported the Codex/SuperClaude MCP catalog (Magic, Playwright, Chrome DevTools, MorphLLM Fast Apply) into the default metadata so they appear in the dashboard out of the box.
+- Added asynchronous unit tests for the credential provider cache covering TTL expiry, invalidation, and subscriber notifications.
+
+### Changed
+- Reworked the Settings dashboard: cards now split into “Active” and “Disabled” columns, with badges showing API-key requirements and no-setup servers; conflict warnings surface inline.
+- The Codex installer now targets the Gateway base URL (no trailing `/sse`), enables `[features].rmcp_client = true`, and preserves the legacy `experimental_use_rmcp_client = true` flag so recent Codex builds connect without manual tweaks.
+- Core zero-setup servers (filesystem/context7/serena/mindbase/sequential-thinking/playwright/chrome-devtools) start enabled in `mcp-config.json` so Codex/Claude/Cursor immediately list useful tools after `make install`.
+- Version metadata across containers, MCP config, and internal servers bumped to `1.3.0`.
+
+### Fixed
+- Relaxed the Tavily API key validator to accept both `tvly-` and `tvly_` prefixes and updated associated tests.
+
+### Documentation
+- Documented the Docker + `uv` prerequisites, clarified that `make install` executes the editor installers via `uv`, and refreshed the development workflow guidance to rely on containerized commands.
+
 ## [0.1.0] - 2025-10-15
 
 ### Added - Phase 1 (MVP) Complete

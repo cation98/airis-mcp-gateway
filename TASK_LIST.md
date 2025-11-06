@@ -22,7 +22,7 @@ FastAPI Proxy (http://localhost:8001/mcp/sse)
     ├─ expandSchema ツール追加（必要時に詳細取得）
     └─ Proxy to Docker MCP Gateway
         ↓
-Docker MCP Gateway (http://localhost:9090/sse)
+Docker MCP Gateway (http://localhost:9090/api/v1/mcp/sse)
     └─ 25 MCP Servers
 ```
 

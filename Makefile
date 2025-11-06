@@ -21,7 +21,7 @@ export PATH := $(PWD)/bin:$(PATH)
 DC := docker compose
 NODE_SVC := node
 SUPA_SVC := supabase
-PNPM_VER := 10.19.0
+PNPM_VER := 10.20.0
 NODE_VER := 24
 DEV_PORT ?= 5173
 CLI_PROFILE := cli
@@ -52,6 +52,7 @@ GATEWAY_CONTAINER := airis-mcp-gateway-gateway
 GREEN := \033[0;32m
 YELLOW := \033[1;33m
 BLUE := \033[0;34m
+RED := \033[0;31m
 NC := \033[0m
 
 # ========== Help ==========
@@ -357,10 +358,15 @@ api-logs: ## Show API logs
 api-shell: ## Enter API shell
 	@$(DC) exec api bash
 
+
+.PHONY: builder-down
+builder-down:
+	@$(DC) --profile builder down --remove-orphans
 # ========== MindBase MCP Server ==========
 
 .PHONY: mindbase-build
 mindbase-build: ## Build MindBase MCP Server (TypeScript → dist/)
+	@$(MAKE) builder-down
 	@echo "$(BLUE)🔨 Building MindBase MCP Server...$(NC)"
 	@$(DC) --profile builder up --build -d mindbase-builder
 	@echo "$(YELLOW)⏳ Waiting for build to complete...$(NC)"
@@ -378,6 +384,7 @@ mindbase-clean: ## Clean MindBase build artifacts
 
 .PHONY: self-management-build
 self-management-build: ## Build Self-Management MCP Server (TypeScript → dist/)
+	@$(MAKE) builder-down
 	@echo "$(BLUE)🔨 Building Self-Management MCP Server...$(NC)"
 	@$(DC) --profile builder up --build -d self-management-builder
 	@echo "$(YELLOW)⏳ Waiting for build to complete...$(NC)"
@@ -532,6 +539,11 @@ verify-claude: ## Verify Claude Code installation
 
 # ========== Installation ==========
 
+.PHONY: install-editors
+install-editors: ## Synchronize MCP configs across editors
+	@echo "$(BLUE)📝 Syncing MCP configs with editors...$(NC)"
+	@uv run scripts/install_all_editors.py install
+
 .PHONY: install
 install: ## Install AIRIS Gateway (imports existing IDE configs automatically)
 	@echo "$(BLUE)🌉 Installing AIRIS Gateway...$(NC)"
@@ -550,7 +562,7 @@ install: ## Install AIRIS Gateway (imports existing IDE configs automatically)
 	@echo "$(GREEN)✅ Gateway healthy$(NC)"
 	@echo ""
 	@echo "$(YELLOW)📝 Step 4: Registering with editors...$(NC)"
-	@uv run scripts/install_all_editors.py install
+	@$(MAKE) install-editors
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "$(GREEN)🎉 Installation complete!$(NC)"
@@ -587,7 +599,7 @@ install-dev: ## Install with UI/API (development mode, imports existing configs)
 	@echo "$(GREEN)✅ Services started$(NC)"
 	@echo ""
 	@echo "$(YELLOW)📝 Step 4: Registering with editors...$(NC)"
-	@uv run scripts/install_all_editors.py install
+	@$(MAKE) install-editors
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "$(GREEN)🎉 Development Mode Active$(NC)"

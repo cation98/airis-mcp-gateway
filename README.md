@@ -7,8 +7,9 @@
 ## ⚡ Quick Start (90 seconds)
 
 Prerequisites:
-- Docker Desktop **or** OrbStack installed and running
-- `make`, `git`, and `pnpm` (automatically vendored inside the container)
+- Docker Desktop **or** OrbStack running (all services start inside containers)
+- `make` / `git`
+- [`uv`](https://docs.astral.sh/uv/) (used to run the lightweight editor installers; install with `brew install uv` on macOS)
 
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
@@ -20,16 +21,18 @@ make install                # unified install (build, start, editor registration
 ```
 
 `make install` will:
+- register Codex CLI, Claude Code, and Cursor via the Python installers executed with `uv`
 - import any existing MCP configs from Claude, Cursor, or Zed and back them up
 - generate `mcp.json` from `mcp.json.template` (port/env-aware)
 - build the Gateway, API, UI, and bundled MCP servers
 - seed the database (MindBase + Self-Management shipped by default)
 - run all database migrations automatically via Alembic
 - start everything in the background and print running endpoints
+- auto-enable the zero-setup servers (filesystem, context7, serena, mindbase, sequential-thinking, playwright, chrome-devtools)
 
 When it finishes you should see:
-- Gateway SSE endpoint → `http://gateway.localhost:9090/api/v1/mcp/sse`
-- FastAPI docs → `http://gateway.localhost:9090/api/docs`
+- Gateway SSE endpoint → `http://api.gateway.localhost:9100/api/v1/mcp/sse`
+- FastAPI docs → `http://api.gateway.localhost:9100/docs`
 - Settings UI → `http://ui.gateway.localhost:5173`
 
 Need a quick health check? Run `make doctor` to verify Docker availability and toolchain shims.
@@ -76,10 +79,12 @@ Need additional MCP servers? Add them via the Settings UI or edit `profiles/` an
 | Run Vite dev server for Settings UI | `make dev` |
 | Build all workspaces | `make build` |
 | Lint / Typecheck / Test | `make lint` / `make typecheck` / `make test-ui` |
-| Run backend tests | `docker compose --profile test run --rm test` or `pytest tests/` |
+| Run backend tests | `docker compose --profile test run --rm test` |
 | Enforce host-port policy | `make check-host-ports` |
 
 The `node`, `pnpm`, and `supabase` binaries under `bin/` are shims that route into the toolchain container, so the host stays clean.
+
+Need to run unit tests or scripts from the host? Use `uv run …` so the virtual environment stays ephemeral, or rely on the dedicated Docker profiles.
 
 ---
 

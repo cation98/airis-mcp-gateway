@@ -21,35 +21,40 @@
         "-y",
         "@modelcontextprotocol/server-filesystem",
         "/workspace/host"
-      ]
+      ],
+      "enabled": true
     },
     "context7": {
       "command": "npx",
       "args": [
         "-y",
         "@upstash/context7-mcp"
-      ]
+      ],
+      "enabled": true
     },
     "sequential-thinking": {
       "command": "npx",
       "args": [
         "-y",
         "@modelcontextprotocol/server-sequential-thinking"
-      ]
+      ],
+      "enabled": true
     },
     "playwright": {
       "command": "npx",
       "args": [
         "-y",
         "@playwright/mcp@latest"
-      ]
+      ],
+      "enabled": true
     },
     "serena": {
       "command": "sh",
       "args": [
         "-c",
         "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -v ${HOST_WORKSPACE_DIR}:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
-      ]
+      ],
+      "enabled": true
     },
     "magic": {
       "command": "npx",
@@ -76,7 +81,8 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-puppeteer"
-      ]
+      ],
+      "enabled": true
     },
     "sqlite": {
       "command": "npx",
@@ -85,21 +91,36 @@
         "mcp-server-sqlite",
         "--db-path",
         "/app/data.db"
-      ]
+      ],
+      "enabled": true
+    },
+    "mcp-postgres-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-postgres-server",
+        "--dsn",
+        "${POSTGRES_CONNECTION_STRING}"
+      ],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "${POSTGRES_CONNECTION_STRING}"
+      }
     },
     "mindbase": {
       "command": "sh",
       "args": [
         "-c",
         "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOST_REPO_DIR}/servers/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
-      ]
+      ],
+      "enabled": true
     },
     "self-management": {
       "command": "sh",
       "args": [
         "-c",
         "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e GATEWAY_API_URL=${GATEWAY_API_URL:-http://mcp-gateway:9090/api} -v ${HOST_REPO_DIR}/servers/self-management:/app:ro -w /app node:24-alpine node dist/index.js"
-      ]
+      ],
+      "enabled": true
     },
     "__comment_disabled": "=== DISABLED (auth required - enable via frontend UI) ===",
     "__comment_ai_search": "=== AI SEARCH & RESEARCH ===",
@@ -118,7 +139,8 @@
       "args": [
         "-y",
         "chrome-devtools-mcp@latest"
-      ]
+      ],
+      "enabled": true
     },
     "__comment_database": "=== DATABASE & BACKEND ===",
     "__disabled_supabase": {

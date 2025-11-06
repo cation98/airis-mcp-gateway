@@ -39,7 +39,7 @@ Verify the zero-token baseline and on-demand loading benefits of Gateway archite
 {
   "mcpServers": {
     "airis-mcp-gateway": {
-      "url": "http://localhost:9090/sse",
+      "url": "http://localhost:9090/api/v1/mcp/sse",
       "description": "All MCP servers via unified Gateway (25 servers, zero-token baseline, on-demand loading)"
     }
   }

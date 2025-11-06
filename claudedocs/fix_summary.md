@@ -136,7 +136,7 @@ If schema partitioning causes issues:
 **File:** `mcp.json`
 ```json
 {
-  "url": "http://localhost:9090/mcp/sse"
+  "url": "http://localhost:9090/api/v1/mcp/sse"
 }
 ```
 
@@ -159,8 +159,8 @@ make down && make up
 
 **Before (Direct Gateway):**
 ```
-Claude Code → http://localhost:9090/sse → Docker MCP Gateway
-                                         ↓ (full schemas, 20k+ tokens)
+Claude Code → http://localhost:9090/api/v1/mcp/sse → Docker MCP Gateway
+                                                    ↓ (full schemas, 20k+ tokens)
 ```
 
 **After (Schema Partitioning):**
