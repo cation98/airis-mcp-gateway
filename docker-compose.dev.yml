@@ -1,13 +1,6 @@
 services:
-  mcp-gateway:
-    # Dev-only host publishing. Base compose stays internal.
+  traefik:
     ports:
       - "${GATEWAY_LISTEN_PORT:-9090}:${GATEWAY_LISTEN_PORT:-9090}"
-
-  api:
-    ports:
       - "${API_LISTEN_PORT:-9000}:${API_LISTEN_PORT:-9000}"
-
-  settings-ui:
-    ports:
-      - "${UI_LISTEN_PORT:-5173}:${UI_CONTAINER_PORT:-5173}"
+      - "${UI_LISTEN_PORT:-5173}:${UI_LISTEN_PORT:-5173}"
