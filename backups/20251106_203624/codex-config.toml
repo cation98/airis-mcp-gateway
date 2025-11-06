@@ -1,0 +1,44 @@
+model = "gpt-5-codex"
+model_reasoning_effort = "medium"
+
+
+[projects."/Users/kazuki/github/airiscode"]
+trust_level = "trusted"
+
+[projects."/Users/kazuki/github/agiletec"]
+trust_level = "trusted"
+
+[projects."/Users/kazuki/github/SuperClaude_Framework"]
+trust_level = "trusted"
+
+[projects."/Users/kazuki/github/airis-mcp-gateway"]
+trust_level = "trusted"
+
+[projects."/Users/kazuki/github/mindbase"]
+trust_level = "trusted"
+
+[projects."/Users/kazuki/github/mkk"]
+trust_level = "trusted"
+
+[projects."/Users/kazuki/github/selfhosted-supabase-mcp"]
+trust_level = "trusted"
+
+[projects."/Users/kazuki/github/SuperClaude_Plugin"]
+trust_level = "trusted"
+
+[projects."/Users/kazuki/github/superagent"]
+trust_level = "trusted"
+
+
+
+
+
+
+[notice]
+hide_full_access_warning = true
+
+[features]
+rmcp_client = true
+
+[mcp_servers.airis-mcp-gateway]
+url = "http://api.gateway.localhost:9100/api/v1/mcp"
