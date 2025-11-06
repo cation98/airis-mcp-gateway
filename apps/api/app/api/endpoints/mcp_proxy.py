@@ -173,8 +173,7 @@ async def mcp_sse_proxy(request: Request):
     )
 
 
-@router.post("/")
-async def mcp_jsonrpc_proxy(request: Request):
+async def _proxy_jsonrpc_request(request: Request) -> Response:
     """
     MCP JSON-RPC 2.0 Proxy Endpoint（tools/call用）
 
@@ -209,6 +208,21 @@ async def mcp_jsonrpc_proxy(request: Request):
             status_code=response.status_code,
             headers=dict(response.headers)
         )
+
+
+@router.post("/")
+async def mcp_jsonrpc_proxy(request: Request):
+    """Expose the JSON-RPC proxy at /api/v1/mcp/."""
+    return await _proxy_jsonrpc_request(request)
+
+
+@router.post("/sse", include_in_schema=False)
+async def mcp_jsonrpc_proxy_sse_alias(request: Request):
+    """
+    Compatibility alias so transports that POST to /sse instead of /
+    (Codex streamable_http) still hit the same proxy logic.
+    """
+    return await _proxy_jsonrpc_request(request)
 
 
 async def handle_expand_schema(rpc_request: Dict[str, Any]) -> Dict[str, Any]:
