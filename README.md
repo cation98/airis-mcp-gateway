@@ -31,7 +31,7 @@ make install                # unified install (build, start, editor registration
 - auto-enable the zero-setup servers (filesystem, context7, serena, mindbase, sequential-thinking, playwright, chrome-devtools)
 
 When it finishes you should see:
-- Gateway SSE endpoint → `http://api.gateway.localhost:9100/api/v1/mcp/sse`
+- Gateway SSE endpoint → `http://api.gateway.localhost:9100/api/v1/mcp/sse` (mirrored at `http://api.gateway.localhost:9100/sse` for Codex `streamable_http`)
 - FastAPI docs → `http://api.gateway.localhost:9100/docs`
 - Settings UI → `http://ui.gateway.localhost:5173`
 
@@ -58,7 +58,7 @@ All commands run through docker-compose using the auto-detected workspace paths.
 
 ## 🔧 Configuration
 
-- `.env` centralises container listen ports (`GATEWAY_LISTEN_PORT`, `API_LISTEN_PORT`, `UI_LISTEN_PORT`), public domains (`GATEWAY_PUBLIC_URL`, `UI_PUBLIC_URL`, `GATEWAY_API_URL`), database credentials, and the encryption master key. Defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
+- `.env` centralises container listen ports (`GATEWAY_LISTEN_PORT`, `API_LISTEN_PORT`, `UI_CONTAINER_PORT`), host-published ports (`UI_LISTEN_PORT`), public domains (`GATEWAY_PUBLIC_URL`, `UI_PUBLIC_URL`, `GATEWAY_API_URL`), database credentials, and the encryption master key. Defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
 - `make generate-mcp-config` renders `mcp.json` from `mcp.json.template`, swapping `${GATEWAY_API_URL}` and other variables. It runs automatically inside `make install`, so no manual edits required.
 - Secrets stay out of `.env`: save API keys via the Settings UI. They are encrypted with Fernet using `ENCRYPTION_MASTER_KEY` and stored in Postgres; the Gateway fetches and injects them on startup.
 - Project paths are auto-detected by `make` and injected as:

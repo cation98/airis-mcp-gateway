@@ -10,4 +10,4 @@ services:
 
   settings-ui:
     ports:
-      - "${UI_LISTEN_PORT:-5173}:${UI_LISTEN_PORT:-5173}"
+      - "${UI_LISTEN_PORT:-5173}:${UI_CONTAINER_PORT:-5173}"

@@ -224,6 +224,43 @@
       ]
     },
     "__comment_dev_tools": "=== DEVELOPMENT TOOLS ===",
+    "github-official": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github-official"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "docker": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-docker"
+      ]
+    },
+    "dockerhub": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-dockerhub"
+      ],
+      "env": {
+        "DOCKERHUB_PAT_TOKEN": "${DOCKERHUB_PAT_TOKEN}"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres"
+      ],
+      "env": {
+        "POSTGRES_URL": "${POSTGRES_URL}"
+      }
+    },
     "__disabled_github": {
       "command": "npx",
       "args": [

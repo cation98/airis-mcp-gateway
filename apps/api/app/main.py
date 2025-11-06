@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .api.routes import api_router
+from .api.endpoints.mcp_proxy import mcp_sse_proxy as api_mcp_sse_proxy
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -19,6 +20,12 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
+
+@app.get("/sse", include_in_schema=False)
+async def public_mcp_sse_proxy(request: Request):
+    """Compatibility SSE endpoint for editors that pin to the domain root."""
+    return await api_mcp_sse_proxy(request)
 
 
 @app.get("/health")

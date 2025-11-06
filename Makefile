@@ -24,6 +24,7 @@ SUPA_SVC := supabase
 PNPM_VER := 10.20.0
 NODE_VER := 24
 DEV_PORT ?= 5173
+UI_CONTAINER_PORT ?= 5173
 CLI_PROFILE := cli
 PNPM_BOOTSTRAP := set -euo pipefail; \
 	corepack enable >/dev/null 2>&1; \
@@ -150,7 +151,7 @@ up: generate-mcp-config ## Start all services with localhost publishing
 	@echo "🚀 API (proxy): $${GATEWAY_API_URL}"
 	@echo "🎨 Settings UI: $${UI_PUBLIC_URL}"
 	@echo ""
-	@echo "🧠 Internal DNS: http://mcp-gateway:$${GATEWAY_LISTEN_PORT}, http://api:$${API_LISTEN_PORT}, http://settings-ui:$${UI_LISTEN_PORT}"
+	@echo "🧠 Internal DNS: http://mcp-gateway:$${GATEWAY_LISTEN_PORT}, http://api:$${API_LISTEN_PORT}, http://settings-ui:$${UI_CONTAINER_PORT}"
 	@echo "💡 Need internal-only networking? Run 'make up-dev'."
 
 .PHONY: up-dev
@@ -160,7 +161,7 @@ up-dev: generate-mcp-config ## Start all services (internal-only networking)
 	@echo "$(GREEN)✅ All services started (internal mode)$(NC)"
 	@echo "🔗 Gateway (internal DNS): http://mcp-gateway:$${GATEWAY_LISTEN_PORT}"
 	@echo "🧠 API (internal DNS):     http://api:$${API_LISTEN_PORT}"
-	@echo "🎨 UI (internal DNS):      http://settings-ui:$${UI_LISTEN_PORT}"
+	@echo "🎨 UI (internal DNS):      http://settings-ui:$${UI_CONTAINER_PORT}"
 	@echo ""
 	@echo "💡 Need localhost access? Run 'make up'."
 
@@ -327,7 +328,7 @@ ui-build: ## Build Settings UI image
 ui-up: ## Start Settings UI
 	@$(DC) up -d settings-ui
 	@echo "$(GREEN)✅ Settings UI started$(NC)"
-	@echo "🎨 Internal URL: http://settings-ui:$${UI_LISTEN_PORT}"
+	@echo "🎨 Internal URL: http://settings-ui:$${UI_CONTAINER_PORT}"
 	@echo "💡 Need localhost access? Run 'make up'."
 
 .PHONY: ui-down

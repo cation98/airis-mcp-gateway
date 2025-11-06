@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Official editor integrations
 - Enterprise features
 
+### Fixed
+- Codex CLI now connects successfully because the FastAPI proxy mirrors `/api/v1/mcp/sse` at the domain root (`/sse`) expected by the `streamable_http` transport.
+- Settings UI host-port overrides respect `.env` again by introducing `UI_CONTAINER_PORT` for the internal listener while `UI_LISTEN_PORT` controls the published host port; the Nginx image now renders its config from environment variables so the container actually honors those values.
+
 ## [1.3.0] - 2025-10-30
 
 ### Added

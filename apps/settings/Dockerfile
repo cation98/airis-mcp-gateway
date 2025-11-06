@@ -32,30 +32,13 @@ RUN pnpm build
 # ------------------------------
 FROM nginx:1.27-alpine
 
+ENV UI_PORT=5173 \
+    API_PROXY_URL=http://api:9000
+
 # Copy built assets from builder stage (vite.config.ts: outDir: 'out')
 COPY --from=builder /monorepo/apps/settings/out /usr/share/nginx/html
-
-# Custom nginx config for SPA routing
-RUN echo 'server { \
-    listen 5173; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-    location /api { \
-        proxy_pass http://api:9000; \
-        proxy_http_version 1.1; \
-        proxy_set_header Upgrade $http_upgrade; \
-        proxy_set_header Connection "upgrade"; \
-        proxy_set_header Host $host; \
-        proxy_set_header X-Real-IP $remote_addr; \
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
-        proxy_set_header X-Forwarded-Proto $scheme; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+COPY apps/settings/nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 EXPOSE 5173
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sh", "-c", "envsubst '$$UI_PORT $$API_PROXY_URL' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]

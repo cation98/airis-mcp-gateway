@@ -1,0 +1,94 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+  "edit_predictions": {
+    "mode": "subtle",
+    "copilot": {
+      "proxy": null,
+      "proxy_no_verify": null
+    },
+    "enabled_in_text_threads": false
+  },
+  "context_servers": {
+    "mcp-server-brave-search": {
+      "settings": {
+        "brave_api_key": "BSAtrhbnjKOxgri0Vm-J0IQuhtD09c5"
+      }
+    }
+  },
+  "agent": {
+    "play_sound_when_agent_done": true,
+    "default_profile": "agent",
+    "default_model": {
+      "provider": "zed.dev",
+      "model": "claude-sonnet-4"
+    },
+    "profiles": {
+      "agent": {
+        "name": "Agent",
+        "tools": {
+                    "web_search": true,
+                    "thinking": true,
+                    "terminal": true,
+                    "read_file": true,
+                    "open": true,
+                    "now": true,
+                    "move_path": true,
+                    "list_directory": true,
+                    "grep": true,
+                    "find_path": true,
+                    "fetch": true,
+                    "edit_file": true,
+                    "delete_path": true,
+                    "diagnostics": true,
+                    "create_directory": true,
+                    "copy_path": true
+                },
+        "enable_all_context_servers": true,
+        "context_servers": {}
+      },
+      "write": {
+        "name": "Write",
+        "tools": {
+          "copy_path": true,
+          "create_directory": true,
+          "create_file": true,
+          "delete_path": true,
+          "diagnostics": true,
+          "edit_file": true,
+          "fetch": true,
+          "list_directory": true,
+          "move_path": true,
+          "now": true,
+          "find_path": true,
+          "read_file": true,
+          "grep": true,
+          "terminal": true,
+          "thinking": true,
+          "web_search": true,
+          "open": true
+        },
+        "enable_all_context_servers": true,
+        "context_servers": {}
+      }
+    },
+    "model_parameters": [],
+    "always_allow_tool_actions": true,
+    "version": "2"
+  },
+  "base_keymap": "VSCode",
+  "vim_mode": false,
+  "ui_font_size": 16,
+  "buffer_font_size": 16,
+  "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "Ayu Mirage"
+  }
+}

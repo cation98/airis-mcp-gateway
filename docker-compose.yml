@@ -118,13 +118,16 @@ services:
       dockerfile: apps/settings/Dockerfile
     container_name: airis-mcp-gateway-settings-ui
     expose:
-      - "${UI_LISTEN_PORT:-5173}"
+      - "${UI_CONTAINER_PORT:-5173}"
+    environment:
+      - UI_PORT=${UI_CONTAINER_PORT:-5173}
+      - API_PROXY_URL=${API_INTERNAL_URL:-http://api:${API_LISTEN_PORT:-9000}}
     depends_on:
       - mcp-gateway
       - api
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${UI_LISTEN_PORT:-5173}/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${UI_CONTAINER_PORT:-5173}/"]
       interval: 30s
       timeout: 10s
       retries: 3
