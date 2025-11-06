@@ -4,5 +4,6 @@
       "url": "http://api.gateway.localhost:9100/api/v1/mcp/sse",
       "description": "All MCP servers via unified Gateway (25 servers, zero-token baseline)"
     }
-  }
+  },
+  "globalShortcut": ""
 }
