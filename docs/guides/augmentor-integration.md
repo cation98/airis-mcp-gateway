@@ -1,6 +1,6 @@
 # Augmentor Integration Playbook
 
-This guide shows how to run the same augmentor package through both AIRIS MCP Gateway and local CLI adapters (SuperClaude / Codex). It is a companion to `docs/augmentor_abi.md`.
+This guide shows how to run the same augmentor package through both AIRIS MCP Gateway and local CLI adapters (SuperClaude / Codex). It is a companion to `docs/guides/augmentor-abi.md`.
 
 ---
 
@@ -89,4 +89,3 @@ This dual-path demo proves that augmentors load in both environments without cod
 3. Create automated contract tests (`tests/augmentor_contract/`) that execute a fixture augmentor via both adapters and compare results.
 
 Use this playbook as the living reference while we continue migrating logic from `superagent` into the shared ABI and runtime layers.
-

@@ -158,7 +158,7 @@ chmod +x ~/.airis-mcp-gateway/scripts/install_all_editors.py
 
 - [Full README](https://github.com/agiletec-inc/airis-mcp-gateway)
 - [Secret Management Guide](https://github.com/agiletec-inc/airis-mcp-gateway/blob/master/SECRETS.md)
-- [MCP Best Practices](https://github.com/agiletec-inc/airis-mcp-gateway/blob/master/docs/mcp-best-practices.md)
+- [MCP Best Practices](https://github.com/agiletec-inc/airis-mcp-gateway/blob/master/docs/guides/mcp-best-practices.md)
 
 ## Support
 

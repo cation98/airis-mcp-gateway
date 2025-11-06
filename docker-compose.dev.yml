@@ -1,6 +1,12 @@
 services:
-  traefik:
+  mcp-gateway:
     ports:
       - "${GATEWAY_LISTEN_PORT:-9090}:${GATEWAY_LISTEN_PORT:-9090}"
+
+  api:
+    ports:
       - "${API_LISTEN_PORT:-9000}:${API_LISTEN_PORT:-9000}"
-      - "${UI_LISTEN_PORT:-5173}:${UI_LISTEN_PORT:-5173}"
+
+  settings-ui:
+    ports:
+      - "${UI_LISTEN_PORT:-5173}:${UI_CONTAINER_PORT:-5173}"

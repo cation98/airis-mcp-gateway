@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 import json
 import asyncio
+import os
+import tempfile
 
 
 class ProtocolLogger:
@@ -26,8 +28,10 @@ class ProtocolLogger:
         Args:
             log_dir: Directory for log files
         """
-        self.log_dir = log_dir
-        self.log_dir.mkdir(parents=True, exist_ok=True)
+        requested_dir = Path(
+            os.environ.get("PROTOCOL_LOG_DIR", str(log_dir))
+        )
+        self.log_dir = self._ensure_log_dir(requested_dir)
         self.log_file = self.log_dir / "protocol_messages.jsonl"
 
     async def log_message(
@@ -129,6 +133,18 @@ class ProtocolLogger:
         """
         if self.log_file.exists():
             self.log_file.unlink()
+
+    def _ensure_log_dir(self, candidate: Path) -> Path:
+        """
+        Attempt to create the requested log directory and fall back to /tmp if needed.
+        """
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            return candidate
+        except OSError:
+            fallback = Path(tempfile.gettempdir()) / "protocol_logs"
+            fallback.mkdir(parents=True, exist_ok=True)
+            return fallback
 
 
 # Global singleton instance

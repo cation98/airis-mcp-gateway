@@ -38,6 +38,7 @@ HOST_SUPABASE_DIR ?= $(HOST_WORKSPACE_DIR)/airis-mcp-supabase-selfhost
 CONTAINER_WORKSPACE_ROOT := /workspace/host
 CONTAINER_PROJECT_ROOT := $(CONTAINER_WORKSPACE_ROOT)/$(REPO_NAME)
 PROJECT ?= $(REPO_NAME)
+HOSTS_SCRIPT := $(PWD)/scripts/manage-hosts.sh
 
 export COMPOSE_PROJECT_NAME := $(PROJECT)
 export HOST_REPO_DIR
@@ -141,6 +142,16 @@ generate-mcp-config: ## Generate mcp.json from template
 .PHONY: check-host-ports
 check-host-ports: ## Verify source files do not reference localhost or host.docker.internal
 	@scripts/check-no-host-ports.sh
+
+.PHONY: hosts-add
+hosts-add: ## Add gateway hostnames to /etc/hosts (requires sudo)
+	@echo "$(BLUE)Adding gateway hostnames to /etc/hosts...$(NC)"
+	@sudo HOSTS_FILE=/etc/hosts $(HOSTS_SCRIPT) add
+
+.PHONY: hosts-remove
+hosts-remove: ## Remove gateway hostnames from /etc/hosts (requires sudo)
+	@echo "$(YELLOW)Removing gateway hostnames from /etc/hosts...$(NC)"
+	@sudo HOSTS_FILE=/etc/hosts $(HOSTS_SCRIPT) remove
 
 .PHONY: up
 up: generate-mcp-config ## Start all services with localhost publishing

@@ -15,6 +15,7 @@ Prerequisites:
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
 cp .env.example .env        # adjust listen ports or public domains if needed
+make hosts-add              # writes gateway.localhost entries to /etc/hosts (sudo prompt)
 make install                # unified install (build, start, editor registration)
 # Optional: dev profile with UI/API preview
 # make install-dev
@@ -28,7 +29,6 @@ make install                # unified install (build, start, editor registration
 - seed the database (MindBase + Self-Management shipped by default)
 - run all database migrations automatically via Alembic
 - start everything in the background and print running endpoints
-- boot an internal Traefik reverse proxy so every `*.gateway.localhost` host resolves the same way on macOS, Windows, or Linux
 - auto-enable the zero-setup servers (filesystem, context7, serena, mindbase, sequential-thinking, playwright, chrome-devtools)
 
 When it finishes you should see:
@@ -59,7 +59,8 @@ All commands run through docker-compose using the auto-detected workspace paths.
 
 ## 🔧 Configuration
 
-- `.env` centralises container listen ports (`GATEWAY_LISTEN_PORT`, `API_LISTEN_PORT`, `UI_CONTAINER_PORT`), host-published ports (Traefik entrypoints such as `UI_LISTEN_PORT`), public domains (`GATEWAY_PUBLIC_URL`, `UI_PUBLIC_URL`, `GATEWAY_API_URL`), database credentials, and the encryption master key. Defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
+- `.env` centralises container listen ports (`GATEWAY_LISTEN_PORT`, `API_LISTEN_PORT`, `UI_CONTAINER_PORT`), host-published ports (e.g., `UI_LISTEN_PORT`), public domains (`GATEWAY_PUBLIC_URL`, `UI_PUBLIC_URL`, `GATEWAY_API_URL`), database credentials, and the encryption master key. Defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
+- `make hosts-add` / `make hosts-remove` manage the `/etc/hosts` entries for `gateway.localhost`, `api.gateway.localhost`, and `ui.gateway.localhost` so every OS resolves the same endpoints without an external reverse proxy.
 - `make generate-mcp-config` renders `mcp.json` from `mcp.json.template`, swapping `${GATEWAY_API_URL}` and other variables. It runs automatically inside `make install`, so no manual edits required.
 - Secrets stay out of `.env`: save API keys via the Settings UI. They are encrypted with Fernet using `ENCRYPTION_MASTER_KEY` and stored in Postgres; the Gateway fetches and injects them on startup.
 - Project paths are auto-detected by `make` and injected as:

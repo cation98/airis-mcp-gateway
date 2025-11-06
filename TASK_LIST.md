@@ -240,7 +240,7 @@ Docker MCP Gateway (http://localhost:9090/api/v1/mcp/sse)
 
 ## 🔗 関連ドキュメント
 
-- [リサーチレポート](./research_mcp_installation_20251014.md) - MCPインストール方法調査
+- [リサーチレポート](docs/research/mcp_installation_best_practices_20251018.md) - MCPインストール方法調査
 - [README.md](../README.md) - プロジェクト概要
 - [PERFORMANCE_TEST.md](../PERFORMANCE_TEST.md) - パフォーマンステスト手順
 - [SECRETS.md](../SECRETS.md) - シークレット管理

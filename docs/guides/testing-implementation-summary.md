@@ -206,7 +206,7 @@ Failure → Show Error → Keep Disabled
 - `tests/apps/settings/src/validation/test_server_config.py` (215 lines)
 - `tests/apps/settings/src/pages/mcp-dashboard/components/test_MultiFieldConfigModal.py` (250 lines)
 - `tests/integration/test_server_toggle_workflow.py` (285 lines)
-- `docs/testing_implementation_summary.md` (this file)
+- `docs/guides/testing-implementation-summary.md` (this file)
 
 ### Modified:
 - `apps/settings/package.json` (added `"zod": "^3.24.1"`)

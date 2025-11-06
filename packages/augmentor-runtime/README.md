@@ -31,5 +31,4 @@ export function factory() {
 }
 ```
 
-See `docs/augmentor_abi.md` for the full ABI specification.
-
+See `docs/guides/augmentor-abi.md` for the full ABI specification.

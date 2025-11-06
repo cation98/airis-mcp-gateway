@@ -131,5 +131,5 @@ make profile-custom
 
 ## 📚 詳細ドキュメント
 
-- [MCP Best Practices](../docs/mcp-best-practices.md) - 設計思想と詳細解説
+- [MCP Best Practices](../docs/guides/mcp-best-practices.md) - 設計思想と詳細解説
 - [MindBase Documentation](https://github.com/kazukinakai/mindbase) - 長期記憶システム
