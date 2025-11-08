@@ -10,7 +10,8 @@
     "test": "pnpm --filter @airis/settings test",
     "lint": "pnpm --filter @airis/settings lint",
     "typecheck": "pnpm --filter @airis/settings typecheck",
-    "clean": "pnpm -r clean"
+    "clean": "pnpm -r clean",
+    "menubar": "pnpm --filter @airis/menubar dev"
   },
   "keywords": [
     "mcp",

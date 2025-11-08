@@ -22,7 +22,7 @@ AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates to
 - **Settings UI** (`apps/settings/`): React dashboard for server management
 - **Custom Servers**: `servers/mindbase/` (memory), `servers/self-management/` (orchestration)
 
-**Key Insight**: Proxy intercepts MCP protocol to partition schemas (top-level only), reducing startup tokens by 90%. Full schemas retrieved on-demand via `expandSchema` tool.
+**Key Insight**: Proxy intercepts MCP protocol to partition schemas (トップレベルのみ) ＋ ツール説明も lazy-load。`tools/list` ではサマリだけ返し、必要なときに `expandSchema(mode="schema"|"docs")` を呼び出して詳細/ドキュメントを取得。
 
 ## Configuration
 

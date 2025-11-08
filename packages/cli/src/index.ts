@@ -4,7 +4,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { execSync } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 
@@ -12,7 +12,40 @@ const program = new Command();
 
 // Gateway installation directory
 const GATEWAY_DIR = join(homedir(), '.airis-mcp-gateway');
+const ENV_FILE_PATH = join(GATEWAY_DIR, '.env');
 const REPO_URL = 'https://github.com/agiletec-inc/airis-mcp-gateway.git';
+
+const loadEnvFromFile = (filePath: string) => {
+  if (!existsSync(filePath)) {
+    return;
+  }
+
+  const content = readFileSync(filePath, 'utf-8');
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || !line.includes('=')) {
+      continue;
+    }
+
+    const [rawKey, ...rest] = line.split('=');
+    const key = rawKey.trim();
+    if (!key || process.env[key] !== undefined) {
+      continue;
+    }
+
+    let value = rest.join('=').trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[key] = value;
+  }
+};
+
+loadEnvFromFile(ENV_FILE_PATH);
 
 const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? 'http://gateway.localhost:9090';
 const UI_PUBLIC_URL = process.env.UI_PUBLIC_URL ?? 'http://ui.gateway.localhost:5173';

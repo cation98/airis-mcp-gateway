@@ -159,6 +159,7 @@ up: generate-mcp-config ## Start all services with localhost publishing
 	@$(DC) -f docker-compose.yml -f docker-compose.dev.yml up -d --build --remove-orphans
 	@echo "$(GREEN)✅ All services started (localhost accessible)$(NC)"
 	@echo "🔗 Gateway:     $${GATEWAY_PUBLIC_URL}"
+	@echo "🌊 Stream GW:   $${GATEWAY_STREAM_PUBLIC_URL:-http://gateway.localhost:9091}"
 	@echo "🚀 API (proxy): $${GATEWAY_API_URL}"
 	@echo "🎨 Settings UI: $${UI_PUBLIC_URL}"
 	@echo ""
@@ -171,6 +172,7 @@ up-dev: generate-mcp-config ## Start all services (internal-only networking)
 	@$(DC) up -d --build --remove-orphans
 	@echo "$(GREEN)✅ All services started (internal mode)$(NC)"
 	@echo "🔗 Gateway (internal DNS): http://mcp-gateway:$${GATEWAY_LISTEN_PORT}"
+	@echo "🌊 Stream GW (internal): http://mcp-gateway-stream:$${GATEWAY_STREAM_LISTEN_PORT}"
 	@echo "🧠 API (internal DNS):     http://api:$${API_LISTEN_PORT}"
 	@echo "🎨 UI (internal DNS):      http://settings-ui:$${UI_CONTAINER_PORT}"
 	@echo ""

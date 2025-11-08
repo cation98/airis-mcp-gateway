@@ -6,6 +6,7 @@ const common = {
   'common.actions.close': '閉じる',
   'common.actions.copy': 'コピー',
   'common.actions.retry': '再試行',
+  'common.actions.saving': '保存中...',
   'common.status.loading': '読み込み中...',
   'common.feedback.error': 'エラー: {{message}}',
   'common.feedback.unknownError': '不明なエラー',

@@ -22,7 +22,9 @@ Practical checklist for installing and registering the AIRIS MCP Gateway across 
 
 ## 2. Manual Registration Reference
 
-When a teammate prefers hand-tuning their configs, point them here. The Gateway exposes an SSE endpoint at `http://localhost:9090/api/v1/mcp/sse`.
+When a teammate prefers hand-tuning their configs, point them here. The Gateway exposes:
+- **Streamable HTTP MCP** (Codex) → `http://localhost:9100/api/v1/mcp` (or `http://api.gateway.localhost:9100/api/v1/mcp` inside Docker).
+- **SSE transport** (Claude, Cursor, Zed) → `http://localhost:9090/api/v1/mcp/sse`.
 
 ### 2.1 Claude Code / Claude Desktop
 
@@ -48,6 +50,29 @@ The Make targets create a symlink from `~/github/airis-mcp-gateway/mcp.json` to 
 | Zed | `~/.config/zed/settings.json` (see `mcpServers` block) |
 
 Both editors pick up changes immediately after restart. `scripts/install_all_editors.py` already writes these files, but keep the mapping handy for manual edits.
+
+### 2.3 Codex CLI (Streamable HTTP + STDIO fallback)
+
+```bash
+# HTTP transport (preferred)
+codex mcp remove airis-mcp-gateway 2>/dev/null || true
+codex --enable rmcp_client mcp add airis-mcp-gateway --url http://api.gateway.localhost:9100/api/v1/mcp
+
+# Optional: supply auth
+export AIRIS_MCP_TOKEN="<token>"
+export CODEX_GATEWAY_BEARER_ENV=AIRIS_MCP_TOKEN
+```
+
+If Codex cannot complete the HTTP handshake (returns 400/handshake failed), fall back to STDIO:
+
+```bash
+codex mcp remove airis-mcp-gateway 2>/dev/null || true
+codex --enable rmcp_client mcp add airis-mcp-gateway -- npx -y mcp-proxy stdio-to-http \
+  --target http://api.gateway.localhost:9100/api/v1/mcp \
+  --header "Authorization: Bearer ${AIRIS_MCP_TOKEN}"
+```
+
+リポジトリ付属のインストーラも同じフローを自動化しています。まず HTTP 接続を試し、失敗したら `npx -y mcp-proxy stdio-to-http` へ切り替え、`CODEX_GATEWAY_BEARER_ENV` で指定したトークンがあれば `Authorization` ヘッダに載せます。別の STDIO コマンドを使いたいときだけ `CODEX_STDIO_CMD` を上書きしてください。
 
 ---
 

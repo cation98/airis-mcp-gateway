@@ -6,6 +6,7 @@ const common = {
   'common.actions.close': 'Close',
   'common.actions.copy': 'Copy',
   'common.actions.retry': 'Retry',
+  'common.actions.saving': 'Saving...',
   'common.status.loading': 'Loading...',
   'common.feedback.error': 'Error: {{message}}',
   'common.feedback.unknownError': 'Unknown error',

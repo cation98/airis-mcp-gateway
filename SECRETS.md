@@ -182,6 +182,11 @@ Required:
 ENCRYPTION_MASTER_KEY=<generated-key>  # Fernet encryption key
 ```
 
+> ℹ️  If `ENCRYPTION_MASTER_KEY` is not provided, the API now generates one
+> automatically and stores it at `data/encryption_master.key`. The persisted
+> value is reused across restarts so saved API keys survive ON/OFF toggles.
+> Set the environment variable when you want to manage rotation yourself.
+
 Optional:
 ```bash
 DATABASE_URL=postgresql+asyncpg://user:pass@postgres:5432/mcp_gateway

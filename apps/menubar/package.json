@@ -1,0 +1,14 @@
+{
+  "name": "@airis/menubar",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^39.1.1"
+  }
+}

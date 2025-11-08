@@ -4,7 +4,7 @@ const multiFieldConfigModal = {
   'multiFieldConfigModal.summary.connectionString': 'Configure the connection string',
   'multiFieldConfigModal.toggleVisibility': 'Toggle visibility',
   'multiFieldConfigModal.errors.invalidValue': 'Invalid value',
-  'multiFieldConfigModal.actions.saveAndRestart': 'Save and restart Gateway',
+  'multiFieldConfigModal.actions.saveAndRestart': 'Save configuration',
   'multiFieldConfigModal.actions.saving': 'Saving...',
   'multiFieldConfigModal.feedback.saveError': 'Save error: {{message}}',
 };

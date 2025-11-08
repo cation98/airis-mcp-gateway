@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "airis-mcp-gateway": {
-      "url": "http://gateway.localhost:9090/api/v1/mcp/sse",
-      "description": "All MCP servers via unified Gateway (25 servers, zero-token baseline)"
-    }
-  }
-}

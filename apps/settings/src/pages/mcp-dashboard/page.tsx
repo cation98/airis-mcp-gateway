@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MCPServerCard, ConflictNotice } from './components/MCPServerCard';
+import { MCPServerCard } from './components/MCPServerCard';
+import type { ConflictNotice } from './components/MCPServerCard';
 import { ConfigEditor } from './components/ConfigEditor';
 import { TipsModal } from './components/TipsModal';
 import { MultiFieldConfigModal } from './components/MultiFieldConfigModal';
@@ -60,6 +61,31 @@ interface ValidationResponse {
 interface ApiErrorResponse {
   detail?: string;
 }
+
+interface DashboardStatsResponse {
+  total: number;
+  active: number;
+  inactive: number;
+  api_key_missing: number;
+}
+
+interface DashboardStats {
+  total: number;
+  active: number;
+  inactive: number;
+  apiKeyMissing: number;
+}
+
+const SINGLE_FIELD_KEY_NAMES: Record<string, string> = {
+  tavily: 'TAVILY_API_KEY',
+  magic: 'TWENTYFIRST_API_KEY',
+  'morphllm-fast-apply': 'MORPH_API_KEY',
+  stripe: 'STRIPE_SECRET_KEY',
+  figma: 'FIGMA_ACCESS_TOKEN',
+  github: 'GITHUB_PERSONAL_ACCESS_TOKEN',
+  notion: 'NOTION_API_KEY',
+  'brave-search': 'BRAVE_API_KEY',
+};
 
 const CONFLICT_RULES: Record<string, { conflictsWith: string[]; messageKey: string }> = {
   tavily: {
@@ -184,13 +210,55 @@ const apiFetch = (path: string, options?: RequestInit) => {
   return fetch(`${API_BASE}${normalizedPath}`, options);
 };
 
+const isDashboardStatsResponse = (value: unknown): value is DashboardStatsResponse =>
+  isRecord(value) &&
+  typeof value.total === 'number' &&
+  typeof value.active === 'number' &&
+  typeof value.inactive === 'number' &&
+  typeof value.api_key_missing === 'number';
+
+const isDashboardSummaryResponse = (value: unknown): value is { stats: DashboardStatsResponse } =>
+  isRecord(value) && isDashboardStatsResponse((value as { stats?: unknown }).stats);
+
+const parseDashboardSummary = (value: unknown): DashboardStats | null => {
+  if (!isDashboardSummaryResponse(value)) {
+    return null;
+  }
+
+  const stats = value.stats;
+
+  return {
+    total: stats.total,
+    active: stats.active,
+    inactive: stats.inactive,
+    apiKeyMissing: stats.api_key_missing,
+  };
+};
+
 export default function MCPDashboard() {
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [showConfigEditor, setShowConfigEditor] = useState(false);
   const [showTips, setShowTips] = useState(false);
   const [configModalServer, setConfigModalServer] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const { t } = useTranslation();
+
+  const loadDashboardSummary = async () => {
+    try {
+      const response = await apiFetch('/dashboard/summary');
+      if (!response.ok) {
+        return;
+      }
+      const summaryRaw: unknown = await response.json().catch(() => null);
+      const stats = parseDashboardSummary(summaryRaw);
+      if (stats) {
+        setDashboardStats(stats);
+      }
+    } catch (error) {
+      console.error('Failed to load dashboard summary', error);
+    }
+  };
 
   const fetchServerSecretConfig = async (serverId: string): Promise<Record<string, string>> => {
     try {
@@ -212,6 +280,29 @@ export default function MCPDashboard() {
       console.error(`Failed to load secrets for ${serverId}`, error);
       return {};
     }
+  };
+
+  const resolveSingleFieldKeyName = (serverId: string): string | undefined => {
+    const schema = getServerConfigSchema(serverId);
+    if (schema && schema.configType === 'single' && schema.fields.length > 0) {
+      return schema.fields[0].key;
+    }
+
+    return SINGLE_FIELD_KEY_NAMES[serverId];
+  };
+
+  const loadSingleFieldSecretValue = async (serverId: string): Promise<string | null> => {
+    const keyName = resolveSingleFieldKeyName(serverId);
+    if (!keyName) {
+      return null;
+    }
+
+    const config = await fetchServerSecretConfig(serverId);
+    if (Object.prototype.hasOwnProperty.call(config, keyName)) {
+      return config[keyName];
+    }
+
+    return null;
   };
 
   const persistServerState = async (serverId: string, enabled: boolean): Promise<boolean> => {
@@ -260,16 +351,6 @@ export default function MCPDashboard() {
 
     const message = await extractErrorDetail(createResponse, `Failed to save ${keyName}`);
     throw new Error(message);
-  };
-
-  const restartGateway = async (): Promise<boolean> => {
-    try {
-      const response = await apiFetch('/gateway/restart', { method: 'POST' });
-      return response.ok;
-    } catch (error) {
-      console.error('Failed to restart gateway', error);
-      return false;
-    }
   };
 
   // Load server list, secrets, and toggle states from database on mount
@@ -347,6 +428,7 @@ export default function MCPDashboard() {
 
         setServers(mergedServers);
         setIsLoading(false);
+        void loadDashboardSummary();
       } catch (error) {
         console.error('Error loading server data:', error);
         setIsLoading(false);
@@ -435,6 +517,8 @@ export default function MCPDashboard() {
           : server
       ));
     }
+
+    void loadDashboardSummary();
   };
 
   const updateApiKey = async (id: string, apiKey: string): Promise<void> => {
@@ -447,19 +531,7 @@ export default function MCPDashboard() {
       return;
     }
 
-    // Single field configuration - legacy flow
-    const keyNameMap: Record<string, string> = {
-      'tavily': 'TAVILY_API_KEY',
-      'magic': 'TWENTYFIRST_API_KEY',
-      'morphllm-fast-apply': 'MORPH_API_KEY',
-      'stripe': 'STRIPE_SECRET_KEY',
-      'figma': 'FIGMA_ACCESS_TOKEN',
-      'github': 'GITHUB_PERSONAL_ACCESS_TOKEN',
-      'notion': 'NOTION_API_KEY',
-      'brave-search': 'BRAVE_API_KEY',
-    };
-
-    const keyName = keyNameMap[id];
+    const keyName = resolveSingleFieldKeyName(id);
     if (!keyName) {
       alert(t('dashboard.alerts.unknownServer', { id }));
       return;
@@ -467,39 +539,25 @@ export default function MCPDashboard() {
 
     try {
       // Save to API
-      await upsertSecret(id, keyName, apiKey);
-
-      // Save enabled state to DB
-      const persisted = await persistServerState(id, true);
-      if (!persisted) {
-        throw new Error(t('dashboard.alerts.saveStateFailed'));
-      }
+      await upsertSecret(id, keyName, apiKey.trim());
 
       // Update local state
       setServers(prev => prev.map(server =>
         server.id === id
           ? {
               ...server,
-              apiKey: 'configured',
-              enabled: true,
-              status: 'connected' as const
+              apiKey: 'configured'
             }
           : server
       ));
 
-      // Restart Gateway to apply changes
       alert(t('dashboard.alerts.apiKeySaved'));
-
-      const restarted = await restartGateway();
-      if (restarted) {
-        alert(t('dashboard.alerts.gatewayRestartSuccess'));
-      } else {
-        alert(t('dashboard.alerts.gatewayRestartFailure'));
-      }
+      void loadDashboardSummary();
 
     } catch (error) {
       const message = error instanceof Error ? error.message : t('common.feedback.unknownError');
       alert(t('common.feedback.error', { message }));
+      throw (error instanceof Error ? error : new Error(String(error)));
     }
   };
 
@@ -511,34 +569,18 @@ export default function MCPDashboard() {
       await upsertSecret(serverId, keyName, value);
     }
 
-    // Save enabled state to DB
-    const persisted = await persistServerState(serverId, true);
-    if (!persisted) {
-      throw new Error(t('dashboard.alerts.saveStateFailed'));
-    }
-
     // Update local state
     setServers(prev => prev.map(server =>
       server.id === serverId
         ? {
             ...server,
-            apiKey: 'configured',
-            enabled: true,
-            status: 'connected' as const
+            apiKey: 'configured'
           }
         : server
     ));
 
-    // Restart Gateway to apply changes
     alert(t('dashboard.alerts.configSaved'));
-
-    const restarted = await restartGateway();
-
-    if (restarted) {
-      alert(t('dashboard.alerts.gatewayRestartSuccess'));
-    } else {
-      alert(t('dashboard.alerts.gatewayRestartFailure'));
-    }
+    void loadDashboardSummary();
   };
 
   if (isLoading) {
@@ -553,9 +595,7 @@ export default function MCPDashboard() {
     void toggleServer(id);
   };
 
-  const handleUpdateApiKey = (id: string, apiKey: string) => {
-    void updateApiKey(id, apiKey);
-  };
+  const handleUpdateApiKey = (id: string, apiKey: string) => updateApiKey(id, apiKey);
 
   const activeServers = servers.filter(s => s.enabled && s.status === 'connected');
   const disabledServers = servers.filter(s => !s.enabled);
@@ -612,6 +652,27 @@ export default function MCPDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
+        {dashboardStats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <p className="text-xs text-gray-500">{t('dashboard.summary.total')}</p>
+              <p className="text-2xl font-semibold text-gray-900">{dashboardStats.total}</p>
+            </div>
+            <div className="bg-white border border-green-200 rounded-lg p-4">
+              <p className="text-xs text-green-700">{t('dashboard.summary.active')}</p>
+              <p className="text-2xl font-semibold text-green-700">{dashboardStats.active}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <p className="text-xs text-gray-600">{t('dashboard.summary.inactive')}</p>
+              <p className="text-2xl font-semibold text-gray-800">{dashboardStats.inactive}</p>
+            </div>
+            <div className="bg-white border border-amber-200 rounded-lg p-4">
+              <p className="text-xs text-amber-700">{t('dashboard.summary.apiKeyMissing')}</p>
+              <p className="text-2xl font-semibold text-amber-700">{dashboardStats.apiKeyMissing}</p>
+            </div>
+          </div>
+        )}
+
         {/* 設定エディター */}
         {showConfigEditor && (
           <div className="mb-6">
@@ -649,6 +710,7 @@ export default function MCPDashboard() {
                   server={server}
                   onToggle={handleToggleServer}
                   onUpdateApiKey={handleUpdateApiKey}
+                  onRequestSecretValue={loadSingleFieldSecretValue}
                   conflicts={resolveConflicts(server)}
                   compact={true}
                 />
@@ -668,6 +730,7 @@ export default function MCPDashboard() {
                   server={server}
                   onToggle={handleToggleServer}
                   onUpdateApiKey={handleUpdateApiKey}
+                  onRequestSecretValue={loadSingleFieldSecretValue}
                   conflicts={resolveConflicts(server)}
                   compact={true}
                 />

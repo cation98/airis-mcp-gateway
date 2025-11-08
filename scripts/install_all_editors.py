@@ -7,15 +7,150 @@ Automatically replaces all editor MCP configs with AIRIS Gateway
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
+from urllib import request as urllib_request
+from urllib.error import HTTPError, URLError
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ENV_FILE = REPO_ROOT / ".env"
+
+
+def _load_env_defaults(env_path: Path) -> None:
+    """
+    Backfill os.environ with values from .env when running outside the Makefile.
+    """
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        cleaned = value.strip().strip('\'"')
+        os.environ[key] = cleaned
+
+
+_load_env_defaults(ENV_FILE)
 
 
 GATEWAY_API_URL = os.getenv("GATEWAY_API_URL", "http://api.gateway.localhost:9100/api")
 GATEWAY_SSE_URL = f"{GATEWAY_API_URL.rstrip('/')}/v1/mcp/sse"
+GATEWAY_HTTP_URL = f"{GATEWAY_API_URL.rstrip('/')}/v1/mcp"
+
+
+def normalize_http_url_to_http_mcp(url: str) -> str:
+    """
+    Normalize any provided URL to its Streamable HTTP MCP base (no trailing slash).
+    """
+    if not url:
+        return GATEWAY_HTTP_URL
+
+    normalized = url.rstrip("/")
+    if normalized.endswith("/sse"):
+        normalized = normalized[: -len("/sse")]
+    if not normalized.endswith("/mcp"):
+        normalized = f"{normalized}/mcp"
+    return normalized
+
+
+def ensure_trailing_newline(text: str) -> str:
+    if not text.endswith("\n"):
+        return f"{text}\n"
+    return text
+
+
+def ensure_codex_bearer_env(text: str, server_name: str, env_name: str) -> str:
+    """
+    Ensure the Codex config has bearer_token_env_var for the given server section.
+    """
+    section_header = f"[mcp_servers.{server_name}]"
+    key_prefix = "bearer_token_env_var"
+
+    lines = text.splitlines()
+    section_index: Optional[int] = None
+
+    for idx, line in enumerate(lines):
+        if line.strip() == section_header:
+            section_index = idx
+            break
+
+    if section_index is None:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines.append(section_header)
+        lines.append(f'{key_prefix} = "{env_name}"')
+        return ensure_trailing_newline("\n".join(lines))
+
+    insert_pos = section_index + 1
+    replaced = False
+
+    while insert_pos < len(lines):
+        stripped = lines[insert_pos].strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            break
+        if stripped.startswith(key_prefix):
+            lines[insert_pos] = f'{key_prefix} = "{env_name}"'
+            replaced = True
+            break
+        insert_pos += 1
+
+    if not replaced:
+        lines.insert(insert_pos, f'{key_prefix} = "{env_name}"')
+
+    return ensure_trailing_newline("\n".join(lines))
+
+
+def probe_http_transport(url: str, bearer_env: Optional[str]) -> bool:
+    """
+    Issue a lightweight GET probe to confirm the Streamable HTTP endpoint responds.
+    Treat 200-399, 401, 403, and 405 as success (the latter two allow auth-required setups).
+    """
+    request_obj = urllib_request.Request(url, method="GET")
+
+    if bearer_env:
+        token = os.getenv(bearer_env)
+        if token:
+            request_obj.add_header("Authorization", f"Bearer {token}")
+
+    try:
+        with urllib_request.urlopen(request_obj, timeout=5) as response:
+            return 200 <= response.status < 400
+    except HTTPError as exc:
+        if exc.code in {401, 403, 405}:
+            return True
+        return False
+    except URLError:
+        return False
+
+
+def build_default_stdio_command(target_url: str, bearer_env: Optional[str]) -> str:
+    """
+    Provide a default STDIO bridge via npx mcp-proxy stdio-to-http.
+    """
+    parts = [
+        "npx",
+        "-y",
+        "mcp-proxy",
+        "stdio-to-http",
+        "--target",
+        target_url,
+    ]
+
+    token = os.getenv(bearer_env) if bearer_env else None
+    if token:
+        parts.extend(["--header", f"Authorization: Bearer {token}"])
+
+    return " ".join(shlex.quote(part) for part in parts)
 
 
 class EditorInstaller:
@@ -164,7 +299,7 @@ class EditorInstaller:
             return False
 
     def _install_codex_config(self, path: Path) -> bool:
-        """Install AIRIS Gateway into Codex CLI config via codex mcp commands"""
+        """Install AIRIS Gateway into Codex CLI config via codex mcp commands."""
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             existing_text = path.read_text(encoding="utf-8") if path.exists() else ""
@@ -172,7 +307,18 @@ class EditorInstaller:
             print(f"   ❌ Failed to read Codex config: {exc}")
             return False
 
+        bearer_env_name = os.getenv("CODEX_GATEWAY_BEARER_ENV")
+        if bearer_env_name and not os.getenv(bearer_env_name):
+            print(f"   ⚠️ Environment variable '{bearer_env_name}' is not set; Codex HTTP auth may fail.")
+
         updated_text = self._ensure_codex_feature_flags(existing_text)
+        if bearer_env_name:
+            updated_text = ensure_codex_bearer_env(
+                updated_text,
+                self.GATEWAY_SERVER_NAME,
+                bearer_env_name,
+            )
+
         if updated_text != existing_text:
             try:
                 path.write_text(updated_text, encoding="utf-8")
@@ -180,53 +326,27 @@ class EditorInstaller:
                 print(f"   ❌ Failed to update Codex config: {exc}")
                 return False
 
-        try:
-            get_proc = subprocess.run(
-                ["codex", "mcp", "get", self.GATEWAY_SERVER_NAME],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
-        except FileNotFoundError:
-            print("   ❌ Codex CLI not found on PATH (expected 'codex').")
+        if not self._codex_cli_available():
             return False
-
-        if get_proc.returncode == 0:
-            subprocess.run(
-                ["codex", "mcp", "remove", self.GATEWAY_SERVER_NAME],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
 
         codex_url = os.getenv("CODEX_GATEWAY_URL")
-        if not codex_url:
-            codex_url = self.GATEWAY_CONFIG["mcpServers"][self.GATEWAY_SERVER_NAME]["url"].rstrip("/")
-            if codex_url.endswith("/sse"):
-                codex_url = codex_url[: -len("/sse")]
-        add_proc = subprocess.run(
-            [
-                "codex",
-                "mcp",
-                "add",
-                "--enable",
-                "rmcp_client",
-                "--url",
-                codex_url,
-                self.GATEWAY_SERVER_NAME,
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=False,
-        )
+        if codex_url:
+            codex_url = normalize_http_url_to_http_mcp(codex_url)
+        else:
+            codex_url = normalize_http_url_to_http_mcp(GATEWAY_HTTP_URL)
 
-        if add_proc.returncode != 0:
-            error_msg = (add_proc.stderr or add_proc.stdout).strip()
-            print(f"   ❌ Failed to register Codex MCP server: {error_msg or 'unknown error'}")
-            return False
+        stdio_cmd = os.getenv("CODEX_STDIO_CMD")
+        if not stdio_cmd:
+            stdio_cmd = build_default_stdio_command(codex_url, bearer_env_name)
 
-        return True
+        self._remove_codex_server()
+        http_registered = self._register_codex_http(codex_url, bearer_env_name)
+        if http_registered:
+            return True
+
+        print("   ⚠️ Streamable HTTP registration failed; attempting STDIO fallback...")
+        self._remove_codex_server()
+        return self._register_codex_stdio(stdio_cmd)
 
     @staticmethod
     def _ensure_codex_feature_flags(text: str) -> str:
@@ -282,6 +402,94 @@ class EditorInstaller:
         if not result.endswith("\n"):
             result += "\n"
         return result
+
+    def _codex_cli_available(self) -> bool:
+        """Verify codex CLI is available."""
+        try:
+            subprocess.run(
+                ["codex", "--version"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            return True
+        except FileNotFoundError:
+            print("   ❌ Codex CLI not found on PATH (expected 'codex').")
+            return False
+
+    def _remove_codex_server(self):
+        """Remove existing Codex MCP server registration if it exists."""
+        subprocess.run(
+            ["codex", "mcp", "remove", self.GATEWAY_SERVER_NAME],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+
+    def _register_codex_http(self, url: str, bearer_env: Optional[str]) -> bool:
+        """Register the Gateway via Streamable HTTP MCP transport."""
+        if not probe_http_transport(url, bearer_env):
+            print(f"   ⚠️ Streamable HTTP MCP probe failed for {url}")
+            return False
+
+        add_proc = subprocess.run(
+            [
+                "codex",
+                "mcp",
+                "add",
+                "--enable",
+                "rmcp_client",
+                "--url",
+                url,
+                self.GATEWAY_SERVER_NAME,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+
+        if add_proc.returncode != 0:
+            error_msg = (add_proc.stderr or add_proc.stdout or "").strip()
+            print(f"   ❌ Failed to register Codex HTTP MCP server: {error_msg or 'unknown error'}")
+            return False
+
+        return True
+
+    def _register_codex_stdio(self, stdio_cmd: Optional[str]) -> bool:
+        """Register the Gateway via STDIO fallback when HTTP transport is unavailable."""
+        if not stdio_cmd:
+            print("   ❌ CODEX_STDIO_CMD not set; cannot fall back to STDIO.")
+            return False
+
+        stdio_args = shlex.split(stdio_cmd)
+        if not stdio_args:
+            print("   ❌ CODEX_STDIO_CMD is empty; cannot register STDIO transport.")
+            return False
+
+        add_proc = subprocess.run(
+            [
+                "codex",
+                "mcp",
+                "add",
+                "--enable",
+                "rmcp_client",
+                self.GATEWAY_SERVER_NAME,
+                "--",
+                *stdio_args,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+
+        if add_proc.returncode != 0:
+            error_msg = (add_proc.stderr or add_proc.stdout or "").strip()
+            print(f"   ❌ Failed to register Codex STDIO MCP server: {error_msg or 'unknown error'}")
+            return False
+
+        return True
 
     def install_all(self) -> bool:
         """Main installation flow"""

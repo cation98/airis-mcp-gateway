@@ -7,8 +7,10 @@ from alembic import context
 import sys
 from pathlib import Path
 
-# Add app directory to path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Add src directory to path so `import app` resolves under src layout
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+SRC_DIR = PROJECT_ROOT / "src"
+sys.path.insert(0, str(SRC_DIR))
 
 from app.core.database import Base
 from app.core.config import settings

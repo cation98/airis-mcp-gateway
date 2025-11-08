@@ -7,8 +7,9 @@ services:
   # AIRIS MCP Gateway - すべてのMCPサーバーを統合
   mcp-gateway:
     build:
-      context: ./gateway
+      context: .
       dockerfile: Dockerfile
+      target: gateway
     image: airis-mcp-gateway/gateway:latest
     container_name: airis-mcp-gateway-gateway
     environment:
@@ -53,6 +54,50 @@ services:
       retries: 3
       start_period: 40s
 
+  # Streaming transport for Codex (RMCP streamable_http clients)
+  mcp-gateway-stream:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: gateway
+    image: airis-mcp-gateway/gateway:latest
+    container_name: airis-mcp-gateway-stream
+    environment:
+      - API_URL=${API_INTERNAL_URL:-http://api:${API_LISTEN_PORT:-9000}}
+      - GATEWAY_LISTEN_PORT=${GATEWAY_STREAM_LISTEN_PORT:-9091}
+      - PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
+      - HOST_REPO_DIR=${HOST_REPO_DIR}
+      - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR}
+      - HOST_SUPABASE_DIR=${HOST_SUPABASE_DIR}
+      - DOCKER_NETWORK=${DOCKER_NETWORK}
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
+      - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
+      - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT}
+    command:
+      - /docker-mcp
+      - gateway
+      - run
+      - --transport=streaming
+      - --port=${GATEWAY_STREAM_LISTEN_PORT:-9091}
+      - --config=/etc/docker-mcp/config.json
+    expose:
+      - "${GATEWAY_STREAM_LISTEN_PORT:-9091}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - type: bind
+        source: ${HOST_WORKSPACE_DIR}
+        target: ${CONTAINER_WORKSPACE_ROOT}
+      - claude-memory:/app/memory
+      - ./mcp-config.json:/etc/docker-mcp/config.json:ro
+      - ./figma-catalog.yaml:/etc/docker-mcp/figma-catalog.yaml:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${GATEWAY_STREAM_LISTEN_PORT:-9091}/mcp"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 
   # PostgreSQL Database (internal only, no port binding)
   postgres:
@@ -74,8 +119,9 @@ services:
   # FastAPI Backend
   api:
     build:
-      context: ./apps/api
+      context: .
       dockerfile: Dockerfile
+      target: api
     container_name: airis-mcp-gateway-api
     expose:
       - "${API_LISTEN_PORT:-9000}"
@@ -83,7 +129,7 @@ services:
       - type: bind
         source: ${HOST_WORKSPACE_DIR}
         target: ${CONTAINER_WORKSPACE_ROOT}
-      - ./apps/api/app:/app/app:rw
+      - ./apps/api/src:/app/src:rw
       - ./apps/api/alembic:/app/alembic:rw
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -114,7 +160,8 @@ services:
   settings-ui:
     build:
       context: .
-      dockerfile: apps/settings/Dockerfile
+      dockerfile: Dockerfile
+      target: settings
     container_name: airis-mcp-gateway-settings-ui
     expose:
       - "${UI_CONTAINER_PORT:-5173}"
@@ -165,8 +212,9 @@ services:
   # Builds TypeScript → dist/ (read-only artifact for MCP config)
   mindbase-builder:
     build:
-      context: ./servers/mindbase
+      context: .
       dockerfile: Dockerfile
+      target: mindbase-builder
     container_name: airis-mcp-gateway-mindbase-builder
     volumes:
       # Source (read-only)
@@ -190,8 +238,9 @@ services:
   # Self-Management MCP Server Builder
   self-management-builder:
     build:
-      context: ./servers/self-management
+      context: .
       dockerfile: Dockerfile
+      target: self-management-builder
     container_name: airis-mcp-gateway-self-management-builder
     volumes:
       # Source (read-only)
@@ -229,8 +278,9 @@ services:
   # Token Measurement - OpenMCP Pattern validation
   measurement:
     build:
-      context: ./tools/measurement
+      context: .
       dockerfile: Dockerfile
+      target: measurement
     container_name: airis-mcp-gateway-measurement
     volumes:
       - ./apps/api/logs:/app/logs:ro

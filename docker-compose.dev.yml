@@ -3,6 +3,10 @@ services:
     ports:
       - "${GATEWAY_LISTEN_PORT:-9090}:${GATEWAY_LISTEN_PORT:-9090}"
 
+  mcp-gateway-stream:
+    ports:
+      - "${GATEWAY_STREAM_LISTEN_PORT:-9091}:${GATEWAY_STREAM_LISTEN_PORT:-9091}"
+
   api:
     ports:
       - "${API_LISTEN_PORT:-9000}:${API_LISTEN_PORT:-9000}"

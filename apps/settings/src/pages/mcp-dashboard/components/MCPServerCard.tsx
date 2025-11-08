@@ -26,7 +26,8 @@ export interface ConflictNotice {
 interface MCPServerCardProps {
   server: MCPServer;
   onToggle: (id: string) => void;
-  onUpdateApiKey: (id: string, apiKey: string) => void;
+  onUpdateApiKey: (id: string, apiKey: string) => Promise<void>;
+  onRequestSecretValue?: (id: string) => Promise<string | null>;
   compact?: boolean;
   conflicts?: ConflictNotice[];
 }
@@ -35,11 +36,15 @@ export function MCPServerCard({
   server,
   onToggle,
   onUpdateApiKey,
+  onRequestSecretValue,
   compact = false,
   conflicts = [],
 }: MCPServerCardProps) {
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
+  const [isFetchingSecret, setIsFetchingSecret] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [revealApiKey, setRevealApiKey] = useState(false);
   const { t } = useTranslation();
   const paddingClass = compact ? 'p-3' : 'p-4';
   const descriptionClass = compact ? 'text-[11px]' : 'text-xs';
@@ -55,14 +60,53 @@ export function MCPServerCard({
   useEffect(() => {
     if (server.apiKey && server.apiKey !== 'configured') {
       setApiKeyInput(server.apiKey);
-    } else {
-      setApiKeyInput('');
     }
   }, [server.apiKey]);
 
-  const handleApiKeySubmit = () => {
-    onUpdateApiKey(server.id, apiKeyInput);
-    setShowApiKeyInput(false);
+  const handleApiKeySubmit = async () => {
+    if (isFetchingSecret) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onUpdateApiKey(server.id, apiKeyInput);
+      setShowApiKeyInput(false);
+      setApiKeyInput('');
+      setRevealApiKey(false);
+    } catch {
+      // Error is surfaced via alert in the caller; keep editor open for corrections.
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const openApiKeyEditor = () => {
+    setRevealApiKey(false);
+    setShowApiKeyInput(true);
+
+    if (!onRequestSecretValue) {
+      setApiKeyInput('');
+      return;
+    }
+
+    setIsFetchingSecret(true);
+    void onRequestSecretValue(server.id)
+      .then((value) => {
+        if (value !== null && value !== undefined) {
+          setApiKeyInput(value);
+        } else {
+          setApiKeyInput('');
+        }
+      })
+      .catch((error: unknown) => {
+        console.error(`Failed to load secret for ${server.id}`, error);
+        alert(t('dashboard.alerts.secretLoadFailed'));
+        setApiKeyInput('');
+      })
+      .finally(() => {
+        setIsFetchingSecret(false);
+      });
   };
 
   const getStatusColor = () => {
@@ -113,6 +157,9 @@ export function MCPServerCard({
   const conflictTooltip = conflicts.map((conflict) => `• ${conflict.message}`).join('\n');
   const hasConflicts = conflicts.length > 0;
   const activeConflicts = conflicts.filter(conflict => conflict.active);
+  const toggleLabel = server.enabled
+    ? t('serverCard.accessibility.disable', { name: server.name })
+    : t('serverCard.accessibility.enable', { name: server.name });
 
   return (
     <div className={`bg-white rounded-lg border transition-all ${paddingClass} ${
@@ -158,6 +205,10 @@ export function MCPServerCard({
         
         {/* オン/オフスイッチ */}
         <button
+          type="button"
+          data-testid={`server-toggle-${server.id}`}
+          aria-pressed={server.enabled}
+          aria-label={toggleLabel}
           onClick={() => onToggle(server.id)}
           className={`ml-2 relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
             server.enabled ? 'bg-blue-600' : 'bg-gray-300'
@@ -176,10 +227,7 @@ export function MCPServerCard({
         <div className="mt-2">
           {!showApiKeyInput ? (
             <button
-              onClick={() => {
-                setApiKeyInput('');
-                setShowApiKeyInput(true);
-              }}
+              onClick={() => { openApiKeyEditor(); }}
               className={`w-full px-2 py-1.5 text-xs rounded border transition-colors ${
                 server.apiKey 
                   ? 'border-green-200 bg-green-50 text-green-700'
@@ -191,23 +239,59 @@ export function MCPServerCard({
             </button>
           ) : (
             <div className="space-y-2">
-              <input
-                type="password"
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder={t('serverCard.inputs.apiKeyPlaceholder')}
-                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-              />
+              <div className="relative">
+                <input
+                  type={revealApiKey ? 'text' : 'password'}
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder={t('serverCard.inputs.apiKeyPlaceholder')}
+                  className="w-full px-2 py-1.5 pr-16 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                  disabled={isSaving || isFetchingSecret}
+                />
+                <button
+                  type="button"
+                  onClick={() => setRevealApiKey(prev => !prev)}
+                  className="absolute inset-y-0 right-2 flex items-center text-[11px] text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+                  disabled={isSaving || isFetchingSecret || apiKeyInput.length === 0}
+                >
+                  <i className={`mr-1 text-xs ${revealApiKey ? 'ri-eye-off-line' : 'ri-eye-line'}`}></i>
+                  {revealApiKey
+                    ? t('serverCard.inputs.hideSecret')
+                    : t('serverCard.inputs.showSecret')}
+                </button>
+              </div>
+              {isFetchingSecret && (
+                <p className="text-[11px] text-gray-500">
+                  {t('common.status.loading')}
+                </p>
+              )}
               <div className="flex gap-1">
                 <button
-                  onClick={handleApiKeySubmit}
-                  className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
+                  onClick={() => { void handleApiKeySubmit(); }}
+                  className={`flex-1 px-2 py-1 text-xs rounded transition-colors whitespace-nowrap ${
+                    isSaving || isFetchingSecret
+                      ? 'bg-blue-300 text-white cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                  disabled={isSaving || isFetchingSecret}
                 >
-                  {t('common.actions.save')}
+                  {isSaving ? (
+                    <span className="inline-flex items-center gap-1">
+                      <i className="ri-loader-4-line animate-spin"></i>
+                      {t('common.actions.saving') ?? t('common.actions.save')}
+                    </span>
+                  ) : (
+                    t('common.actions.save')
+                  )}
                 </button>
                 <button
-                  onClick={() => setShowApiKeyInput(false)}
+                  onClick={() => {
+                    setShowApiKeyInput(false);
+                    setApiKeyInput('');
+                    setRevealApiKey(false);
+                  }}
                   className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors whitespace-nowrap"
+                  disabled={isSaving}
                 >
                   {t('common.actions.cancel')}
                 </button>

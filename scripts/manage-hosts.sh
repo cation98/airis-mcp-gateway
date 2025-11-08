@@ -10,7 +10,7 @@ fi
 HOSTS_FILE=${HOSTS_FILE:-/etc/hosts}
 BLOCK_BEGIN="# >>> AIRIS MCP Gateway >>>"
 BLOCK_END="# <<< AIRIS MCP Gateway <<<"
-HOST_LINE="127.0.0.1 gateway.localhost api.gateway.localhost ui.gateway.localhost"
+HOST_LINE="127.0.0.1 gateway.localhost gateway-stream.localhost api.gateway.localhost ui.gateway.localhost"
 
 add_block() {
   if grep -q "$BLOCK_BEGIN" "$HOSTS_FILE"; then

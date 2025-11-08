@@ -15,7 +15,7 @@ Prerequisites:
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
 cp .env.example .env        # adjust listen ports or public domains if needed
-make hosts-add              # writes gateway.localhost entries to /etc/hosts (sudo prompt)
+make hosts-add              # writes gateway*.localhost entries to /etc/hosts (sudo prompt)
 make install                # unified install (build, start, editor registration)
 # Optional: dev profile with UI/API preview
 # make install-dev
@@ -32,7 +32,8 @@ make install                # unified install (build, start, editor registration
 - auto-enable the zero-setup servers (filesystem, context7, serena, mindbase, sequential-thinking, playwright, chrome-devtools)
 
 When it finishes you should see:
-- Gateway SSE endpoint → `http://api.gateway.localhost:9100/api/v1/mcp/sse` (mirrored at `http://api.gateway.localhost:9100/sse` for Codex `streamable_http`)
+- Codex Streamable HTTP MCP → `http://api.gateway.localhost:9100/api/v1/mcp` (no trailing slash; set `CODEX_GATEWAY_BEARER_ENV` if auth is required)
+- Gateway SSE endpoint → `http://api.gateway.localhost:9100/api/v1/mcp/sse` (mirrored at `http://api.gateway.localhost:9100/sse` for Claude/Cursor)
 - FastAPI docs → `http://api.gateway.localhost:9100/docs`
 - Settings UI → `http://ui.gateway.localhost:5173`
 
@@ -59,8 +60,8 @@ All commands run through docker-compose using the auto-detected workspace paths.
 
 ## 🔧 Configuration
 
-- `.env` centralises container listen ports (`GATEWAY_LISTEN_PORT`, `API_LISTEN_PORT`, `UI_CONTAINER_PORT`), host-published ports (e.g., `UI_LISTEN_PORT`), public domains (`GATEWAY_PUBLIC_URL`, `UI_PUBLIC_URL`, `GATEWAY_API_URL`), database credentials, and the encryption master key. Defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
-- `make hosts-add` / `make hosts-remove` manage the `/etc/hosts` entries for `gateway.localhost`, `api.gateway.localhost`, and `ui.gateway.localhost` so every OS resolves the same endpoints without an external reverse proxy.
+- `.env` centralises container listen ports (`GATEWAY_LISTEN_PORT`, `GATEWAY_STREAM_LISTEN_PORT`, `API_LISTEN_PORT`, `UI_CONTAINER_PORT`), host-published ports (e.g., `UI_LISTEN_PORT`), public domains (`GATEWAY_PUBLIC_URL`, `GATEWAY_STREAM_PUBLIC_URL`, `UI_PUBLIC_URL`, `GATEWAY_API_URL`), database credentials, and the encryption master key. Defaults work out-of-the-box; uncomment the `HOST_*` variables only if you run `docker compose` directly.
+- `make hosts-add` / `make hosts-remove` manage the `/etc/hosts` entries for `gateway.localhost`, `gateway-stream.localhost`, `api.gateway.localhost`, and `ui.gateway.localhost` so every OS resolves the same endpoints without an external reverse proxy.
 - `make generate-mcp-config` renders `mcp.json` from `mcp.json.template`, swapping `${GATEWAY_API_URL}` and other variables. It runs automatically inside `make install`, so no manual edits required.
 - Secrets stay out of `.env`: save API keys via the Settings UI. They are encrypted with Fernet using `ENCRYPTION_MASTER_KEY` and stored in Postgres; the Gateway fetches and injects them on startup.
 - Project paths are auto-detected by `make` and injected as:
@@ -70,6 +71,27 @@ All commands run through docker-compose using the auto-detected workspace paths.
 - Internal wiring between containers defaults to `http://api:9000` for the FastAPI service and `http://mcp-gateway:9090` for the gateway. Override with `API_INTERNAL_URL`, `MINDBASE_API_URL`, or `GATEWAY_API_URL` if your topology changes.
 
 Need additional MCP servers? Add them via the Settings UI or edit `profiles/` and re-run `make install` (or `make restart` if configs stay the same).
+
+---
+
+## 🎛 Codex CLI Transport Notes
+
+Codex now targets the Streamable HTTP MCP endpoint at `http://api.gateway.localhost:9100/api/v1/mcp` by default. Set these optional environment variables before running `make install` (or `make install-editors`) to fine-tune the installer:
+
+| Variable | Purpose |
+|----------|---------|
+| `CODEX_GATEWAY_URL` | Override the HTTP MCP URL if you publish the API elsewhere. Must end with `/mcp` and omit the trailing slash (e.g., `https://prod.example.com/api/v1/mcp`). |
+| `CODEX_GATEWAY_BEARER_ENV` | Name of an environment variable that stores the bearer token Codex should send (e.g., `CODEX_GATEWAY_BEARER_ENV=AIRIS_MCP_TOKEN`). The installer injects `bearer_token_env_var` into `~/.codex/config.toml`. |
+| `CODEX_STDIO_CMD` | (Optional) Override the STDIO fallback command. By default we run `npx -y mcp-proxy stdio-to-http --target <HTTP_URL>` and add an `Authorization` header if `CODEX_GATEWAY_BEARER_ENV` is set. |
+
+Workflow:
+```bash
+export AIRIS_MCP_TOKEN="<your-token>"
+export CODEX_GATEWAY_BEARER_ENV=AIRIS_MCP_TOKEN
+make install
+```
+
+The installer attempts HTTP first (`codex mcp add ... --url http://api.gateway.localhost:9100/api/v1/mcp`). If the endpoint returns 4xx/5xx or is unreachable, it automatically falls back to a STDIO bridge powered by `npx -y mcp-proxy stdio-to-http --target <HTTP_URL> [--header "Authorization: Bearer <token>"]`. Set `CODEX_STDIO_CMD` only if you need a different STDIO command.
 
 ---
 
