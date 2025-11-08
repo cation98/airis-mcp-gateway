@@ -70,7 +70,7 @@ All commands run through docker-compose using the auto-detected workspace paths.
   - `CONTAINER_PROJECT_ROOT` → `/workspace/host/<repo>`
 - Internal wiring between containers defaults to `http://api:9000` for the FastAPI service and `http://mcp-gateway:9090` for the gateway. Override with `API_INTERNAL_URL`, `MINDBASE_API_URL`, or `GATEWAY_API_URL` if your topology changes.
 
-Need additional MCP servers? Add them via the Settings UI or edit `profiles/` and re-run `make install` (or `make restart` if configs stay the same).
+Need additional MCP servers? Add them via the Settings UI or edit `config/profiles/` and re-run `make install` (or `make restart` if configs stay the same).
 
 ---
 
@@ -134,7 +134,7 @@ All containerised servers use environment-aware commands (`HOST_WORKSPACE_DIR`, 
 - **Change internal bindings** → update `*_LISTEN_PORT` in `.env`, then `make restart`.
 - **Docker daemon unavailable** → run `make doctor` for context; ensure Docker Desktop/OrbStack is running.
 - **MindBase / Supabase directories missing** → create adjacent clones or override `HOST_SUPABASE_DIR` in `.env`.
-- **Changing profiles** → tweak `profiles/*.json` or toggle servers in the UI, then hit “Restart Gateway” or call `POST /api/v1/gateway/restart`.
+- **Changing profiles** → tweak `config/profiles/*.json` or toggle servers in the UI, then hit "Restart Gateway" or call `POST /api/v1/gateway/restart`.
 
 Still stuck? Check `make logs` for stack traces, or `docker compose ps` to confirm containers are healthy.
 

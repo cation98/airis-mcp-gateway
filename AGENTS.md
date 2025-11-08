@@ -4,7 +4,7 @@
 - `apps/api`: FastAPI backend with `app/` domain modules and Alembic migrations. Add new routes under `app/api/endpoints` and pair schema updates with migrations.
 - `apps/settings`: Vite + React admin UI; dashboard components in `src/pages/mcp-dashboard/components`, shared validation in `src/validation`.
 - `apps/desktop`: Tauri wrapper; Rust commands in `src-tauri`.
-- Shared Docker entrypoints live in `gateway/`, bundled MCP servers in `servers/`, profile presets in `profiles/`, and integration suites in `tests/`.
+- Shared Docker entrypoints live in `gateway/`, bundled MCP servers in `servers/`, profile presets in `config/profiles/`, and integration suites in `tests/`.
 
 ## Build, Test, and Development Commands
 - `make deps` – bootstrap pnpm workspaces inside the Node toolchain container (alias: `make install-deps`).

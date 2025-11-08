@@ -8,7 +8,7 @@ AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates to
 
 **Core Value**: 90% token reduction (12,500 → 1,250 tokens) via schema partitioning and on-demand expansion.
 
-**Key Documents**: See `PROJECT_INDEX.md` for architecture overview, `ARCHITECTURE.md` for technical deep-dive, `AGENTS.md` for coding conventions.
+**Key Documents**: See `docs/ARCHITECTURE.md` for technical deep-dive, `AGENTS.md` for coding conventions.
 
 ## Architecture
 
@@ -30,7 +30,7 @@ AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates to
 - `mcp-config.json`: Gateway server definitions (command, args, env)
 - `mcp.json`: IDE client config (symlinked to `~/.claude/mcp.json`)
 - `.env`: Ports, database credentials, encryption key
-- `profiles/*.json`: Server presets (recommended/minimal)
+- `config/profiles/*.json`: Server presets (recommended/minimal)
 
 **Profile System**: Toggle servers by renaming keys in `mcp-config.json`:
 - Enabled: `"serena": { ... }`

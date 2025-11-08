@@ -11,7 +11,7 @@ Practical checklist for installing and registering the AIRIS MCP Gateway across 
 | All editors (Claude Desktop/Code, Cursor, Zed) | `make install` | Builds bundled MCP servers, imports existing configs, starts Docker stack, waits for health, registers every editor via `scripts/install_all_editors.py` |
 | Claude-only quick setup | `make install-claude` | Delegates to `make install` but prints Claude-specific next steps |
 | Development mode (UI + API extras) | `make install-dev` | Same as `make install` plus ensures Settings UI + FastAPI are running for local tweaking |
-| Shell-friendly wrapper | `./install.sh` | Runs the same `make install` sequence after verifying Docker and sourcing `.env` overrides |
+| Shell-friendly wrapper | `./scripts/install.sh` | Runs the same `make install` sequence after verifying Docker and sourcing `.env` overrides |
 
 **After running any installer**
 1. Restart every editor so they pick up the refreshed `mcp.json` symlink.
@@ -90,7 +90,7 @@ codex --enable rmcp_client mcp add airis-mcp-gateway -- npx -y mcp-proxy stdio-t
 
 Use these snippets when integrating the Gateway into other installers or CI pipelines.
 
-### install.sh (ships in repo root)
+### scripts/install.sh
 
 ```bash
 #!/bin/bash

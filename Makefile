@@ -136,7 +136,7 @@ typegen: ## DB→TS型生成を実行
 .PHONY: generate-mcp-config
 generate-mcp-config: ## Generate mcp.json from template
 	@echo "$(BLUE)Generating mcp.json from template...$(NC)"
-	@envsubst < mcp.json.template > mcp.json
+	@envsubst < config/mcp.json.template > mcp.json
 	@echo "$(GREEN)✅ mcp.json generated (GATEWAY_API_URL=$${GATEWAY_API_URL})$(NC)"
 
 .PHONY: check-host-ports
@@ -252,12 +252,12 @@ profile-list: ## List available profiles
 	@echo "$(BLUE)📦 Available Profiles:$(NC)"
 	@echo ""
 	@echo "$(GREEN)1. Recommended$(NC) (recommended.json)"
-	@cat profiles/recommended.json | jq -r '.description' | sed 's/^/     /'
+	@cat config/profiles/recommended.json | jq -r '.description' | sed 's/^/     /'
 	@echo "     Servers: filesystem, context7, serena, mindbase"
 	@echo "     Resource: ~500MB"
 	@echo ""
 	@echo "$(GREEN)2. Minimal$(NC) (minimal.json)"
-	@cat profiles/minimal.json | jq -r '.description' | sed 's/^/     /'
+	@cat config/profiles/minimal.json | jq -r '.description' | sed 's/^/     /'
 	@echo "     Servers: filesystem, context7"
 	@echo "     Resource: ~50MB"
 	@echo ""

@@ -615,10 +615,8 @@ networks:
 
 ## 🔗 Related Documents
 
-- [VISION.md](./VISION.md) - Project philosophy and goals
-- [ROADMAP.md](./ROADMAP.md) - Development timeline and phases
-- [TASK_LIST.md](./TASK_LIST.md) - Implementation status
-- [README.md](./README.md) - User documentation
+- [README.md](../README.md) - User documentation
+- [HACKING.md](./HACKING.md) - Development guide
 
 ---
 

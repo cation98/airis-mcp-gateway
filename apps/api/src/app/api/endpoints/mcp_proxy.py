@@ -282,6 +282,34 @@ def _filter_stream_headers(headers: dict[str, str]) -> dict[str, str]:
     }
 
 
+def _format_sse_event(data: Dict[str, Any], event_type: str | None = "message") -> bytes:
+    """
+    Encode an SSE event payload.
+    """
+    lines = []
+    if event_type:
+        lines.append(f"event: {event_type}")
+    lines.append(f"data: {json.dumps(data)}")
+    return ("\n".join(lines) + "\n\n").encode("utf-8")
+
+
+def _parse_sse_json(lines: list[str]) -> Optional[Dict[str, Any]]:
+    """
+    Extract JSON payload from SSE event lines.
+    """
+    data_lines: list[str] = []
+    for line in lines:
+        if line.startswith("data:"):
+            data_lines.append(line[5:].lstrip())
+    if not data_lines:
+        return None
+    data_str = "\n".join(data_lines)
+    try:
+        return json.loads(data_str)
+    except json.JSONDecodeError:
+        return None
+
+
 def _method_has_body(method: str) -> bool:
     return method.upper() in {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -290,6 +318,7 @@ async def _proxy_streaming_gateway_request(
     request: Request,
     *,
     include_api_prefix: bool = True,
+    initialize_request_id: Optional[Any] = None,
 ) -> Response:
     """
     Proxy Codex RMCP streamable_http traffic to the streaming gateway.
@@ -326,9 +355,66 @@ async def _proxy_streaming_gateway_request(
             headers=response_headers,
         )
 
+    content_type = response_headers.get("content-type", "")
+    is_sse_response = "text/event-stream" in content_type.lower()
+
+    async def _inject_initialized_notifications():
+        """
+        Yield SSE stream chunks and append notifications/initialized when needed.
+        """
+        if not is_sse_response:
+            async for chunk in upstream.aiter_raw():
+                yield chunk
+            return
+
+        pending_lines: list[str] = []
+        tracked_initialize_id = initialize_request_id
+
+        def flush_lines() -> list[bytes]:
+            nonlocal pending_lines, tracked_initialize_id
+            if not pending_lines:
+                return [b"\n"]
+
+            event_text = "\n".join(pending_lines)
+            payload = _parse_sse_json(pending_lines)
+            chunks = [(event_text + "\n\n").encode("utf-8")]
+
+            if isinstance(payload, dict):
+                method = payload.get("method")
+                if method == "notifications/initialized":
+                    tracked_initialize_id = None
+                elif (
+                    tracked_initialize_id is not None
+                    and payload.get("id") == tracked_initialize_id
+                    and "result" in payload
+                ):
+                    chunks.append(
+                        _format_sse_event(
+                            {
+                                "jsonrpc": "2.0",
+                                "method": "notifications/initialized",
+                            }
+                        )
+                    )
+                    tracked_initialize_id = None
+
+            pending_lines = []
+            return chunks
+
+        async for line in upstream.aiter_lines():
+            if line == "":
+                for chunk in flush_lines():
+                    yield chunk
+            else:
+                pending_lines.append(line)
+
+        if pending_lines:
+            for chunk in flush_lines():
+                yield chunk
+
     async def stream_body():
         try:
-            async for chunk in upstream.aiter_raw():
+            async for chunk in _inject_initialized_notifications():
                 yield chunk
         finally:
             await upstream.aclose()
@@ -389,6 +475,9 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
     """
     body = await request.body()
     rpc_request = json.loads(body)
+    initialize_request_id: Optional[Any] = None
+    if isinstance(rpc_request, dict) and rpc_request.get("method") == "initialize":
+        initialize_request_id = rpc_request.get("id")
 
     # expandSchema ツールコール処理
     if rpc_request.get("method") == "tools/call":
@@ -402,7 +491,10 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
     # その他のツールコールはGatewayにproxy
     if "sessionid" not in request.query_params:
         # RMCP streamable_http clients (Codex) expect streaming responses.
-        return await _proxy_streaming_gateway_request(request)
+        return await _proxy_streaming_gateway_request(
+            request,
+            initialize_request_id=initialize_request_id,
+        )
     target_url = _build_gateway_jsonrpc_url(request)
     forward_headers = {"Content-Type": "application/json"}
     auth_header = request.headers.get("Authorization")

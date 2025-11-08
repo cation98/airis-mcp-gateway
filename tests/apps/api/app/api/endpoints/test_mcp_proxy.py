@@ -216,3 +216,59 @@ async def test_stream_proxy_without_session_id_forwards_to_stream_gateway():
     assert captured["follow_redirects"] is True
     assert captured["client_closed"] is True
     assert captured["stream_closed"] is True
+
+
+async def test_stream_proxy_appends_initialized_notification_for_sse():
+    """Ensure streamable HTTP responses include notifications/initialized for handshake."""
+    from apps.api.app.main import app
+
+    class MockStreamResponse:
+        def __init__(self):
+            self.status_code = 200
+            self.headers = {"content-type": "text/event-stream"}
+
+        async def aiter_lines(self):
+            yield "event: message"
+            yield 'data: {"jsonrpc":"2.0","id":1,"result":{}}'
+            yield ""
+
+        async def aiter_raw(self):
+            yield b""
+
+        async def aread(self):
+            return b""
+
+        async def aclose(self):
+            return None
+
+    class MockAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def build_request(self, method, url, headers=None, content=None):
+            return object()
+
+        async def send(self, request, stream=False, follow_redirects=True):
+            assert stream is True
+            return MockStreamResponse()
+
+        async def aclose(self):
+            return None
+
+    with patch("apps.api.app.api.endpoints.mcp_proxy.httpx.AsyncClient", MockAsyncClient):
+        async with AsyncClient(app=app, base_url="http://testserver") as client:
+            resp = await client.post(
+                "/api/v1/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {"clientInfo": {"name": "test", "version": "0.0.1"}, "capabilities": {}},
+                },
+            )
+
+    assert resp.status_code == 200
+    body = resp.text.strip()
+    assert 'notifications/initialized' in body
+    events = [segment for segment in body.split("\n\n") if segment]
+    assert len(events) == 2
