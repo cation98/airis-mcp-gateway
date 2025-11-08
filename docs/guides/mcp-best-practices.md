@@ -510,8 +510,8 @@ AIRIS MCP Gatewayの利点:
 ```json
 {
   "mcpGateway": {
-    "addr": ":9090",
-    "baseURL": "http://localhost:9090",
+    "addr": ":9390",
+    "baseURL": "http://localhost:9390",
     "type": "sse"
   },
   "mcpServers": {

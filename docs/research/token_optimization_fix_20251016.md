@@ -35,7 +35,7 @@ api_router.include_router(
 **Before:**
 ```json
 {
-  "url": "http://localhost:9090/mcp/sse",
+  "url": "http://localhost:9390/mcp/sse",
   "description": "All MCP servers via unified Gateway (25 servers, schema partitioning enabled)"
 }
 ```
@@ -43,12 +43,12 @@ api_router.include_router(
 **After:**
 ```json
 {
-  "url": "http://localhost:8001/api/v1/mcp/sse",
+  "url": "http://localhost:9400/api/v1/mcp/sse",
   "description": "All MCP servers via unified Gateway (25 servers, 75-90% token reduction via OpenMCP schema partitioning)"
 }
 ```
 
-**Note:** Port changed from 9090 (direct Gateway) to 8001 (FastAPI Proxy with schema partitioning)
+**Note:** Port changed from 9390 (direct Gateway) to 9400 (FastAPI Proxy with schema partitioning)
 
 ---
 
@@ -58,8 +58,8 @@ api_router.include_router(
 
 | Endpoint | Initial Tokens | Available Context | Performance |
 |----------|---------------|-------------------|-------------|
-| **Before** (Port 9090) | 20,000-108,000 | 92,000 tokens | ❌ Slow startup |
-| **After** (Port 8001) | 3,000-15,000 | 185,000-197,000 | ✅ Fast startup |
+| **Before** (Port 9390) | 20,000-108,000 | 92,000 tokens | ❌ Slow startup |
+| **After** (Port 9400) | 3,000-15,000 | 185,000-197,000 | ✅ Fast startup |
 | **Improvement** | **-85% tokens** | **+100k context** | **Dramatic** |
 
 ---
@@ -74,13 +74,13 @@ make ps
 
 ### 2. API Health Check
 ```bash
-curl http://localhost:9000/health
+curl http://localhost:9900/health
 ```
 **Expected:** `{"status":"healthy"}`
 
 ### 3. Proxy Endpoint
 ```bash
-curl -N -H "Accept: text/event-stream" http://localhost:9000/api/v1/mcp/sse --max-time 5
+curl -N -H "Accept: text/event-stream" http://localhost:9900/api/v1/mcp/sse --max-time 5
 ```
 **Expected:** SSE connection established, endpoint information returned
 
@@ -105,7 +105,7 @@ curl -N -H "Accept: text/event-stream" http://localhost:9000/api/v1/mcp/sse --ma
 4. Check context usage in status bar (should start low)
 
 ### Method 2: MCP Inspector (if available)
-1. Connect MCP Inspector to `http://localhost:8001/api/v1/mcp/sse`
+1. Connect MCP Inspector to `http://localhost:9400/api/v1/mcp/sse`
 2. View tools list
 3. Verify schemas are partitioned (nested properties removed)
 4. Test `expandSchema` tool functionality
@@ -136,7 +136,7 @@ If schema partitioning causes issues:
 **File:** `mcp.json`
 ```json
 {
-  "url": "http://localhost:9090/api/v1/mcp/sse"
+  "url": "http://localhost:9390/api/v1/mcp/sse"
 }
 ```
 
@@ -159,13 +159,13 @@ make down && make up
 
 **Before (Direct Gateway):**
 ```
-Claude Code → http://localhost:9090/api/v1/mcp/sse → Docker MCP Gateway
+Claude Code → http://localhost:9390/api/v1/mcp/sse → Docker MCP Gateway
                                                     ↓ (full schemas, 20k+ tokens)
 ```
 
 **After (Schema Partitioning):**
 ```
-Claude Code → http://localhost:8001/api/v1/mcp/sse → FastAPI Proxy
+Claude Code → http://localhost:9400/api/v1/mcp/sse → FastAPI Proxy
                                                      ↓ (intercepts tools/list)
                                                      ↓ (applies schema partitioning)
                                                      ↓ (partitioned schemas, 3k tokens)
@@ -216,12 +216,12 @@ make restart
 ### Issue: Tools load slowly
 
 **Possible causes:**
-1. Still using old `mcp.json` (Port 9090)
+1. Still using old `mcp.json` (Port 9390)
 2. Proxy router not enabled in `routes.py`
 3. Services not restarted after changes
 
 **Solution:**
-1. Verify `mcp.json` points to Port 8001
+1. Verify `mcp.json` points to Port 9400
 2. Verify `routes.py` imports and registers `mcp_proxy_router`
 3. Run `make down && make up`
 
@@ -231,7 +231,7 @@ make restart
 
 **Check:**
 ```bash
-curl http://localhost:9000/api/v1/mcp/sse 2>&1 | grep -i "404\|not found"
+curl http://localhost:9900/api/v1/mcp/sse 2>&1 | grep -i "404\|not found"
 ```
 
 **If 404:** Proxy router disabled, check `routes.py`
@@ -263,7 +263,7 @@ Add to monitoring dashboard:
 
 **Original reasoning:**
 - "Unnecessary proxy layer"
-- "9090 works correctly"
+- "9390 works correctly"
 - "Simplicity over complexity"
 
 **What was missed:**
@@ -286,7 +286,7 @@ Add to monitoring dashboard:
 ## ✅ Completion Checklist
 
 - [x] Proxy router re-enabled in `routes.py`
-- [x] `mcp.json` updated to use Port 8001
+- [x] `mcp.json` updated to use Port 9400
 - [x] Services restarted (`make down && make up`)
 - [x] API health check passed
 - [x] Proxy endpoint accessible

@@ -17,7 +17,7 @@ import json
 import httpx
 from typing import Optional, Dict, Any
 
-async def test_mcp_connection(url: str = "http://mcp-gateway:9090/sse") -> Optional[Dict[str, Any]]:
+async def test_mcp_connection(url: str = "http://mcp-gateway:9390/sse") -> Optional[Dict[str, Any]]:
     """
     MCP Gatewayに接続してツール一覧を取得
 

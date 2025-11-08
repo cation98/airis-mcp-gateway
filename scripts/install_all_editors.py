@@ -43,7 +43,7 @@ def _load_env_defaults(env_path: Path) -> None:
 _load_env_defaults(ENV_FILE)
 
 
-GATEWAY_API_URL = os.getenv("GATEWAY_API_URL", "http://api.gateway.localhost:9100/api")
+GATEWAY_API_URL = os.getenv("GATEWAY_API_URL", "http://api.gateway.localhost:9400/api")
 GATEWAY_SSE_URL = f"{GATEWAY_API_URL.rstrip('/')}/v1/mcp/sse"
 GATEWAY_HTTP_URL = f"{GATEWAY_API_URL.rstrip('/')}/v1/mcp"
 

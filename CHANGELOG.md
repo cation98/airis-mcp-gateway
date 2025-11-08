@@ -107,9 +107,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Infrastructure**
 - Update `docker-compose.yml`: 4-service architecture
-  - mcp-gateway: Docker MCP Gateway (9090)
+  - mcp-gateway: Docker MCP Gateway (9390)
   - postgres: PostgreSQL with encrypted secrets (internal)
-  - api: FastAPI proxy with schema partitioning (8001)
+  - api: FastAPI proxy with schema partitioning (9400)
   - settings-ui: React-based configuration UI (5173)
 - Update `Makefile`: Standardized Docker-First commands
   - `make up/down`: Service lifecycle
@@ -159,12 +159,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ```
 Claude Code
     ↓ SSE
-FastAPI Proxy (localhost:8001)
+FastAPI Proxy (localhost:9400)
     ↓ Intercept tools/list
 Schema Partitioning Applied
     ↓ 90% token reduction
     ↓ SSE
-Docker MCP Gateway (localhost:9090)
+Docker MCP Gateway (localhost:9390)
     ↓
 25 MCP Servers (Docker containers)
 ```

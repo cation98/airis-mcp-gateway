@@ -9,7 +9,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 // Gateway API configuration
-const GATEWAY_API_BASE = process.env.GATEWAY_API_URL || "http://api.gateway.localhost:9100/api";
+const GATEWAY_API_BASE = process.env.GATEWAY_API_URL || "http://api.gateway.localhost:9400/api";
 // Initialize MCP Server
 const server = new Server({
     name: "airis-self-management",

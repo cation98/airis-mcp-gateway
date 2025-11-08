@@ -10,7 +10,7 @@
 
 **Finding:** AIRIS MCP Gateway **already has** complete OpenMCP lazy loading implementation with 75-90% token reduction capability, but it's **disabled** in production.
 
-**Root Cause:** Proxy endpoint containing schema partitioning logic was commented out in `apps/api/app/api/routes.py` with note "Unnecessary proxy layer, 9090 works correctly", not realizing this bypasses critical token optimization.
+**Root Cause:** Proxy endpoint containing schema partitioning logic was commented out in `apps/api/app/api/routes.py` with note "Unnecessary proxy layer, 9390 works correctly", not realizing this bypasses critical token optimization.
 
 **Impact:** Editors loading all tool definitions at startup → 20,000-108,000+ tokens consumed before any work begins.
 
@@ -156,10 +156,10 @@ Claude Code → FastAPI Proxy → Docker MCP Gateway
 **File:** `apps/api/app/api/routes.py:4-27`
 
 ```python
-# from .endpoints.mcp_proxy import router as mcp_proxy_router  # Disabled: Use Port 9090 directly
+# from .endpoints.mcp_proxy import router as mcp_proxy_router  # Disabled: Use Port 9390 directly
 
-# MCP Proxy Layer Removed - Connect directly to Port 9090
-# Reason: Unnecessary proxy layer, 9090 works correctly
+# MCP Proxy Layer Removed - Connect directly to Port 9390
+# Reason: Unnecessary proxy layer, 9390 works correctly
 # To re-enable: uncomment import and router below
 # api_router.include_router(
 #     mcp_proxy_router,
@@ -177,7 +177,7 @@ Claude Code → FastAPI Proxy → Docker MCP Gateway
 {
   "mcpServers": {
     "airis-mcp-gateway": {
-      "url": "http://localhost:9090/mcp/sse",  // ← Direct to Gateway, bypasses proxy
+      "url": "http://localhost:9390/mcp/sse",  // ← Direct to Gateway, bypasses proxy
       "description": "All MCP servers via unified Gateway (25 servers, schema partitioning enabled)"
     }
   }
@@ -189,7 +189,7 @@ Claude Code → FastAPI Proxy → Docker MCP Gateway
 {
   "mcpServers": {
     "airis-mcp-gateway": {
-      "url": "http://localhost:8001/api/v1/mcp/sse",  // ← Use FastAPI proxy
+      "url": "http://localhost:9400/api/v1/mcp/sse",  // ← Use FastAPI proxy
       "description": "All MCP servers via unified Gateway (25 servers, schema partitioning enabled)"
     }
   }
@@ -249,14 +249,14 @@ api_router.include_router(
 {
   "mcpServers": {
     "airis-mcp-gateway": {
-      "url": "http://localhost:8001/api/v1/mcp/sse",
+      "url": "http://localhost:9400/api/v1/mcp/sse",
       "description": "All MCP servers via unified Gateway (25 servers, 75-90% token reduction via schema partitioning)"
     }
   }
 }
 ```
 
-**Note:** Port 8001 is the `API_PORT` from `.env` file.
+**Note:** Port 9400 is the `API_PORT` from `.env` file.
 
 ---
 

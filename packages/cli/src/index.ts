@@ -47,9 +47,9 @@ const loadEnvFromFile = (filePath: string) => {
 
 loadEnvFromFile(ENV_FILE_PATH);
 
-const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? 'http://gateway.localhost:9090';
+const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? 'http://gateway.localhost:9390';
 const UI_PUBLIC_URL = process.env.UI_PUBLIC_URL ?? 'http://ui.gateway.localhost:5173';
-const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://api.gateway.localhost:9100/api';
+const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://api.gateway.localhost:9400/api';
 
 program
   .name('airis-gateway')

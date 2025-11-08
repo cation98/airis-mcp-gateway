@@ -1,7 +1,7 @@
 {
   "mcpGateway": {
-    "addr": ":9090",
-    "baseURL": "http://mcp-gateway:9090",
+    "addr": ":9390",
+    "baseURL": "http://mcp-gateway:9390",
     "name": "AIRIS MCP Gateway",
     "version": "1.3.0",
     "type": "sse"
@@ -118,7 +118,7 @@
       "command": "sh",
       "args": [
         "-c",
-        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e GATEWAY_API_URL=${GATEWAY_API_URL:-http://mcp-gateway:9090/api} -v ${HOST_REPO_DIR}/servers/self-management:/app:ro -w /app node:24-alpine node dist/index.js"
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e GATEWAY_API_URL=${GATEWAY_API_URL:-http://mcp-gateway:9390/api} -v ${HOST_REPO_DIR}/servers/self-management:/app:ro -w /app node:24-alpine node dist/index.js"
       ],
       "enabled": true
     },

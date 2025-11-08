@@ -23,13 +23,13 @@ Practical checklist for installing and registering the AIRIS MCP Gateway across 
 ## 2. Manual Registration Reference
 
 When a teammate prefers hand-tuning their configs, point them here. The Gateway exposes:
-- **Streamable HTTP MCP** (Codex) → `http://localhost:9100/api/v1/mcp` (or `http://api.gateway.localhost:9100/api/v1/mcp` inside Docker).
-- **SSE transport** (Claude, Cursor, Zed) → `http://localhost:9090/api/v1/mcp/sse`.
+- **Streamable HTTP MCP** (Codex) → `http://localhost:9400/api/v1/mcp` (or `http://api.gateway.localhost:9400/api/v1/mcp` inside Docker).
+- **SSE transport** (Claude, Cursor, Zed) → `http://localhost:9400/api/v1/mcp/sse`.
 
 ### 2.1 Claude Code / Claude Desktop
 
 ```bash
-claude mcp add --transport sse airis-mcp-gateway http://localhost:9090/api/v1/mcp/sse
+claude mcp add --transport sse airis-mcp-gateway http://localhost:9400/api/v1/mcp/sse
 ```
 
 Config file locations:
@@ -56,7 +56,7 @@ Both editors pick up changes immediately after restart. `scripts/install_all_edi
 ```bash
 # HTTP transport (preferred)
 codex mcp remove airis-mcp-gateway 2>/dev/null || true
-codex --enable rmcp_client mcp add airis-mcp-gateway --url http://api.gateway.localhost:9100/api/v1/mcp
+codex --enable rmcp_client mcp add airis-mcp-gateway --url http://api.gateway.localhost:9400/api/v1/mcp
 
 # Optional: supply auth
 export AIRIS_MCP_TOKEN="<token>"
@@ -68,7 +68,7 @@ If Codex cannot complete the HTTP handshake (returns 400/handshake failed), fall
 ```bash
 codex mcp remove airis-mcp-gateway 2>/dev/null || true
 codex --enable rmcp_client mcp add airis-mcp-gateway -- npx -y mcp-proxy stdio-to-http \
-  --target http://api.gateway.localhost:9100/api/v1/mcp \
+  --target http://api.gateway.localhost:9400/api/v1/mcp \
   --header "Authorization: Bearer ${AIRIS_MCP_TOKEN}"
 ```
 
@@ -79,7 +79,7 @@ codex --enable rmcp_client mcp add airis-mcp-gateway -- npx -y mcp-proxy stdio-t
 ## 3. Health Checks & Troubleshooting
 
 1. **Docker status** – `docker ps | grep airis-mcp-gateway` should show `healthy`. If it is still `starting`, rerun `make up` and wait ~60s.
-2. **SSE probe** – `curl -I http://localhost:9090/api/v1/mcp/sse` must return `200/302`. Anything else means the FastAPI proxy is down.
+2. **SSE probe** – `curl -I http://localhost:9400/api/v1/mcp/sse` must return `200/302`. Anything else means the FastAPI proxy is down.
 3. **Config drift** – If editors are still talking to old servers, delete their `mcp.json` and rerun `make install` (the installer recreates symlinks safely).
 4. **SuperClaude installer** – When embedding AIRIS via SuperClaude’s own installer, add a 60 s health-check loop (see `scripts/install_all_editors.py` for reference) so the SSE probe waits for Docker to finish booting.
 5. **Uninstall / reset** – `make uninstall` rolls back the config import and stops Docker containers.

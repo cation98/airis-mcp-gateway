@@ -1,7 +1,7 @@
 """
 MCP Proxy Endpoint with OpenMCP Lazy Loading Pattern
 
-Claude Code → FastAPI (/mcp/sse) → Docker MCP Gateway (http://mcp-gateway:9090/sse)
+Claude Code → FastAPI (/mcp/sse) → Docker MCP Gateway (http://mcp-gateway:9390/sse)
 """
 
 from fastapi import APIRouter, Request, Response

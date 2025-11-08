@@ -22,10 +22,10 @@ class Settings(BaseSettings):
     # MCP Gateway
     PROJECT_ROOT: Path = DEFAULT_PROJECT_ROOT
     MCP_CONFIG_PATH: Path = DEFAULT_MCP_CONFIG
-    MCP_GATEWAY_URL: str = "http://mcp-gateway:9090"
-    MCP_STREAM_GATEWAY_URL: str = "http://mcp-gateway-stream:9091/mcp"
-    GATEWAY_PUBLIC_URL: str = "http://gateway.localhost:9090"
-    GATEWAY_API_URL: str = "http://api.gateway.localhost:9100/api"
+    MCP_GATEWAY_URL: str = "http://mcp-gateway:9390"
+    MCP_STREAM_GATEWAY_URL: str = "http://mcp-gateway-stream:9330/mcp"
+    GATEWAY_PUBLIC_URL: str = "http://gateway.localhost:9390"
+    GATEWAY_API_URL: str = "http://api.gateway.localhost:9400/api"
     UI_PUBLIC_URL: str = "http://ui.gateway.localhost:5173"
     MASTER_KEY_HEX: str | None = None
 

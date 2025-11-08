@@ -15,7 +15,7 @@ MAKEFLAGS   += --no-builtin-rules --warn-undefined-variables
 export
 
 export COMPOSE_DOCKER_CLI_BUILD := 1
-export DOCKER_BUILDKIT := 1
+# export DOCKER_BUILDKIT := 0
 export PATH := $(PWD)/bin:$(PATH)
 
 DC := docker compose

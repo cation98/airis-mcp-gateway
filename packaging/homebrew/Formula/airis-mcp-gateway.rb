@@ -57,9 +57,9 @@ class AirisMcpGateway < Formula
         - All MCP servers merged into unified Gateway
 
       Access URLs:
-        Gateway:     http://localhost:9090
+        Gateway:     http://localhost:9390
         Settings UI: http://localhost:5173
-        API Docs:    http://localhost:8001/docs
+        API Docs:    http://localhost:9400/docs
 
       Documentation: https://github.com/agiletec-inc/airis-mcp-gateway
     EOS

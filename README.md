@@ -32,9 +32,9 @@ make install                # unified install (build, start, editor registration
 - auto-enable the zero-setup servers (filesystem, context7, serena, mindbase, sequential-thinking, playwright, chrome-devtools)
 
 When it finishes you should see:
-- Codex Streamable HTTP MCP → `http://api.gateway.localhost:9100/api/v1/mcp` (no trailing slash; set `CODEX_GATEWAY_BEARER_ENV` if auth is required)
-- Gateway SSE endpoint → `http://api.gateway.localhost:9100/api/v1/mcp/sse` (mirrored at `http://api.gateway.localhost:9100/sse` for Claude/Cursor)
-- FastAPI docs → `http://api.gateway.localhost:9100/docs`
+- Codex Streamable HTTP MCP → `http://api.gateway.localhost:9400/api/v1/mcp` (no trailing slash; set `CODEX_GATEWAY_BEARER_ENV` if auth is required)
+- Gateway SSE endpoint → `http://api.gateway.localhost:9400/api/v1/mcp/sse` (mirrored at `http://api.gateway.localhost:9400/sse` for Claude/Cursor)
+- FastAPI docs → `http://api.gateway.localhost:9400/docs`
 - Settings UI → `http://ui.gateway.localhost:5173`
 
 Need a quick health check? Run `make doctor` to verify Docker availability and toolchain shims.
@@ -68,7 +68,7 @@ All commands run through docker-compose using the auto-detected workspace paths.
   - `HOST_WORKSPACE_DIR` → parent directory containing your clones
   - `CONTAINER_WORKSPACE_ROOT` → `/workspace/host`
   - `CONTAINER_PROJECT_ROOT` → `/workspace/host/<repo>`
-- Internal wiring between containers defaults to `http://api:9000` for the FastAPI service and `http://mcp-gateway:9090` for the gateway. Override with `API_INTERNAL_URL`, `MINDBASE_API_URL`, or `GATEWAY_API_URL` if your topology changes.
+- Internal wiring between containers defaults to `http://api:9900` for the FastAPI service and `http://mcp-gateway:9390` for the gateway. Override with `API_INTERNAL_URL`, `MINDBASE_API_URL`, or `GATEWAY_API_URL` if your topology changes.
 
 Need additional MCP servers? Add them via the Settings UI or edit `config/profiles/` and re-run `make install` (or `make restart` if configs stay the same).
 
@@ -76,7 +76,7 @@ Need additional MCP servers? Add them via the Settings UI or edit `config/profil
 
 ## 🎛 Codex CLI Transport Notes
 
-Codex now targets the Streamable HTTP MCP endpoint at `http://api.gateway.localhost:9100/api/v1/mcp` by default. Set these optional environment variables before running `make install` (or `make install-editors`) to fine-tune the installer:
+Codex now targets the Streamable HTTP MCP endpoint at `http://api.gateway.localhost:9400/api/v1/mcp` by default. Set these optional environment variables before running `make install` (or `make install-editors`) to fine-tune the installer:
 
 | Variable | Purpose |
 |----------|---------|
@@ -91,7 +91,7 @@ export CODEX_GATEWAY_BEARER_ENV=AIRIS_MCP_TOKEN
 make install
 ```
 
-The installer attempts HTTP first (`codex mcp add ... --url http://api.gateway.localhost:9100/api/v1/mcp`). If the endpoint returns 4xx/5xx or is unreachable, it automatically falls back to a STDIO bridge powered by `npx -y mcp-proxy stdio-to-http --target <HTTP_URL> [--header "Authorization: Bearer <token>"]`. Set `CODEX_STDIO_CMD` only if you need a different STDIO command.
+The installer attempts HTTP first (`codex mcp add ... --url http://api.gateway.localhost:9400/api/v1/mcp`). If the endpoint returns 4xx/5xx or is unreachable, it automatically falls back to a STDIO bridge powered by `npx -y mcp-proxy stdio-to-http --target <HTTP_URL> [--header "Authorization: Bearer <token>"]`. Set `CODEX_STDIO_CMD` only if you need a different STDIO command.
 
 ---
 

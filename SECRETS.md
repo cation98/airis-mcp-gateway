@@ -70,7 +70,7 @@ Navigate to "Secrets" tab and add:
 
 **API** (Advanced):
 ```bash
-curl -X POST http://localhost:8001/api/v1/secrets \
+curl -X POST http://localhost:9400/api/v1/secrets \
   -H "Content-Type: application/json" \
   -d '{
     "key": "STRIPE_API_KEY",

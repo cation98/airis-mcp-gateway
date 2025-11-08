@@ -83,7 +83,7 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://api:9000',
+        target: 'http://api:9900',
         changeOrigin: true,
         ws: true
       }

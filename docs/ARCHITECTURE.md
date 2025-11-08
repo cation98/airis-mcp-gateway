@@ -67,7 +67,7 @@
                          │ tools/call → expandSchema on-demand
                          │
 ┌────────────────────────▼────────────────────────────────────┐
-│  FastAPI Proxy (http://localhost:8001/mcp/sse)             │
+│  FastAPI Proxy (http://localhost:9400/mcp/sse)             │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │  Schema Partitioner (OpenMCP Pattern)                │  │
 │  │  • Intercept tools/list responses                    │  │
@@ -82,7 +82,7 @@
                          │ Forward tools/call (except expandSchema)
                          │
 ┌────────────────────────▼────────────────────────────────────┐
-│  Docker MCP Gateway (http://mcp-gateway:9090/sse)          │
+│  Docker MCP Gateway (http://mcp-gateway:9390/sse)          │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │  MCP Server Orchestrator                             │  │
 │  │  • Manage 25+ MCP server processes                   │  │
@@ -418,8 +418,8 @@ sequenceDiagram
 
 | Service | Purpose | Port | Status |
 |---------|---------|------|--------|
-| **FastAPI Proxy** | Schema partitioning | 8001 | ✅ Implemented |
-| **MCP Gateway** | Server orchestration | 9090 | ✅ Active |
+| **FastAPI Proxy** | Schema partitioning | 9400 | ✅ Implemented |
+| **MCP Gateway** | Server orchestration | 9390 | ✅ Active |
 | **PostgreSQL** | Secrets/config storage | 5432 | ✅ Active |
 | **Settings UI** | Web management | 5173 | ✅ Active |
 
@@ -493,7 +493,7 @@ MCP Servers
 │  Host Network (localhost)           │
 │  ┌─────────────────────────────┐   │
 │  │  External Services          │   │
-│  │  • Port 8001 (Proxy)        │   │
+│  │  • Port 9400 (Proxy)        │   │
 │  │  • Port 5173 (UI)           │   │
 │  └─────────────────────────────┘   │
 │                                     │
@@ -506,8 +506,8 @@ MCP Servers
 └─────────────────────────────────────┘
 ```
 
-**Exposed**: Proxy (8001), UI (5173)
-**Internal**: Gateway (9090), Database (5432), MCP Servers
+**Exposed**: Proxy (9400), UI (5173)
+**Internal**: Gateway (9390), Database (5432), MCP Servers
 
 ### Authentication Flow
 
@@ -543,9 +543,9 @@ services:
   api:
     build: ./apps/api
     ports:
-      - "8001:8000"
+      - "9400:9900"
     environment:
-      - MCP_GATEWAY_URL=http://mcp-gateway:9090
+      - MCP_GATEWAY_URL=http://mcp-gateway:9390
     depends_on:
       - mcp-gateway
     networks:
@@ -554,7 +554,7 @@ services:
   mcp-gateway:
     image: modelcontextprotocol/server:latest
     ports:
-      - "9090:9090"
+      - "9390:9390"
     volumes:
       - ./mcp-config.json:/app/mcp-config.json
     environment:

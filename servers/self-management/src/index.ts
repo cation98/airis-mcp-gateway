@@ -15,7 +15,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 // Gateway API configuration
-const GATEWAY_API_BASE = process.env.GATEWAY_API_URL || "http://api.gateway.localhost:9100/api";
+const GATEWAY_API_BASE = process.env.GATEWAY_API_URL || "http://api.gateway.localhost:9400/api";
 
 interface MCPServer {
   id: number;

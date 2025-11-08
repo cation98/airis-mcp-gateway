@@ -54,7 +54,7 @@ async def test_proxy_preserves_session_query():
 
     assert resp.status_code == 200
     called_url = mock_post.await_args.args[0]
-    assert called_url == "http://mcp-gateway:9090/sse?sessionid=abc123"
+    assert called_url == "http://mcp-gateway:9390/sse?sessionid=abc123"
 
 
 async def test_proxy_root_path_defaults_to_gateway_base():
@@ -68,7 +68,7 @@ async def test_proxy_root_path_defaults_to_gateway_base():
 
     assert resp.status_code == 200
     called_url = mock_post.await_args.args[0]
-    assert called_url == "http://mcp-gateway:9090/"
+    assert called_url == "http://mcp-gateway:9390/"
 
 
 def test_build_gateway_sse_url_preserves_querystring():
@@ -86,7 +86,7 @@ def test_build_gateway_sse_url_preserves_querystring():
     request = Request(scope)
 
     url = _build_gateway_sse_url(request)
-    assert url == "http://mcp-gateway:9090/sse?sessionid=abc&foo=bar"
+    assert url == "http://mcp-gateway:9390/sse?sessionid=abc&foo=bar"
 
 
 def test_build_stream_gateway_url_strips_api_prefix():
@@ -154,7 +154,7 @@ async def test_post_sse_with_accept_header_streams_sse():
     assert "text/event-stream" in resp.headers["content-type"]
     assert 'data: {"jsonrpc": "2.0", "id": 1, "result": {}}\n\n' == resp.text
     assert captured["method"] == "GET"
-    assert captured["url"] == "http://mcp-gateway:9090/sse?sessionid=abc123"
+    assert captured["url"] == "http://mcp-gateway:9390/sse?sessionid=abc123"
 
 
 async def test_stream_proxy_without_session_id_forwards_to_stream_gateway():

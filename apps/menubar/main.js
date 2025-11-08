@@ -1,6 +1,6 @@
 const { app, Menu, Tray, nativeImage, shell, dialog } = require('electron');
 
-const API_BASE = process.env.MCP_GATEWAY_API ?? 'http://localhost:9100/api/v1';
+const API_BASE = process.env.MCP_GATEWAY_API ?? 'http://localhost:9400/api/v1';
 const DASHBOARD_URL = process.env.MCP_GATEWAY_DASHBOARD ?? 'http://ui.gateway.localhost:5174';
 const REFRESH_INTERVAL = Number(process.env.MCP_GATEWAY_REFRESH_MS ?? 10000);
 

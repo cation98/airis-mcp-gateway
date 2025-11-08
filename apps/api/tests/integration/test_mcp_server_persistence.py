@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.crud import mcp_server as crud
 
 # API base URL (container internal)
-API_BASE_URL = os.getenv("API_INTERNAL_URL", "http://api:9000")
+API_BASE_URL = os.getenv("API_INTERNAL_URL", "http://api:9900")
 
 # Create test engine with NullPool (no connection pooling = no cache)
 test_engine = create_async_engine(

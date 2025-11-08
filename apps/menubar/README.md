@@ -11,7 +11,7 @@ pnpm menubar
 
 ## Environment variables
 
-- `MCP_GATEWAY_API` (defaults to `http://localhost:9100/api/v1`)
+- `MCP_GATEWAY_API` (defaults to `http://localhost:9400/api/v1`)
 - `MCP_GATEWAY_DASHBOARD` (defaults to `http://ui.gateway.localhost:5174`)
 - `MCP_GATEWAY_REFRESH_MS` (defaults to `10000`)
 
