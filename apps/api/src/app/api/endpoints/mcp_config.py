@@ -63,15 +63,6 @@ SERVER_METADATA = {
         "recommended": True,
         "builtin": True
     },
-    "sequentialthinking": {
-        "name": "Sequential Thinking",
-        "description": "Step-by-step reasoning and structured analysis",
-        "category": "builtin",
-        "apiKeyRequired": False,
-        "recommended": True,
-        "builtin": True
-    },
-
     # Gateway servers (no auth)
     "filesystem": {
         "name": "File System",
@@ -331,7 +322,7 @@ def load_mcp_servers_from_config() -> list[MCPServerInfo]:
             **metadata
         ))
 
-    builtin_servers = ["time", "fetch", "git", "memory", "sequentialthinking"]
+    builtin_servers = ["time", "fetch", "git", "memory"]
     for builtin_id in builtin_servers:
         if not any(s.id == builtin_id for s in servers):
             metadata = SERVER_METADATA[builtin_id]

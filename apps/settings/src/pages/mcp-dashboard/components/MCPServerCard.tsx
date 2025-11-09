@@ -134,14 +134,14 @@ export function MCPServerCard({
       key: 'api-required',
       icon: 'ri-key-2-line',
       text: t('serverCard.badge.apiKeyRequired'),
-      className: 'bg-amber-100 text-amber-800 border border-amber-200',
+      className: 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700',
     });
   } else if (!hasEnvRequirements) {
     headerBadges.push({
       key: 'no-setup',
       icon: 'ri-flashlight-fill',
       text: t('serverCard.badge.noSetupNeeded'),
-      className: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+      className: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700',
     });
   }
 
@@ -150,7 +150,7 @@ export function MCPServerCard({
       key: 'recommended',
       icon: 'ri-star-smile-line',
       text: t('serverCard.badge.recommended'),
-      className: 'bg-blue-50 text-blue-700 border border-blue-200',
+      className: 'bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700',
     });
   }
 
@@ -162,14 +162,14 @@ export function MCPServerCard({
     : t('serverCard.accessibility.enable', { name: server.name });
 
   return (
-    <div className={`bg-white rounded-lg border transition-all ${paddingClass} ${
-      server.enabled ? 'border-blue-200 shadow-sm' : 'border-gray-200'
+    <div className={`bg-white dark:bg-gray-800 rounded-lg border transition-all ${paddingClass} ${
+      server.enabled ? 'border-blue-200 dark:border-blue-700 shadow-sm' : 'border-gray-200 dark:border-gray-700'
     }`}>
       {/* ヘッダー */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-medium text-gray-900 text-sm truncate">{server.name}</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">{server.name}</h4>
             <i className={`${getStatusIcon()} text-xs ${getStatusColor()}`}></i>
             {hasConflicts && (
               <span
@@ -197,8 +197,8 @@ export function MCPServerCard({
               ))}
             </div>
           )}
-          <p className={`${descriptionClass} text-gray-600 truncate`}>{server.description}</p>
-          <div className="text-[11px] text-gray-500 mt-1 truncate">
+          <p className={`${descriptionClass} text-gray-600 dark:text-gray-400 truncate`}>{server.description}</p>
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 truncate">
             {commandPreview}
           </div>
         </div>
@@ -215,7 +215,7 @@ export function MCPServerCard({
           }`}
         >
           <span
-            className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+            className={`inline-block h-3 w-3 transform rounded-full bg-white dark:bg-gray-200 transition-transform ${
               server.enabled ? 'translate-x-5' : 'translate-x-1'
             }`}
           />
@@ -229,9 +229,9 @@ export function MCPServerCard({
             <button
               onClick={() => { openApiKeyEditor(); }}
               className={`w-full px-2 py-1.5 text-xs rounded border transition-colors ${
-                server.apiKey 
-                  ? 'border-green-200 bg-green-50 text-green-700'
-                  : 'border-orange-200 bg-orange-50 text-orange-700'
+                server.apiKey
+                  ? 'border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                  : 'border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
               }`}
             >
               <i className={`${server.apiKey ? 'ri-key-fill' : 'ri-key-line'} mr-1`}></i>
@@ -245,13 +245,13 @@ export function MCPServerCard({
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
                   placeholder={t('serverCard.inputs.apiKeyPlaceholder')}
-                  className="w-full px-2 py-1.5 pr-16 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-2 py-1.5 pr-16 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                   disabled={isSaving || isFetchingSecret}
                 />
                 <button
                   type="button"
                   onClick={() => setRevealApiKey(prev => !prev)}
-                  className="absolute inset-y-0 right-2 flex items-center text-[11px] text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+                  className="absolute inset-y-0 right-2 flex items-center text-[11px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 disabled:text-gray-400 dark:disabled:text-gray-600"
                   disabled={isSaving || isFetchingSecret || apiKeyInput.length === 0}
                 >
                   <i className={`mr-1 text-xs ${revealApiKey ? 'ri-eye-off-line' : 'ri-eye-line'}`}></i>
@@ -261,7 +261,7 @@ export function MCPServerCard({
                 </button>
               </div>
               {isFetchingSecret && (
-                <p className="text-[11px] text-gray-500">
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   {t('common.status.loading')}
                 </p>
               )}
@@ -270,8 +270,8 @@ export function MCPServerCard({
                   onClick={() => { void handleApiKeySubmit(); }}
                   className={`flex-1 px-2 py-1 text-xs rounded transition-colors whitespace-nowrap ${
                     isSaving || isFetchingSecret
-                      ? 'bg-blue-300 text-white cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      ? 'bg-blue-300 dark:bg-blue-800 text-white cursor-not-allowed'
+                      : 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600'
                   }`}
                   disabled={isSaving || isFetchingSecret}
                 >
@@ -290,7 +290,7 @@ export function MCPServerCard({
                     setApiKeyInput('');
                     setRevealApiKey(false);
                   }}
-                  className="flex-1 px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors whitespace-nowrap"
+                  className="flex-1 px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors whitespace-nowrap"
                   disabled={isSaving}
                 >
                   {t('common.actions.cancel')}
@@ -302,7 +302,7 @@ export function MCPServerCard({
       )}
 
       {activeConflicts.length > 0 && (
-        <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 flex items-start gap-2">
+        <div className="mt-2 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded px-2 py-1 flex items-start gap-2">
           <i className="ri-alert-fill mt-0.5"></i>
           <span>
             {activeConflicts.map(conflict => conflict.message).join(' ')}

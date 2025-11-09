@@ -8,7 +8,8 @@
 
 ## Build, Test, and Development Commands
 - `make deps` – bootstrap pnpm workspaces inside the Node toolchain container (alias: `make install-deps`).
-- `make dev` – run the settings UI (`pnpm dev`) for hot reload (binds to 5173 on the host).
+- `make init` – wipe prior editor bindings, rebuild the stack, and re-register all IDEs (full reinstall).
+- `make dev` – run the settings UI (`pnpm dev`) for hot reload (binds to 5273 on the host).
 - `make build` / `make typecheck` / `make lint` – build artifacts, run `tsc --noEmit`, and enforce ESLint 9 rules (all containerised).
 - `make test-ui` – execute pnpm-managed UI test suites in Docker.
 - `make up` (localhost publishing) / `make up-dev` (internal DNS only) / `make down` / `make logs` – orchestrate the Docker stack; use `pytest tests/` for API coverage runs.

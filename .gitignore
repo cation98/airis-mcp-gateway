@@ -53,3 +53,4 @@ backups/
 *.egg-info/
 uv.lock
 apps/api/.coverage
+secrets.json

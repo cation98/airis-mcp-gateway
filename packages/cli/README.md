@@ -67,7 +67,7 @@ airis-gateway update
 
 After installation:
 - **Gateway**: http://gateway.localhost:9390
-- **Settings UI**: http://ui.gateway.localhost:5173
+- **Settings UI**: http://ui.gateway.localhost:5273
 - **API Docs**: http://api.gateway.localhost:9400/docs
 - *(Need internal-only networking? Run `make up-dev` inside the repository.)*
 
@@ -81,7 +81,7 @@ After installation:
 
 ### Core Tools
 - `filesystem`, `context7`, `serena`, `mindbase`
-- `time`, `fetch`, `git`, `memory`, `sequentialthinking`
+- `time`, `fetch`, `git`, `memory`, `sequential-thinking`
 
 ### Search & AI
 - `tavily`, `brave-search`

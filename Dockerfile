@@ -41,13 +41,13 @@ WORKDIR /monorepo/apps/settings
 RUN pnpm build
 
 FROM nginx:1.27-alpine AS settings
-ENV UI_PORT=5173 \
+ENV UI_PORT=5273 \
     API_PROXY_URL=http://api:9900
 
 COPY --from=settings-builder /monorepo/apps/settings/out /usr/share/nginx/html
 COPY apps/settings/nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
-EXPOSE 5173
+EXPOSE 5273
 CMD ["sh", "-c", "envsubst '$$UI_PORT $$API_PROXY_URL' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
 
 

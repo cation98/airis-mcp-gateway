@@ -8,10 +8,10 @@ Practical checklist for installing and registering the AIRIS MCP Gateway across 
 
 | Scenario | Command | What It Does |
 |----------|---------|--------------|
-| All editors (Claude Desktop/Code, Cursor, Zed) | `make install` | Builds bundled MCP servers, imports existing configs, starts Docker stack, waits for health, registers every editor via `scripts/install_all_editors.py` |
-| Claude-only quick setup | `make install-claude` | Delegates to `make install` but prints Claude-specific next steps |
-| Development mode (UI + API extras) | `make install-dev` | Same as `make install` plus ensures Settings UI + FastAPI are running for local tweaking |
-| Shell-friendly wrapper | `./scripts/install.sh` | Runs the same `make install` sequence after verifying Docker and sourcing `.env` overrides |
+| All editors (Claude Desktop/Code, Cursor, Zed) | `make init` | Cleans prior configs, builds bundled MCP servers, imports existing configs, starts Docker stack, waits for health, registers every editor via `scripts/install_all_editors.py` |
+| Claude-only quick setup | `make install-claude` | Delegates to `make init` but prints Claude-specific next steps |
+| Development mode (UI + API extras) | `make install-dev` | Same flow as `make init` plus ensures Settings UI + FastAPI are running for local tweaking |
+| Shell-friendly wrapper | `./scripts/install.sh` | Runs the same `make init` sequence after verifying Docker and sourcing `.env` overrides |
 
 **After running any installer**
 1. Restart every editor so they pick up the refreshed `mcp.json` symlink.
@@ -80,7 +80,7 @@ codex --enable rmcp_client mcp add airis-mcp-gateway -- npx -y mcp-proxy stdio-t
 
 1. **Docker status** – `docker ps | grep airis-mcp-gateway` should show `healthy`. If it is still `starting`, rerun `make up` and wait ~60s.
 2. **SSE probe** – `curl -I http://localhost:9400/api/v1/mcp/sse` must return `200/302`. Anything else means the FastAPI proxy is down.
-3. **Config drift** – If editors are still talking to old servers, delete their `mcp.json` and rerun `make install` (the installer recreates symlinks safely).
+3. **Config drift** – If editors are still talking to old servers, delete their `mcp.json` and rerun `make init` (the installer recreates symlinks safely).
 4. **SuperClaude installer** – When embedding AIRIS via SuperClaude’s own installer, add a 60 s health-check loop (see `scripts/install_all_editors.py` for reference) so the SSE probe waits for Docker to finish booting.
 5. **Uninstall / reset** – `make uninstall` rolls back the config import and stops Docker containers.
 
@@ -97,10 +97,10 @@ Use these snippets when integrating the Gateway into other installers or CI pipe
 set -euo pipefail
 cd "$(dirname "$0")"
 command -v docker >/dev/null || { echo "Docker required"; exit 1; }
-make install
+make init
 ```
 
-The real script prints colored status output and loads `.env` overrides, but the logic boils down to “ensure Docker, then run `make install`”.
+The real script prints colored status output and loads `.env` overrides, but the logic boils down to “ensure Docker, then run `make init`”.
 
 ### Health-check loop (Python)
 

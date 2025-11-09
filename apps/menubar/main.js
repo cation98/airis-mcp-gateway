@@ -50,6 +50,10 @@ function openDashboard(fragment = '') {
 async function handleToggle(server) {
   const desiredState = !server.enabled;
   try {
+    if (desiredState) {
+      await ensureServerReady(server);
+    }
+
     await fetchJson(`${API_BASE}/server-states/${server.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -59,6 +63,46 @@ async function handleToggle(server) {
   } catch (error) {
     console.error('Failed to toggle server', error);
     dialog.showErrorBox('Toggle failed', `Could not update ${server.name}: ${error.message}`);
+  }
+}
+
+async function ensureServerReady(server) {
+  if (!server.api_key_required) {
+    return;
+  }
+
+  if (!server.api_key_configured) {
+    throw new Error('API key not configured yet. Open the dashboard to save it.');
+  }
+
+  const secrets = await fetchJson(`${API_BASE}/secrets/${server.id}/values`);
+  if (!Array.isArray(secrets) || secrets.length === 0) {
+    throw new Error('Failed to load stored API key. Re-save it in the dashboard.');
+  }
+
+  const config = secrets.reduce((acc, item) => {
+    if (item && typeof item === 'object' && item.key_name && typeof item.value === 'string') {
+      acc[item.key_name] = item.value;
+    }
+    return acc;
+  }, {});
+
+  if (Object.keys(config).length === 0) {
+    throw new Error('No credentials found for this server.');
+  }
+
+  const validation = await fetchJson(`${API_BASE}/validate/${server.id}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      server_id: server.id,
+      config,
+    }),
+  });
+
+  if (!validation?.valid) {
+    const message = validation?.message ?? 'Unknown validation error';
+    throw new Error(`Validation failed: ${message}`);
   }
 }
 

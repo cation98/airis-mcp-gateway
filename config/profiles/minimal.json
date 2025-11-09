@@ -5,12 +5,12 @@
     "time",
     "fetch",
     "git",
-    "memory",
-    "sequentialthinking"
+    "memory"
   ],
   "gateway_servers": [
     "filesystem",
-    "context7"
+    "context7",
+    "sequential-thinking"
   ],
   "optional_servers": [
     "serena",
@@ -24,7 +24,7 @@
   "features": {
     "short_term_memory": "memory（Built-in知識グラフ）",
     "latest_docs": "context7（15,000+ライブラリ）",
-    "complex_reasoning": "sequentialthinking（多段階推論）",
+    "complex_reasoning": "sequential-thinking（多段階推論API）",
     "time_awareness": "time（2004年問題解決）",
     "web_content": "fetch（URL内容取得）"
   },

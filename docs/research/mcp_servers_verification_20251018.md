@@ -41,14 +41,9 @@ These are built into the MCP gateway itself and don't require external repositor
    - Config: No configuration required
    - Description: Knowledge graph-based persistent memory
 
-5. **sequentialthinking** ✅
-   - Official: Built-in to MCP SDK
-   - Config: No configuration required
-   - Description: Multi-step reasoning and problem-solving
-
 ### Gateway Servers (No Auth Required)
 
-6. **filesystem** ✅
+5. **filesystem** ✅
    - Official: `@modelcontextprotocol/server-filesystem`
    - Repository: https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem
    - Config: Directory paths (command-line args)
@@ -64,7 +59,7 @@ These are built into the MCP gateway itself and don't require external repositor
      }
      ```
 
-7. **context7** ✅
+6. **context7** ✅
    - Official: `@upstash/context7-mcp`
    - Repository: https://github.com/upstash/context7
    - Config: Optional API key for higher rate limits
@@ -72,11 +67,17 @@ These are built into the MCP gateway itself and don't require external repositor
      - `CONTEXT7_API_KEY` (optional)
    - Description: Up-to-date library documentation and code examples
 
-8. **serena** ✅
+7. **serena** ✅
    - Official: `ghcr.io/oraios/serena`
    - Repository: https://github.com/oraios/serena
    - Config: Workspace paths
    - Description: Semantic code analysis and intelligent editing
+
+8. **sequential-thinking** ✅
+   - Official: `@modelcontextprotocol/server-sequential-thinking`
+   - Registry: https://www.npmjs.com/package/@modelcontextprotocol/server-sequential-thinking
+   - Config: No additional parameters (pure reasoning API)
+   - Description: Multi-step reasoning MCP server published via npm
 
 9. **puppeteer** ✅
    - Official: Part of modelcontextprotocol/servers
@@ -289,7 +290,8 @@ These are built into the MCP gateway itself and don't require external repositor
    - `DATABASE_URI` (connection string)
 
 ### No Auth Required
-- time, fetch, git, memory, sequentialthinking (built-in)
+- time, fetch, git, memory (built-in)
+- sequential-thinking (npm reasoning API)
 - filesystem (directory paths)
 - context7 (optional API key)
 - serena (workspace paths)

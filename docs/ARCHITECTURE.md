@@ -421,7 +421,7 @@ sequenceDiagram
 | **FastAPI Proxy** | Schema partitioning | 9400 | ✅ Implemented |
 | **MCP Gateway** | Server orchestration | 9390 | ✅ Active |
 | **PostgreSQL** | Secrets/config storage | 5432 | ✅ Active |
-| **Settings UI** | Web management | 5173 | ✅ Active |
+| **Settings UI** | Web management | 5273 | ✅ Active |
 
 ---
 
@@ -494,7 +494,7 @@ MCP Servers
 │  ┌─────────────────────────────┐   │
 │  │  External Services          │   │
 │  │  • Port 9400 (Proxy)        │   │
-│  │  • Port 5173 (UI)           │   │
+│  │  • Port 5273 (UI)           │   │
 │  └─────────────────────────────┘   │
 │                                     │
 │  ┌─────────────────────────────┐   │
@@ -506,7 +506,7 @@ MCP Servers
 └─────────────────────────────────────┘
 ```
 
-**Exposed**: Proxy (9400), UI (5173)
+**Exposed**: Proxy (9400), UI (5273)
 **Internal**: Gateway (9390), Database (5432), MCP Servers
 
 ### Authentication Flow

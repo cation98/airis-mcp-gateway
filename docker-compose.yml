@@ -1,6 +1,6 @@
 name: airis-mcp-gateway
 
-# IMPORTANT: Use `make install` (or `make up` for advanced use) to start services (auto-sets required environment variables)
+# IMPORTANT: Use `make init` (or `make up` for advanced use) to start services (auto-sets required environment variables)
 # Running `docker compose up` directly will show warnings about unset variables.
 
 services:
@@ -184,16 +184,16 @@ services:
       target: settings
     container_name: airis-mcp-gateway-settings-ui
     expose:
-      - "${UI_CONTAINER_PORT:-5173}"
+      - "${UI_CONTAINER_PORT:-5273}"
     environment:
-      - UI_PORT=${UI_CONTAINER_PORT:-5173}
+      - UI_PORT=${UI_CONTAINER_PORT:-5273}
       - API_PROXY_URL=${API_INTERNAL_URL:-http://api:${API_LISTEN_PORT:-9900}}
     depends_on:
       - mcp-gateway
       - api
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${UI_CONTAINER_PORT:-5173}/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${UI_CONTAINER_PORT:-5273}/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -291,7 +291,7 @@ services:
              . /tmp/venv/bin/activate &&
              pip install --upgrade pip &&
              pip install -q fastapi sqlalchemy alembic asyncpg aiosqlite pydantic pydantic-settings cryptography python-dotenv pytest pytest-asyncio httpx &&
-             PYTHONPATH=/workspace/apps/api pytest tests/test_config.py apps/api/tests/unit/ -v -o addopts=''"
+             PYTHONPATH=/workspace/apps/api/src:/workspace/apps/api pytest tests/test_config.py apps/api/tests/unit/ -v -o addopts=''"
     profiles:
       - test
 

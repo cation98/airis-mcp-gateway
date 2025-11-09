@@ -1,0 +1,7 @@
+# Install pnpm dependencies inside the Dockerized Node workspace.
+description: Install workspace dependencies via pnpm (Dockerized)
+profile: cli
+service: node
+forward_uid_gid: true
+pass_env: PNPM_BOOTSTRAP
+command: bash -lc "$PNPM_BOOTSTRAP pnpm install --frozen-lockfile 2>&1 | grep -v '╭\|╰\|│' | grep -v 'Ignored build scripts' | grep -v 'approve-builds' | grep -v 'protobufjs' | sed '/^[[:space:]]*$/d' || true"

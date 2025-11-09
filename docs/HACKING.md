@@ -14,8 +14,10 @@ This workspace is **Docker-first** and **Makefile-driven**. Keep the host as cle
 | --- | --- |
 | `make help` | Lists every documented target (LLMs should read this first). |
 | `make doctor` | Runs Docker connectivity checks and prints `node -v` / `pnpm -v` from the toolchain container. |
+| `make init` | Resets editor configs, rebuilds the stack, and re-registers every editor (full reinstall). |
 | `make deps` | Executes `pnpm install --frozen-lockfile` inside the Node service (alias: `make install-deps`). |
-| `make dev` | Launches the Vite dev server via `pnpm dev` in Docker (`DEV_PORT` defaults to 5173). |
+| `make install` | Lightweight wrapper around `apps/settings/src/tasks/install.yml` (Dockerized pnpm install only). |
+| `make dev` | Launches the Vite dev server via `pnpm dev` in Docker (`DEV_PORT` defaults to 5273). |
 | `make build` | Builds the entire pnpm workspace in the Node container. |
 | `make lint` / `make typecheck` | Delegates ESLint and TypeScript checks to the containerised toolchain. |
 | `make test-ui` | Runs `pnpm test` in Docker. |
@@ -24,7 +26,7 @@ This workspace is **Docker-first** and **Makefile-driven**. Keep the host as cle
 | `make clean` | Stops containers and prunes development volumes. |
 | `make clean-host` | Deletes any accidental host-side build artefacts (should normally be a no-op). |
 
-The legacy operational targets (`make up`, `make install`, profile toggles, etc.) continue to work and now reuse the `$(DC)` helper so they automatically benefit from the same Docker Compose routing.
+The legacy operational targets (`make up`, `make init`, profile toggles, etc.) continue to work and now reuse the `$(DC)` helper so they automatically benefit from the same Docker Compose routing.
 
 ## Docker Toolchain Services
 - **`node` service**: `node:24-bookworm` image mounted at `/workspace` with `node_modules` / `.pnpm-store` volumes keeping dependencies inside Docker. Every CLI target runs `corepack enable` + `corepack prepare pnpm@$(PNPM_VER)` before executing `pnpm …`, so the pnpm CLI is provisioned on-demand in the container without touching the host.

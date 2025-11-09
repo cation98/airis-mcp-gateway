@@ -1,5 +1,5 @@
 #!/bin/bash
-# install.sh - Delegates to `make install` for a unified setup experience.
+# install.sh - Delegates to `make init` for a unified setup experience.
 # Usage: ./install.sh
 
 set -euo pipefail
@@ -27,7 +27,7 @@ fi
 
 export GATEWAY_PUBLIC_URL="${GATEWAY_PUBLIC_URL:-http://gateway.localhost:9390}"
 export GATEWAY_API_URL="${GATEWAY_API_URL:-http://api.gateway.localhost:9400/api}"
-export UI_PUBLIC_URL="${UI_PUBLIC_URL:-http://ui.gateway.localhost:5173}"
+export UI_PUBLIC_URL="${UI_PUBLIC_URL:-http://ui.gateway.localhost:5273}"
 
 echo "Checking prerequisites..."
 if ! command -v docker >/dev/null 2>&1; then
@@ -38,13 +38,13 @@ fi
 echo -e "${GREEN}✅ Docker found${NC}"
 
 echo ""
-echo -e "${BLUE}🚀 Running unified installer (make install)...${NC}"
+echo -e "${BLUE}🚀 Running unified installer (make init)...${NC}"
 echo ""
 
-if make install; then
+if make init; then
     echo ""
     echo -e "${GREEN}🎉 All done!${NC}"
-    echo "👉 For future installs, run ${BLUE}make install${NC} directly."
+    echo "👉 For future reinstalls, run ${BLUE}make init${NC} directly."
 else
     status=$?
     echo ""

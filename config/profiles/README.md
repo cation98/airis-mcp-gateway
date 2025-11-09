@@ -9,8 +9,8 @@ AIRIS MCP Gatewayで使用できるプロファイル定義です。
 **対象ユーザー**: 長期プロジェクト、本格的な開発
 
 **含まれるサーバー**:
-- Built-in: time, fetch, git, memory, sequentialthinking
-- Gateway: filesystem, context7, serena, mindbase
+- Built-in: time, fetch, git, memory
+- Gateway: filesystem, context7, serena, mindbase, sequential-thinking
 
 **特徴**:
 - ✅ 短期 + 長期のハイブリッド記憶
@@ -27,8 +27,8 @@ AIRIS MCP Gatewayで使用できるプロファイル定義です。
 **対象ユーザー**: リソース制約環境、短期タスク
 
 **含まれるサーバー**:
-- Built-in: time, fetch, git, memory, sequentialthinking
-- Gateway: filesystem, context7
+- Built-in: time, fetch, git, memory
+- Gateway: filesystem, context7, sequential-thinking
 
 **特徴**:
 - ✅ 軽量・高速

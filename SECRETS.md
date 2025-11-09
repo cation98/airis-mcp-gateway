@@ -59,7 +59,7 @@ make db-migrate
 
 **Web UI** (Recommended):
 ```
-http://localhost:5173
+http://localhost:5273
 ```
 
 Navigate to "Secrets" tab and add:

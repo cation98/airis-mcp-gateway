@@ -48,7 +48,7 @@ const loadEnvFromFile = (filePath: string) => {
 loadEnvFromFile(ENV_FILE_PATH);
 
 const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? 'http://gateway.localhost:9390';
-const UI_PUBLIC_URL = process.env.UI_PUBLIC_URL ?? 'http://ui.gateway.localhost:5173';
+const UI_PUBLIC_URL = process.env.UI_PUBLIC_URL ?? 'http://ui.gateway.localhost:5273';
 const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://api.gateway.localhost:9400/api';
 
 program
@@ -90,7 +90,7 @@ program
       spinner.warn('Could not update (continuing with current version)');
     }
 
-    const installCmd = options.claudeOnly ? 'make install-claude' : 'make install';
+    const installCmd = options.claudeOnly ? 'make install-claude' : 'make init';
 
     // Step 3: Run unified install (Docker + editors)
     if (options.docker !== false) {

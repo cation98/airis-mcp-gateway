@@ -8,6 +8,8 @@ AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates to
 
 **Core Value**: 90% token reduction (12,500 → 1,250 tokens) via schema partitioning and on-demand expansion.
 
+**Key Innovation**: FastAPI proxy intercepts MCP protocol `tools/list` responses, partitions schemas to top-level only, and injects `expandSchema` tool for on-demand loading. Full schemas cached in memory; requests for details handled locally without Gateway roundtrip.
+
 **Key Documents**: See `docs/ARCHITECTURE.md` for technical deep-dive, `AGENTS.md` for coding conventions.
 
 ## Architecture
@@ -41,29 +43,47 @@ AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates to
 
 ### Daily Operations
 ```bash
-make install        # Full setup: build, start, register all editors
-make up             # Start services only (no editor import)
-make restart        # Full restart cycle
-make down           # Stop containers
+make init           # Full reset: clean editor configs, build custom servers, start services, register all editors (Claude, Cursor, Zed, Codex)
+make up             # Start services with localhost publishing (ports exposed on host)
+make up-dev         # Start services with internal-only DNS (no host ports)
+make restart        # Full stop/start cycle (no editor registration)
+make down           # Stop containers, keep volumes
+make clean          # Stop containers + drop volumes (destructive)
 make logs           # Stream all logs
-make test           # Validate config + run tests
+make logs-api       # Show API logs only
+make logs-gateway   # Show Gateway logs only
+make test           # Run pytest in container (config + unit tests)
+make doctor         # Health check (Docker, toolchain shims)
 ```
 
 ### Development
 ```bash
-make deps           # Install pnpm deps in container
-make dev            # Start Vite dev server (UI hot reload)
+# Workspace builds
+make deps           # Install pnpm deps in container (runs apps/settings/src/tasks/install.yml)
+make dev            # Start Vite dev server on port 5273 (UI hot reload)
 make build          # Build all TypeScript workspaces
 make lint           # ESLint all workspaces
 make typecheck      # Run tsc --noEmit
 
-# API tests
-docker compose run --rm test        # Run pytest in container
-cd apps/api && pytest tests/ -v     # Run locally
+# Backend tests (Python)
+make test                           # Full test suite in Docker
+docker compose run --rm test        # Same as above
+pytest tests/ --cov=app -v          # Run locally with coverage
+pytest apps/api/tests/unit/ -v      # Unit tests only
+pytest apps/api/tests/integration/  # Integration tests only
+
+# Frontend tests (TypeScript)
+make test-ui                        # Run vitest in container
+pnpm test                           # Run locally (if inside toolchain)
 
 # Database
 make db-migrate     # Run Alembic migrations
 make db-shell       # PostgreSQL psql shell
+docker compose exec api alembic revision --autogenerate -m "description"  # Create migration
+
+# Running individual Python files/scripts
+uv run <script.py>  # Always use uv for ephemeral venvs
+python scripts/install_all_editors.py  # Also works if venv active
 ```
 
 ### Building Custom Servers
@@ -76,12 +96,22 @@ docker compose --profile builder up # Build with isolated node_modules
 
 ### Editor Installation
 ```bash
-make install-claude     # Claude Code only
-make uninstall          # Remove from all editors
-make verify-claude      # Test installation
+make install-claude     # DEPRECATED: Use make init instead
+make install-editors    # Register with all detected editors (Claude, Cursor, Zed, Codex)
+make install-dev        # Start with UI/API + register editors (development mode)
+make uninstall          # Remove from all editors, restore backups
+make verify-claude      # Test Claude Code installation
+make hosts-add          # Add gateway*.localhost to /etc/hosts (sudo required)
+make hosts-remove       # Remove gateway hostnames from /etc/hosts
 ```
 
-**Auto-import**: Scans `~/.claude/`, `~/.cursor/`, `~/.windsurf/`, `~/.config/zed/`, merges configs, backs up originals.
+**Auto-import**: `make init` automatically:
+1. Runs `scripts/import_existing_configs.py` to scan `~/.claude/`, `~/.cursor/`, `~/.windsurf/`, `~/.config/zed/`
+2. Merges existing MCP servers into `mcp-config.json`
+3. Backs up original configs to `<editor>/.mcp.json.backup.<timestamp>`
+4. Registers unified Gateway via `scripts/install_all_editors.py`
+
+**Codex CLI Transport**: Installer attempts HTTP endpoint first (`http://api.gateway.localhost:9400/api/v1/mcp`), falls back to STDIO bridge if unreachable. Set `CODEX_GATEWAY_BEARER_ENV` for auth.
 
 ## Monorepo Structure
 
@@ -97,21 +127,31 @@ servers/
   self-management/  Task orchestration (in workspace)
 ```
 
-**Database** (`apps/api/app/models/`):
-- `secrets`: Encrypted API keys (Fernet)
+**Database** (`apps/api/src/app/models/`):
+- `secrets`: Encrypted API keys (Fernet + `ENCRYPTION_MASTER_KEY`)
 - `mcp_server_states`: Server ON/OFF toggles
 - `mcp_servers`: Server metadata
 
 **API Endpoints** (`/api/v1/` prefix):
 - `/secrets`: Manage encrypted credentials
 - `/mcp/servers`, `/server-states`: Server management
-- `/gateway/restart`: Trigger Gateway restart
-- `/mcp/*`: Schema partitioning proxy (OpenMCP pattern)
+- `/gateway/restart`: Trigger Gateway restart (Docker socket access)
+- `/mcp/sse`, `/sse`: Schema partitioning proxy (SSE transport)
+- `/mcp/*`: JSON-RPC proxy for tool calls
+- `/health`: Healthcheck endpoint
+- `/dashboard/summary`: UI metrics
+
+**Schema Partitioning** (`apps/api/src/app/core/schema_partitioning.py`):
+- `partition_schema()`: Remove nested `properties`, keep top-level types/descriptions
+- `store_full_schema()`: Cache full schema in memory
+- `expand_schema()`: On-demand retrieval (no Gateway call)
+- `expandSchema` tool: Injected into `tools/list` response
 
 **Docker-First Principles**:
-- NO host-side `node_modules`, `dist`, `__pycache__`
+- NO host-side `node_modules`, `dist`, `__pycache__` (all in named volumes)
 - All builds in containers with isolated volumes
-- Source code: bind mounts, Build artifacts: named volumes
+- Source code: bind mounts (read-only for builders), Build artifacts: named volumes
+- CLI shims (`bin/pnpm`, `bin/node`, `bin/supabase`) fail with instructions to use Make targets
 
 ## Development Workflows
 
@@ -138,34 +178,65 @@ Edit `apps/settings/src/` → auto-reloads with `make dev` → build with `pnpm 
 ## Coding Conventions (from AGENTS.md)
 
 ### TypeScript/React
-- Two-space indentation, functional components in PascalCase
+- Two-space indentation, functional components in PascalCase (e.g., `MCPServerCard.tsx`)
 - Hooks in `useCamelCase`, validate with `pnpm lint` and `pnpm typecheck`
 - React 19: `forwardRef` deprecated, use `React.ComponentProps<...>`
-- Tailwind v4: Single import, `darkMode: "class"`
+- Tailwind v4: Single `@import "tailwindcss"` in CSS, `darkMode: "class"` in config
+- UI validation: Zod schemas in `apps/settings/src/validation/`
+- Vitest for unit tests: `apps/settings/src/**/*.test.tsx`
 
 ### Python/FastAPI
-- Four-space indentation, snake_case modules, type hints for routes
-- **Async consistency**: Alembic migrations fully async (`async_engine_from_config`)
-- **Timestamps**: Use `server_default=func.now()` (DB-side, not Python)
-- **PostgreSQL triggers**: Auto-update `updated_at` via `trigger_set_updated_at()`
-- **Session management**: Always `async with AsyncSession` (NOT concurrency-safe)
-- **Schema isolation**: Tests use session-scoped schemas
+- Four-space indentation, snake_case modules, type hints for all route handlers
+- **Async consistency**: Alembic migrations fully async (`async_engine_from_config`), all DB ops use `AsyncSession`
+- **Timestamps**: Use `server_default=func.now()` (DB-side, not Python `datetime.now()`)
+- **PostgreSQL triggers**: Auto-update `updated_at` via `trigger_set_updated_at()` function
+- **Session management**: Always `async with AsyncSession() as session:` (NOT thread-safe without context manager)
+- **Schema isolation**: Tests use session-scoped schemas via `@pytest.fixture(scope="session")`
+- **Secrets**: Never commit to `.env`, use Fernet encryption via `core/encryption.py`
+- **Path construction**: `CONTAINER_PROJECT_ROOT` for Docker paths, `HOST_WORKSPACE_DIR` for host paths
 
 ### Testing
-- Mirror source layout under `tests/`, name `test_<unit>.py`
-- Run `pytest tests/ --cov=app` after backend changes
+- **Python**: Mirror source under `tests/` and `apps/api/tests/`, name `test_<unit>.py`
+- **React**: Co-locate tests in `src/` as `*.test.tsx` or mirror in `tests/apps/settings/`
+- Run `pytest tests/ --cov=app --cov-report=term-missing` after backend changes
 - Mark async tests with `@pytest.mark.asyncio`
-- Fixtures in `tests/conftest.py`
+- Fixtures in `tests/conftest.py` and `apps/api/tests/conftest.py`
+- Integration tests use `apps/api/tests/integration/`
 
 ### Git Commits
-- Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`)
-- PRs: summary, linked issue, commands run, screenshots for UI
-- Flag migrations/secret-store implications
+- Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`, `chore:`)
+- PRs: summary, linked issue/roadmap item, commands run (`make lint`, `pytest tests/`), screenshots for UI changes
+- Flag migrations, secret-store changes, or Docker networking modifications in PR description
 
 ## Important Notes
 
-- **mcp-config.json**: Keys starting with `__comment_` = docs, `__disabled_` = ignored by Gateway
-- **Secrets**: Encrypted at rest (Fernet), injected via `${VAR_NAME}`
-- **Docker networking**: Custom servers must join `airis-mcp-gateway_default` network
-- **Testing**: Each test gets isolated DB schema
-- **Symlinks**: Changes to `mcp.json` auto-apply to all editors
+### Configuration & Secrets
+- **mcp-config.json**: Keys starting with `__comment_` = documentation only, `__disabled_<name>` = server disabled (Gateway ignores)
+- **mcp.json**: Generated from `config/mcp.json.template` by `make generate-mcp-config` (replaces `${GATEWAY_API_URL}` etc.)
+- **Secrets**: Encrypted at rest (Fernet), stored in PostgreSQL `secrets` table, injected via `${VAR_NAME}` in `mcp-config.json`
+- **Environment variables**: Auto-detected by Makefile (`HOST_WORKSPACE_DIR`, `CONTAINER_PROJECT_ROOT`, `DOCKER_NETWORK`)
+- **Profiles**: Use `make profile-recommended` / `make profile-minimal` to toggle server groups
+
+### Docker & Networking
+- **Network name**: `airis-mcp-gateway_default` (auto-created by Compose with `COMPOSE_PROJECT_NAME`)
+- **Custom servers**: Must join `airis-mcp-gateway_default` network or use `DOCKER_NETWORK` env var
+- **Internal URLs**: `http://mcp-gateway:9390`, `http://api:9900`, `http://settings-ui:5273`
+- **External URLs**: `http://api.gateway.localhost:9400` (proxy), `http://ui.gateway.localhost:5273` (UI)
+- **Port binding**: `make up` binds to localhost, `make up-dev` uses internal DNS only
+
+### Testing & CI
+- **Test isolation**: Each pytest test gets isolated DB schema via `@pytest.fixture(scope="session")`
+- **Test command**: Always run `docker compose run --rm test` or `make test` (not `pytest` directly on host)
+- **Coverage**: `pytest tests/ --cov=app --cov-report=term-missing` shows missing lines
+- **Host validation**: `make check-host-ports` ensures no hardcoded `localhost` or `host.docker.internal` in source
+
+### Editor Integration
+- **Symlinks**: Changes to `mcp.json` auto-propagate to `~/.claude/mcp.json` if symlinked by `make init`
+- **Backup locations**: `~/<editor>/.mcp.json.backup.<timestamp>` for restored configs
+- **Multi-editor**: `scripts/install_all_editors.py` handles Claude Desktop, Claude Code, Cursor, Zed, Codex CLI
+- **Transport detection**: Codex uses HTTP if available, falls back to STDIO bridge via `mcp-proxy`
+
+### Performance & Monitoring
+- **Token measurement**: `make measure-tokens` analyzes `apps/api/logs/protocol_messages.jsonl` for reduction metrics
+- **Logs**: Protocol messages logged to `apps/api/logs/protocol_messages.jsonl` when `DEBUG=true`
+- **Health checks**: All services have Docker healthchecks (Gateway: port 9390, API: `/health`, UI: port 5273)

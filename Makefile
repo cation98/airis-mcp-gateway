@@ -23,12 +23,13 @@ NODE_SVC := node
 SUPA_SVC := supabase
 PNPM_VER := 10.20.0
 NODE_VER := 24
-DEV_PORT ?= 5173
-UI_CONTAINER_PORT ?= 5173
+DEV_PORT ?= 5273
+UI_CONTAINER_PORT ?= 5273
 CLI_PROFILE := cli
-PNPM_BOOTSTRAP := set -euo pipefail; \
+export PNPM_BOOTSTRAP := set -euo pipefail; \
 	corepack enable >/dev/null 2>&1; \
 	corepack prepare pnpm@$(PNPM_VER) --activate >/dev/null 2>&1;
+PYTHON ?= python3
 
 # Auto-detect project name from directory
 HOST_REPO_DIR := $(shell pwd)
@@ -78,9 +79,19 @@ doctor: ## 開発前ヘルスチェック
 
 .PHONY: deps install-deps
 deps install-deps: ## Node依存をコンテナ内pnpmで解決
-	@$(DC) --profile $(CLI_PROFILE) run --rm \
-		-e UID=$$(id -u) -e GID=$$(id -g) \
-		$(NODE_SVC) bash -lc '$(PNPM_BOOTSTRAP) pnpm install --frozen-lockfile'
+	@$(MAKE) run-task TASK_FILE=apps/settings/src/tasks/install.yml
+
+.PHONY: install
+install: deps ## Node依存パッケージのみをインストール
+
+TASK_FILE ?=
+.PHONY: run-task
+run-task:
+	@if [ -z "$(TASK_FILE)" ]; then \
+		echo "TASK_FILE is not set (expected path to YAML definition)"; \
+		exit 1; \
+	fi
+	@$(PYTHON) scripts/run_task_from_yaml.py --file $(TASK_FILE)
 
 .PHONY: dev
 dev: ## 設定UIの開発サーバー (pnpm dev)
@@ -472,8 +483,8 @@ measure-clear: ## Clear measurement logs and start fresh
 
 .PHONY: install-claude
 install-claude: ## Install and register with Claude Code (one-command setup)
-	@echo "$(BLUE)🌉 Installing AIRIS MCP Gateway for Claude Code...$(NC)"
-	@$(MAKE) install
+	@echo "$(BLUE)🌉 Initializing AIRIS MCP Gateway for Claude Code...$(NC)"
+	@$(MAKE) init
 	@echo "$(BLUE)📝 Creating configuration symlink...$(NC)"
 	@mkdir -p $(HOME)/.claude
 	@if [ -f $(HOME)/.claude/mcp.json ] && [ ! -L $(HOME)/.claude/mcp.json ]; then \
@@ -493,7 +504,7 @@ install-claude: ## Install and register with Claude Code (one-command setup)
 	@echo "  2. Run: $(BLUE)/mcp$(NC)"
 	@echo "  3. Verify: $(GREEN)airis-mcp-gateway$(NC) appears in list"
 	@echo ""
-	@echo "$(BLUE)Tip: $(NC)Future updates can use $(BLUE)make install$(NC) directly."
+	@echo "$(BLUE)Tip: $(NC)Future resets can use $(BLUE)make init$(NC) directly."
 	@echo ""
 	@echo "$(BLUE)Access URLs:$(NC)"
 	@echo "  Gateway:     $${GATEWAY_PUBLIC_URL}"
@@ -553,14 +564,26 @@ verify-claude: ## Verify Claude Code installation
 
 # ========== Installation ==========
 
+.PHONY: clean-editor-configs
+clean-editor-configs: ## Remove all AIRIS MCP configs from editors
+	@echo "$(YELLOW)🗑️  Removing old AIRIS MCP Gateway configs from all editors...$(NC)"
+	@uv run scripts/install_all_editors.py uninstall >/dev/null 2>&1 || true
+	@echo "$(GREEN)✅ Old configs removed$(NC)"
+
 .PHONY: install-editors
-install-editors: ## Synchronize MCP configs across editors
-	@echo "$(BLUE)📝 Syncing MCP configs with editors...$(NC)"
+install-editors: clean-editor-configs ## Synchronize MCP configs across editors (clean install)
+	@echo "$(BLUE)📝 Installing fresh MCP configs to all editors...$(NC)"
 	@uv run scripts/install_all_editors.py install
 
-.PHONY: install
-install: ## Install AIRIS Gateway (imports existing IDE configs automatically)
-	@echo "$(BLUE)🌉 Installing AIRIS Gateway...$(NC)"
+.PHONY: init
+init: ## Initialize AIRIS Gateway from scratch (clean + build + register)
+	@echo "$(BLUE)🌉 Initializing AIRIS Gateway...$(NC)"
+	@echo ""
+	@echo "$(YELLOW)🧹 Resetting any previous installation (safe to ignore errors if first run)...$(NC)"
+	@uv run scripts/install_all_editors.py uninstall >/dev/null 2>&1 || true
+	@$(DC) -f docker-compose.yml -f docker-compose.dev.yml down --remove-orphans >/dev/null 2>&1 || true
+	@rm -f /tmp/airis_import_summary.txt || true
+	@echo "$(GREEN)✅ Clean slate ready$(NC)"
 	@echo ""
 	@echo "$(YELLOW)🛠️  Step 1: Building bundled MCP servers (mindbase, self-management)...$(NC)"
 	@$(MAKE) build-custom-servers
@@ -579,7 +602,7 @@ install: ## Install AIRIS Gateway (imports existing IDE configs automatically)
 	@$(MAKE) install-editors
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "$(GREEN)🎉 Installation complete!$(NC)"
+	@echo "$(GREEN)🎉 Initialization complete!$(NC)"
 	@echo ""
 	@echo "$(BLUE)What was imported:$(NC)"
 	@cat /tmp/airis_import_summary.txt 2>/dev/null | grep -A 20 "Found MCP Servers" || echo "  No existing configs found (fresh install)"
@@ -644,8 +667,8 @@ install-import: ## Import existing IDE MCP configs and merge into AIRIS Gateway
 	@uv run scripts/import_existing_configs.py
 	@echo ""
 	@echo "$(GREEN)✅ Import complete$(NC)"
-	@echo "$(BLUE)🌉 Installing AIRIS Gateway with merged configuration...$(NC)"
-	@$(MAKE) install
+	@echo "$(BLUE)🌉 Initializing AIRIS Gateway with merged configuration...$(NC)"
+	@$(MAKE) init
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "$(GREEN)🎉 Your existing MCP servers are now unified!$(NC)"

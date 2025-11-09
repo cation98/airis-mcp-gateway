@@ -58,7 +58,7 @@ class AirisMcpGateway < Formula
 
       Access URLs:
         Gateway:     http://localhost:9390
-        Settings UI: http://localhost:5173
+        Settings UI: http://localhost:5273
         API Docs:    http://localhost:9400/docs
 
       Documentation: https://github.com/agiletec-inc/airis-mcp-gateway

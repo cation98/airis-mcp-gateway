@@ -13,7 +13,7 @@
     "__comment_profiles_custom": "Custom: \u9078\u629e\u7684\u6709\u52b9\u5316\uff08UI or profiles/custom.json\uff09",
     "__comment_profiles_switch": "\u5207\u308a\u66ff\u3048: make profile-recommended | make profile-minimal",
     "__comment_builtin": "=== BUILT-IN SERVERS (enabled via --servers flag) ===",
-    "__comment_builtin_list": "time, fetch, git, memory, sequentialthinking",
+    "__comment_builtin_list": "time, fetch, git, memory",
     "__comment_gateway_npx": "=== GATEWAY NPX SERVERS (no auth required) ===",
     "filesystem": {
       "command": "npx",
@@ -317,15 +317,6 @@
         "-v",
         "claude-memory:/app/dist",
         "mcp/memory"
-      ]
-    },
-    "__disabled_sequentialthinking": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "mcp/sequentialthinking"
       ]
     },
     "__disabled_time": {

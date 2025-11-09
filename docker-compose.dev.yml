@@ -9,9 +9,8 @@ services:
 
   api:
     ports:
-      - "9400:${API_LISTEN_PORT:-9900}"
       - "${GATEWAY_API_PORT:-9400}:${API_LISTEN_PORT:-9900}"
 
   settings-ui:
     ports:
-      - "${UI_LISTEN_PORT:-5173}:${UI_CONTAINER_PORT:-5173}"
+      - "${UI_LISTEN_PORT:-5273}:${UI_CONTAINER_PORT:-5273}"
