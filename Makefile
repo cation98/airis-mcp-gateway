@@ -353,13 +353,13 @@ profile-dynamic: ## Switch to Dynamic profile (self-management enabled, LLM cont
 		sed -i '' 's/"__disabled_self-management":/"self-management":/g' mcp-config.json; \
 		echo "$(GREEN)  ✅ self-management enabled$(NC)"; \
 	fi
-	@echo "$(YELLOW)🔴 Disabling: mindbase, playwright, puppeteer, chrome-devtools, sqlite, magic$(NC)"
+	@echo "$(YELLOW)🔴 Disabling: playwright, puppeteer, chrome-devtools, sqlite, magic$(NC)"
 	@cd $(PWD) && python3 scripts/disable_servers.py
 	@echo ""
 	@echo "$(BLUE)📋 Profile: Dynamic$(NC)"
-	@echo "   $(GREEN)✅ Always enabled:$(NC) self-management, serena, context7, filesystem"
-	@echo "   $(YELLOW)📦 Available on-demand:$(NC) mindbase, playwright, puppeteer, tavily, etc."
-	@echo "   $(BLUE)💡 Memory:$(NC) ~100MB (初期), ~500MB (全サーバー有効時)"
+	@echo "   $(GREEN)✅ Always enabled:$(NC) self-management, serena, context7, mindbase, filesystem"
+	@echo "   $(YELLOW)📦 Available on-demand:$(NC) playwright, puppeteer, tavily, github, etc."
+	@echo "   $(BLUE)💡 Memory:$(NC) ~300MB (初期), ~500MB (全サーバー有効時)"
 	@echo "   $(BLUE)🎯 Features:$(NC) LLMが必要に応じて動的にサーバー有効化"
 	@echo ""
 	@echo "$(BLUE)📖 Usage:$(NC)"

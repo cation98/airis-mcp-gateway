@@ -88,7 +88,6 @@ export function ServerCard({ server, onToggle, dynamicMode }: ServerCardProps) {
           <Switch
             checked={isActive}
             onCheckedChange={() => onToggle(server.id)}
-            disabled={server.alwaysEnabled && dynamicMode}
             className="data-[state=checked]:bg-[#5ac8fa]"
           />
         </div>

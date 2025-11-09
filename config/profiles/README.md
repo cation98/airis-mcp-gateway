@@ -10,8 +10,8 @@ AIRIS MCP Gatewayで使用できるプロファイル定義です。
 
 **含まれるサーバー**:
 - Built-in: time, fetch, git, memory
-- Gateway (常時): filesystem, context7, serena, **self-management**
-- Optional (LLMが動的に有効化): mindbase, playwright, puppeteer, tavily, github, 他
+- Gateway (常時): filesystem, context7, serena, **mindbase**, **self-management**
+- Optional (LLMが動的に有効化): playwright, puppeteer, tavily, github, 他
 
 **特徴**:
 - ✅ 初期トークン消費最小（~5-8k）
@@ -19,7 +19,7 @@ AIRIS MCP Gatewayで使用できるプロファイル定義です。
 - ✅ タスク完了後に自動無効化可能
 - ✅ コード理解（serena）+ 最新ドキュメント（context7）常時利用可能
 
-**リソース**: ~100MB メモリ使用（初期）
+**リソース**: ~300MB メモリ使用（Recommended比40%削減）
 
 **使い方**:
 ```

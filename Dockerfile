@@ -52,6 +52,34 @@ CMD ["sh", "-c", "envsubst '$$UI_PORT $$API_PROXY_URL' < /etc/nginx/templates/de
 
 
 ###########################################
+# WebUI (Dynamic Profile UI - Vite + pnpm + nginx)
+###########################################
+FROM node:24-alpine AS webui-builder
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+WORKDIR /monorepo
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/webui ./apps/webui
+COPY servers/mindbase/package.json ./servers/mindbase/package.json
+COPY servers/self-management/package.json ./servers/self-management/package.json
+
+RUN pnpm install --frozen-lockfile
+WORKDIR /monorepo/apps/webui
+RUN pnpm build
+
+FROM nginx:1.27-alpine AS webui
+ENV WEBUI_PORT=5274 \
+    API_PROXY_URL=http://api:9900
+
+COPY --from=webui-builder /monorepo/apps/webui/dist /usr/share/nginx/html
+COPY apps/webui/nginx/default.conf.template /etc/nginx/templates/default.conf.template
+
+EXPOSE 5274
+CMD ["sh", "-c", "envsubst '$$WEBUI_PORT $$API_PROXY_URL' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
+
+
+###########################################
 # Gateway (docker/mcp-gateway base)
 ###########################################
 FROM docker/mcp-gateway:latest AS gateway

@@ -88,7 +88,7 @@ const mockServers: Server[] = [
     id: 'sequential-thinking',
     name: 'sequential-thinking',
     description: 'Token-efficient reasoning',
-    status: 'active',
+    status: 'disabled',
     setupNeeded: false,
     recommended: true,
     apiKeyRequired: false,
@@ -101,7 +101,7 @@ const mockServers: Server[] = [
     id: 'playwright',
     name: 'playwright',
     description: 'JavaScript-heavy content extraction',
-    status: 'active',
+    status: 'disabled',
     setupNeeded: false,
     recommended: true,
     apiKeyRequired: false,
@@ -114,7 +114,7 @@ const mockServers: Server[] = [
     id: 'puppeteer',
     name: 'puppeteer',
     description: 'Headless browser automation (E2E testing only)',
-    status: 'active',
+    status: 'disabled',
     setupNeeded: false,
     recommended: false,
     apiKeyRequired: false,
@@ -129,8 +129,9 @@ const mockServers: Server[] = [
     description: 'Knowledge base and notes management',
     status: 'active',
     setupNeeded: false,
-    recommended: false,
+    recommended: true,
     apiKeyRequired: false,
+    alwaysEnabled: true,
     stars: 876,
     icon: '🧩',
     verified: true,
@@ -140,7 +141,7 @@ const mockServers: Server[] = [
     id: 'chrome-devtools',
     name: 'chrome-devtools',
     description: 'Browser debugging and inspection',
-    status: 'active',
+    status: 'disabled',
     setupNeeded: false,
     recommended: false,
     apiKeyRequired: false,
@@ -153,7 +154,7 @@ const mockServers: Server[] = [
     id: 'time',
     name: 'time',
     description: 'Time and scheduling utilities',
-    status: 'active',
+    status: 'disabled',
     setupNeeded: false,
     recommended: false,
     apiKeyRequired: false,
@@ -166,7 +167,7 @@ const mockServers: Server[] = [
     id: 'fetch',
     name: 'fetch',
     description: 'HTTP requests and API calls',
-    status: 'active',
+    status: 'disabled',
     setupNeeded: false,
     recommended: false,
     apiKeyRequired: false,
@@ -179,7 +180,7 @@ const mockServers: Server[] = [
     id: 'git',
     name: 'git',
     description: 'Git repository operations',
-    status: 'active',
+    status: 'disabled',
     setupNeeded: false,
     recommended: false,
     apiKeyRequired: false,
@@ -192,7 +193,7 @@ const mockServers: Server[] = [
     id: 'memory',
     name: 'memory',
     description: 'Persistent memory and context',
-    status: 'active',
+    status: 'disabled',
     setupNeeded: false,
     recommended: false,
     apiKeyRequired: false,
@@ -408,15 +409,10 @@ export default function App() {
 
   const handleToggleServer = (serverId: string, forceToggle: boolean = false) => {
     const server = servers.find(s => s.id === serverId);
-    
-    if (dynamicMode && !forceToggle && server?.status === 'disabled' && !server?.alwaysEnabled) {
-      setPendingServerId(serverId);
-      setShowDynamicDialog(true);
-      return;
-    }
 
-    setServers(servers.map(s => 
-      s.id === serverId 
+    // Simply toggle without showing dialog
+    setServers(servers.map(s =>
+      s.id === serverId
         ? { ...s, status: s.status === 'active' ? 'disabled' : 'active' } as Server
         : s
     ));
@@ -478,7 +474,7 @@ export default function App() {
                 <div className="flex items-start gap-2 text-[#888] text-sm">
                   <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#5ac8fa]" />
                   <div>
-                    <span className="text-[#e8e8e8]">Always enabled:</span> self-management, serena, context7, filesystem · 
+                    <span className="text-[#e8e8e8]">Always enabled:</span> self-management, serena, context7, filesystem, mindbase ·
                     <span className="text-[#888]"> Other servers dynamically enabled via </span>
                     <code className="text-[#5ac8fa] bg-[#0a0a0a] px-1.5 py-0.5 rounded text-xs">enable_mcp_server()</code>
                   </div>

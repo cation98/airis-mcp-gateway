@@ -25,7 +25,7 @@ def disable_servers(config_path, servers_to_disable):
     return True
 
 if __name__ == "__main__":
-    servers = ["mindbase", "playwright", "puppeteer", "chrome-devtools", "sqlite", "magic"]
+    servers = ["playwright", "puppeteer", "chrome-devtools", "sqlite", "magic"]
     if disable_servers("mcp-config.json", servers):
         sys.exit(0)
     else:

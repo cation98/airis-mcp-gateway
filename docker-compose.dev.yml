@@ -14,3 +14,7 @@ services:
   settings-ui:
     ports:
       - "${UI_LISTEN_PORT:-5273}:${UI_CONTAINER_PORT:-5273}"
+
+  webui:
+    ports:
+      - "${WEBUI_LISTEN_PORT:-5274}:${WEBUI_CONTAINER_PORT:-5274}"
