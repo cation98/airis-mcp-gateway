@@ -46,7 +46,7 @@
         "-y",
         "@playwright/mcp@latest"
       ],
-      "enabled": true
+      "enabled": false
     },
     "serena": {
       "command": "sh",
@@ -65,7 +65,7 @@
       "env": {
         "TWENTYFIRST_API_KEY": "${TWENTYFIRST_API_KEY}"
       },
-      "enabled": true
+      "enabled": false
     },
     "morphllm-fast-apply": {
       "command": "npx",
@@ -83,7 +83,7 @@
         "-y",
         "@modelcontextprotocol/server-puppeteer"
       ],
-      "enabled": true
+      "enabled": false
     },
     "sqlite": {
       "command": "npx",
@@ -93,7 +93,7 @@
         "--db-path",
         "/app/data.db"
       ],
-      "enabled": true
+      "enabled": false
     },
     "mcp-postgres-server": {
       "command": "npx",
@@ -113,7 +113,7 @@
         "-c",
         "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOST_REPO_DIR}/servers/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
       ],
-      "enabled": true
+      "enabled": false
     },
     "self-management": {
       "command": "sh",
@@ -141,7 +141,7 @@
         "-y",
         "chrome-devtools-mcp@latest"
       ],
-      "enabled": true
+      "enabled": false
     },
     "__comment_database": "=== DATABASE & BACKEND ===",
     "__disabled_supabase": {
@@ -217,12 +217,28 @@
         "STRIPE_SECRET_KEY": "${STRIPE_SECRET_KEY}"
       }
     },
-    "__disabled_twilio": {
-      "command": "bash",
+    "twilio": {
+      "command": "npx",
       "args": [
-        "-c",
-        "TWILIO_ACCOUNT_SID=$(cat /run/secrets/twilio_sid 2>/dev/null || echo ${TWILIO_ACCOUNT_SID}) TWILIO_API_KEY=$(cat /run/secrets/twilio_key 2>/dev/null || echo ${TWILIO_API_KEY}) TWILIO_API_SECRET=$(cat /run/secrets/twilio_secret 2>/dev/null || echo ${TWILIO_API_SECRET}) npx -y @twilio-alpha/mcp"
-      ]
+        "-y",
+        "@twilio-alpha/mcp"
+      ],
+      "env": {
+        "TWILIO_ACCOUNT_SID": "${TWILIO_ACCOUNT_SID}",
+        "TWILIO_API_KEY": "${TWILIO_API_KEY}",
+        "TWILIO_API_SECRET": "${TWILIO_API_SECRET}"
+      }
+    },
+    "cloudflare": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@cloudflare/mcp-server-cloudflare"
+      ],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
+        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID}"
+      }
     },
     "__comment_dev_tools": "=== DEVELOPMENT TOOLS ===",
     "github-official": {

@@ -353,13 +353,8 @@ profile-dynamic: ## Switch to Dynamic profile (self-management enabled, LLM cont
 		sed -i '' 's/"__disabled_self-management":/"self-management":/g' mcp-config.json; \
 		echo "$(GREEN)  ✅ self-management enabled$(NC)"; \
 	fi
-	@echo "$(YELLOW)🔴 Disabling: mindbase, playwright, puppeteer, chrome-devtools, sqlite$(NC)"
-	@for server in mindbase playwright puppeteer chrome-devtools sqlite magic; do \
-		if grep -q "\"$$server\":" mcp-config.json | grep -v '__disabled'; then \
-			sed -i '' "s/\"$$server\":/\"__disabled_$$server\":/g" mcp-config.json; \
-			echo "$(YELLOW)  🔴 $$server disabled$(NC)"; \
-		fi; \
-	done
+	@echo "$(YELLOW)🔴 Disabling: mindbase, playwright, puppeteer, chrome-devtools, sqlite, magic$(NC)"
+	@cd $(PWD) && python3 scripts/disable_servers.py
 	@echo ""
 	@echo "$(BLUE)📋 Profile: Dynamic$(NC)"
 	@echo "   $(GREEN)✅ Always enabled:$(NC) self-management, serena, context7, filesystem"
