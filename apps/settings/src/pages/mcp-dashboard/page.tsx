@@ -82,9 +82,11 @@ const SINGLE_FIELD_KEY_NAMES: Record<string, string> = {
   'morphllm-fast-apply': 'MORPH_API_KEY',
   stripe: 'STRIPE_SECRET_KEY',
   figma: 'FIGMA_ACCESS_TOKEN',
-  github: 'GITHUB_PERSONAL_ACCESS_TOKEN',
+  'github-official': 'GITHUB_PERSONAL_ACCESS_TOKEN',
   notion: 'NOTION_API_KEY',
   'brave-search': 'BRAVE_API_KEY',
+  dockerhub: 'DOCKERHUB_PAT_TOKEN',
+  cloudflare: 'CLOUDFLARE_API_TOKEN',
 };
 
 const CONFLICT_RULES: Record<string, { conflictsWith: string[]; messageKey: string }> = {

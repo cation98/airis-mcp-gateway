@@ -11,10 +11,10 @@
     "filesystem",
     "context7",
     "serena",
+    "mindbase",
     "self-management"
   ],
   "optional_servers": [
-    "mindbase",
     "sequential-thinking",
     "playwright",
     "puppeteer",
@@ -28,6 +28,7 @@
   ],
   "features": {
     "dynamic_server_management": "self-management（LLMが必要に応じてサーバー有効化）",
+    "long_term_memory": "mindbase（会話履歴 + 失敗学習）",
     "code_understanding": "serena（セマンティック検索）",
     "latest_docs": "context7（15,000+ライブラリ）",
     "time_awareness": "time（2004年問題解決）",

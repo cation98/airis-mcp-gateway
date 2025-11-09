@@ -161,7 +161,64 @@ export const SERVER_CONFIG_SCHEMAS: Record<string, ServerConfigSchema> = {
     ]
   },
 
+  'github-official': {
+    id: 'github-official',
+    name: 'GitHub Official',
+    configType: 'single',
+    fields: [
+      {
+        key: 'GITHUB_PERSONAL_ACCESS_TOKEN',
+        label: 'Personal Access Token',
+        type: 'password',
+        placeholder: 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+        required: true,
+        validation: /^gh[ps]_[A-Za-z0-9]{36,}$/,
+        helpText: 'Generate from GitHub Settings > Developer settings > Personal access tokens'
+      }
+    ]
+  },
+
+  dockerhub: {
+    id: 'dockerhub',
+    name: 'DockerHub',
+    configType: 'single',
+    fields: [
+      {
+        key: 'DOCKERHUB_PAT_TOKEN',
+        label: 'Personal Access Token',
+        type: 'password',
+        placeholder: 'dckr_pat_xxxxxxxxxxxxxxxxxxxxxxxx',
+        required: true,
+        helpText: 'Generate from Docker Hub > Account Settings > Security > New Access Token'
+      }
+    ]
+  },
+
   // Multiple field configurations
+  cloudflare: {
+    id: 'cloudflare',
+    name: 'Cloudflare',
+    configType: 'multiple',
+    fields: [
+      {
+        key: 'CLOUDFLARE_API_TOKEN',
+        label: 'API Token',
+        type: 'password',
+        placeholder: 'Enter your Cloudflare API Token',
+        required: true,
+        helpText: 'My Profile > API Tokens > Create Token'
+      },
+      {
+        key: 'CLOUDFLARE_ACCOUNT_ID',
+        label: 'Account ID',
+        type: 'text',
+        placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+        required: true,
+        validation: /^[a-f0-9]{32}$/,
+        helpText: 'Workers & Pages > Overview > Account ID'
+      }
+    ]
+  },
   supabase: {
     id: 'supabase',
     name: 'Supabase',
