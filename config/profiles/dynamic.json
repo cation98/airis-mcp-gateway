@@ -1,0 +1,84 @@
+{
+  "name": "Dynamic",
+  "description": "最小構成 + Self-Management（LLMが必要に応じて動的にサーバーをON/OFF）",
+  "builtin_servers": [
+    "time",
+    "fetch",
+    "git",
+    "memory"
+  ],
+  "gateway_servers": [
+    "filesystem",
+    "context7",
+    "serena",
+    "self-management"
+  ],
+  "optional_servers": [
+    "mindbase",
+    "sequential-thinking",
+    "playwright",
+    "puppeteer",
+    "chrome-devtools",
+    "sqlite",
+    "tavily",
+    "supabase",
+    "github",
+    "magic",
+    "morphllm-fast-apply"
+  ],
+  "features": {
+    "dynamic_server_management": "self-management（LLMが必要に応じてサーバー有効化）",
+    "code_understanding": "serena（セマンティック検索）",
+    "latest_docs": "context7（15,000+ライブラリ）",
+    "time_awareness": "time（2004年問題解決）",
+    "web_content": "fetch（URL内容取得）",
+    "git_operations": "git（リポジトリ操作）",
+    "short_term_memory": "memory（Built-in知識グラフ）"
+  },
+  "resource_usage": {
+    "memory": "~100MB（軽量・最初はcontext7+serena+self-managementのみ）",
+    "cpu": "低（必要なサーバーのみ起動）",
+    "disk": "~200MB"
+  },
+  "use_cases": [
+    "トークン効率を最大化したい場合",
+    "LLMに自律的にツール管理させたい場合",
+    "タスクごとに必要なサーバーが異なる場合",
+    "初期トークン消費を最小限に抑えたい場合"
+  ],
+  "tradeoffs": {
+    "pros": [
+      "初期トークン消費最小（~5-8k）",
+      "LLMが必要に応じて自動的にサーバー有効化",
+      "不要なツールを常時ロードしない",
+      "タスク完了後に自動無効化可能"
+    ],
+    "cons": [
+      "初回サーバー有効化時に数秒の遅延",
+      "LLMが適切なサーバーを選択できない場合がある",
+      "Self-Management APIへの依存"
+    ]
+  },
+  "workflow": {
+    "startup": [
+      "self-managementサーバーのみ常時有効",
+      "LLMがlist_mcp_servers で利用可能サーバー一覧を確認",
+      "必要に応じてenable_mcp_serverで有効化"
+    ],
+    "during_task": [
+      "タスクに応じて動的にサーバー追加",
+      "例: Web検索必要 → tavily有効化",
+      "例: GitHub操作必要 → github有効化"
+    ],
+    "cleanup": [
+      "タスク完了後にdisable_mcp_serverで無効化",
+      "トークン使用量を常に最適化"
+    ]
+  },
+  "example_commands": {
+    "list_servers": "LLM calls: list_mcp_servers()",
+    "enable_web_search": "LLM calls: enable_mcp_server(server_name='tavily')",
+    "enable_browser": "LLM calls: enable_mcp_server(server_name='playwright')",
+    "disable_after_task": "LLM calls: disable_mcp_server(server_name='tavily')"
+  }
+}

@@ -63,6 +63,9 @@ LABEL version="1.3.0"
 ENV AIRIS_VERSION="1.3.0" \
     AIRIS_MCP_GATEWAY="true"
 
+# Install jq for robust JSON parsing (Alpine)
+RUN apk add --no-cache jq
+
 COPY gateway/inject-secrets.sh /usr/local/bin/inject-secrets.sh
 RUN chmod +x /usr/local/bin/inject-secrets.sh
 

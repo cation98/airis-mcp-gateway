@@ -46,7 +46,7 @@ Need a quick health check? Run `make doctor` to verify Docker availability and t
 | Command | What it does |
 |---------|--------------|
 | `make init` | Full reinstall: clean configs, build/start services, register every editor |
-| `make install` | Dockerized pnpm install (defined in `apps/settings/src/tasks/install.yml`) |
+| `make install` | Dockerized pnpm install (defined in `scripts/tasks/pnpm-install.yml`) |
 | `make restart` | Full stop/start cycle (no editor import) |
 | `make up` | Start services only (advanced/CI use) |
 | `make up-dev` | Start with internal-only networking (Docker DNS only) |

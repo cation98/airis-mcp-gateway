@@ -64,7 +64,8 @@
       ],
       "env": {
         "TWENTYFIRST_API_KEY": "${TWENTYFIRST_API_KEY}"
-      }
+      },
+      "enabled": true
     },
     "morphllm-fast-apply": {
       "command": "npx",

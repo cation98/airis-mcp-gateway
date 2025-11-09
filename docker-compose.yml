@@ -15,14 +15,14 @@ services:
     environment:
       - API_URL=${API_INTERNAL_URL:-http://api:${API_LISTEN_PORT:-9900}}
       - GATEWAY_LISTEN_PORT=${GATEWAY_LISTEN_PORT:-9390}
-      - PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
-      - HOST_REPO_DIR=${HOST_REPO_DIR}
-      - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR}
-      - HOST_SUPABASE_DIR=${HOST_SUPABASE_DIR}
-      - DOCKER_NETWORK=${DOCKER_NETWORK}
-      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-      - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
-      - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT}
+      - PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
+      - HOST_REPO_DIR=${HOST_REPO_DIR:-/Users/kazuki/github/airis-mcp-gateway}
+      - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
+      - HOST_SUPABASE_DIR=${HOST_SUPABASE_DIR:-/Users/kazuki/github/airis-mcp-gateway/supabase}
+      - DOCKER_NETWORK=${DOCKER_NETWORK:-airis-mcp-gateway_default}
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-airis-mcp-gateway}
+      - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
+      - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT:-/workspace}
     command:
       - /docker-mcp
       - gateway
@@ -40,13 +40,14 @@ services:
       - --servers=mindbase
       - --servers=self-management
       - --servers=chrome-devtools
+      - --servers=magic
     expose:
       - "${GATEWAY_LISTEN_PORT:-9390}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - type: bind
-        source: ${HOST_WORKSPACE_DIR}
-        target: ${CONTAINER_WORKSPACE_ROOT}
+        source: ${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
+        target: ${CONTAINER_WORKSPACE_ROOT:-/workspace}
       - claude-memory:/app/memory
       - ./mcp-config.json:/etc/docker-mcp/config.json:ro
       - ./config/figma-catalog.yaml:/etc/docker-mcp/figma-catalog.yaml:ro
@@ -56,6 +57,9 @@ services:
       - "x-secret:TWILIO_API_KEY=/run/secrets/twilio_key"
       - "x-secret:TWILIO_API_SECRET=/run/secrets/twilio_secret"
       - "x-secret:FIGMA_ACCESS_TOKEN=/run/secrets/figma_token"
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${GATEWAY_LISTEN_PORT:-9390}/"]
@@ -75,14 +79,14 @@ services:
     environment:
       - API_URL=${API_INTERNAL_URL:-http://api:${API_LISTEN_PORT:-9900}}
       - GATEWAY_LISTEN_PORT=${GATEWAY_STREAM_LISTEN_PORT:-9330}
-      - PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
-      - HOST_REPO_DIR=${HOST_REPO_DIR}
-      - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR}
-      - HOST_SUPABASE_DIR=${HOST_SUPABASE_DIR}
-      - DOCKER_NETWORK=${DOCKER_NETWORK}
-      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-      - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
-      - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT}
+      - PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
+      - HOST_REPO_DIR=${HOST_REPO_DIR:-/Users/kazuki/github/airis-mcp-gateway}
+      - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
+      - HOST_SUPABASE_DIR=${HOST_SUPABASE_DIR:-/Users/kazuki/github/airis-mcp-gateway/supabase}
+      - DOCKER_NETWORK=${DOCKER_NETWORK:-airis-mcp-gateway_default}
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-airis-mcp-gateway}
+      - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
+      - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT:-/workspace}
     command:
       - /docker-mcp
       - gateway
@@ -100,16 +104,20 @@ services:
       - --servers=mindbase
       - --servers=self-management
       - --servers=chrome-devtools
+      - --servers=magic
     expose:
       - "${GATEWAY_STREAM_LISTEN_PORT:-9330}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - type: bind
-        source: ${HOST_WORKSPACE_DIR}
-        target: ${CONTAINER_WORKSPACE_ROOT}
+        source: ${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
+        target: ${CONTAINER_WORKSPACE_ROOT:-/workspace}
       - claude-memory:/app/memory
       - ./mcp-config.json:/etc/docker-mcp/config.json:ro
       - ./config/figma-catalog.yaml:/etc/docker-mcp/figma-catalog.yaml:ro
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${GATEWAY_STREAM_LISTEN_PORT:-9330}/mcp"]
@@ -147,8 +155,8 @@ services:
       - "${API_LISTEN_PORT:-9900}"
     volumes:
       - type: bind
-        source: ${HOST_WORKSPACE_DIR}
-        target: ${CONTAINER_WORKSPACE_ROOT}
+        source: ${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
+        target: ${CONTAINER_WORKSPACE_ROOT:-/workspace}
       - ./apps/api/src:/app/src:rw
       - ./apps/api/alembic:/app/alembic:rw
       - /var/run/docker.sock:/var/run/docker.sock
@@ -156,15 +164,15 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-mcp_gateway}
       - DEBUG=${API_DEBUG:-true}
       - ENCRYPTION_MASTER_KEY=${ENCRYPTION_MASTER_KEY}
-      - PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
-      - HOST_REPO_DIR=${HOST_REPO_DIR}
-      - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR}
-      - HOST_SUPABASE_DIR=${HOST_SUPABASE_DIR}
-      - DOCKER_NETWORK=${DOCKER_NETWORK}
-      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-      - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT}
-      - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT}
-      - MCP_CONFIG_PATH=${CONTAINER_PROJECT_ROOT}/mcp-config.json
+      - PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
+      - HOST_REPO_DIR=${HOST_REPO_DIR:-/Users/kazuki/github/airis-mcp-gateway}
+      - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
+      - HOST_SUPABASE_DIR=${HOST_SUPABASE_DIR:-/Users/kazuki/github/airis-mcp-gateway/supabase}
+      - DOCKER_NETWORK=${DOCKER_NETWORK:-airis-mcp-gateway_default}
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-airis-mcp-gateway}
+      - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
+      - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT:-/workspace}
+      - MCP_CONFIG_PATH=${CONTAINER_PROJECT_ROOT:-/workspace}/mcp-config.json
       - API_LISTEN_PORT=${API_LISTEN_PORT:-9900}
     depends_on:
       postgres:
@@ -202,16 +210,16 @@ services:
   node:
     image: node:24-bookworm
     container_name: airis-mcp-gateway-node
-    working_dir: ${CONTAINER_PROJECT_ROOT}
+    working_dir: ${CONTAINER_PROJECT_ROOT:-/workspace}
     profiles:
       - cli
     entrypoint: null
     volumes:
       - type: bind
-        source: ${HOST_WORKSPACE_DIR}
-        target: ${CONTAINER_WORKSPACE_ROOT}
-      - node_modules:${CONTAINER_PROJECT_ROOT}/node_modules
-      - pnpm-store:${CONTAINER_PROJECT_ROOT}/.pnpm-store
+        source: ${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
+        target: ${CONTAINER_WORKSPACE_ROOT:-/workspace}
+      - node_modules:${CONTAINER_PROJECT_ROOT:-/workspace}/node_modules
+      - pnpm-store:${CONTAINER_PROJECT_ROOT:-/workspace}/.pnpm-store
 
 
   # Supabase CLI container routed through bin/supabase shim
@@ -223,9 +231,9 @@ services:
       - cli
     volumes:
       - type: bind
-        source: ${HOST_WORKSPACE_DIR}
-        target: ${CONTAINER_WORKSPACE_ROOT}
-      - supabase_data:${CONTAINER_PROJECT_ROOT}/supabase
+        source: ${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
+        target: ${CONTAINER_WORKSPACE_ROOT:-/workspace}
+      - supabase_data:${CONTAINER_PROJECT_ROOT:-/workspace}/supabase
 
 
   # MindBase MCP Server Builder

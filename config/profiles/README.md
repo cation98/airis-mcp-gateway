@@ -4,7 +4,34 @@ AIRIS MCP Gatewayで使用できるプロファイル定義です。
 
 ## 📦 利用可能なプロファイル
 
-### 1. Recommended（推奨設定）
+### 1. Dynamic（動的管理）⭐ NEW
+
+**対象ユーザー**: トークン効率最大化、LLMに自律的なツール管理をさせたい
+
+**含まれるサーバー**:
+- Built-in: time, fetch, git, memory
+- Gateway (常時): filesystem, context7, serena, **self-management**
+- Optional (LLMが動的に有効化): mindbase, playwright, puppeteer, tavily, github, 他
+
+**特徴**:
+- ✅ 初期トークン消費最小（~5-8k）
+- ✅ LLMが必要に応じて自動的にサーバー有効化
+- ✅ タスク完了後に自動無効化可能
+- ✅ コード理解（serena）+ 最新ドキュメント（context7）常時利用可能
+
+**リソース**: ~100MB メモリ使用（初期）
+
+**使い方**:
+```
+LLM: "Web検索が必要です"
+→ enable_mcp_server(server_name='tavily')
+→ タスク完了
+→ disable_mcp_server(server_name='tavily')
+```
+
+---
+
+### 2. Recommended（推奨設定）
 
 **対象ユーザー**: 長期プロジェクト、本格的な開発
 
@@ -22,7 +49,7 @@ AIRIS MCP Gatewayで使用できるプロファイル定義です。
 
 ---
 
-### 2. Minimal（最小構成）
+### 3. Minimal（最小構成）
 
 **対象ユーザー**: リソース制約環境、短期タスク
 
@@ -43,7 +70,7 @@ AIRIS MCP Gatewayで使用できるプロファイル定義です。
 
 ---
 
-### 3. Custom（カスタム構成）
+### 4. Custom（カスタム構成）
 
 **対象ユーザー**: 特定ニーズに合わせた構成
 
@@ -61,6 +88,9 @@ AIRIS MCP Gatewayで使用できるプロファイル定義です。
 ## 🚀 プロファイル切り替え
 
 ```bash
+# 動的管理に切り替え（推奨）
+make profile-dynamic
+
 # 推奨設定に切り替え
 make profile-recommended
 
@@ -100,11 +130,13 @@ make profile-custom
 
 | 状況 | プロファイル | 理由 |
 |------|------------|------|
+| トークン効率最大化 | **Dynamic** ⭐ | LLMが必要なツールだけ有効化 |
+| タスクごとにツールが異なる | **Dynamic** ⭐ | 動的にサーバーON/OFF |
 | 長期プロジェクト開発 | Recommended | 記憶機能・学習機能が充実 |
 | 短期タスク・実験 | Minimal | 軽量・高速 |
 | リソース制約環境 | Minimal | メモリ使用量 ~50MB |
 | LLM暴走が問題 | Recommended | mindbaseで失敗学習 |
-| コード理解が必要 | Recommended | serenaでセマンティック検索 |
+| コード理解が必要 | Recommended / Dynamic | serenaでセマンティック検索 |
 
 ---
 

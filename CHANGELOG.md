@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `make hosts-add` / `make hosts-remove` targets that manage `/etc/hosts` entries for `gateway.localhost`, `api.gateway.localhost`, and `ui.gateway.localhost`, keeping local domains consistent without requiring Traefik or Coolify.
 
 ### Changed
-- `make install` is back to being a dependency-only command and now delegates to a YAML task definition at `apps/settings/src/tasks/install.yml`, keeping the Makefile thin while ensuring pnpm runs inside the Dockerized Node shim. Use `make init` for the full editor-registration flow.
+- `make install` is back to being a dependency-only command and now delegates to a YAML task definition at `scripts/tasks/pnpm-install.yml`, keeping the Makefile thin while ensuring pnpm runs inside the Dockerized Node shim. Use `make init` for the full editor-registration flow.
 
 ### Planned for Phase 2 (Stabilization)
 - Real-world testing and validation

@@ -79,7 +79,7 @@ doctor: ## 開発前ヘルスチェック
 
 .PHONY: deps install-deps
 deps install-deps: ## Node依存をコンテナ内pnpmで解決
-	@$(MAKE) run-task TASK_FILE=apps/settings/src/tasks/install.yml
+	@$(MAKE) run-task TASK_FILE=scripts/tasks/pnpm-install.yml
 
 .PHONY: install
 install: deps ## Node依存パッケージのみをインストール
@@ -274,7 +274,7 @@ profile-list: ## List available profiles
 	@echo ""
 	@echo "$(YELLOW)Current profile:$(NC) $$($(MAKE) --no-print-directory profile-info-short)"
 	@echo ""
-	@echo "$(BLUE)Switch:$(NC) make profile-recommended | make profile-minimal"
+	@echo "$(BLUE)Switch:$(NC) make profile-recommended | make profile-minimal | make profile-dynamic"
 
 .PHONY: profile-info
 profile-info: ## Show current profile configuration
@@ -337,6 +337,40 @@ profile-minimal: ## Switch to Minimal profile (filesystem, context7 only)
 	@echo "   - filesystem, context7"
 	@echo "   - Memory: ~50MB"
 	@echo "   - Features: 必須機能のみ"
+	@echo ""
+	@echo "$(YELLOW)⚠️  Gateway restart required$(NC)"
+	@echo "$(BLUE)Run: make restart$(NC)"
+
+.PHONY: profile-dynamic
+profile-dynamic: ## Switch to Dynamic profile (self-management enabled, LLM controls other servers)
+	@echo "$(BLUE)🔄 Switching to Dynamic profile...$(NC)"
+	@echo "$(GREEN)✅ Enabling: self-management, serena, context7$(NC)"
+	@if grep -q '"__disabled_serena":' mcp-config.json; then \
+		sed -i '' 's/"__disabled_serena":/"serena":/g' mcp-config.json; \
+		echo "$(GREEN)  ✅ serena enabled$(NC)"; \
+	fi
+	@if grep -q '"__disabled_self-management":' mcp-config.json; then \
+		sed -i '' 's/"__disabled_self-management":/"self-management":/g' mcp-config.json; \
+		echo "$(GREEN)  ✅ self-management enabled$(NC)"; \
+	fi
+	@echo "$(YELLOW)🔴 Disabling: mindbase, playwright, puppeteer, chrome-devtools, sqlite$(NC)"
+	@for server in mindbase playwright puppeteer chrome-devtools sqlite magic; do \
+		if grep -q "\"$$server\":" mcp-config.json | grep -v '__disabled'; then \
+			sed -i '' "s/\"$$server\":/\"__disabled_$$server\":/g" mcp-config.json; \
+			echo "$(YELLOW)  🔴 $$server disabled$(NC)"; \
+		fi; \
+	done
+	@echo ""
+	@echo "$(BLUE)📋 Profile: Dynamic$(NC)"
+	@echo "   $(GREEN)✅ Always enabled:$(NC) self-management, serena, context7, filesystem"
+	@echo "   $(YELLOW)📦 Available on-demand:$(NC) mindbase, playwright, puppeteer, tavily, etc."
+	@echo "   $(BLUE)💡 Memory:$(NC) ~100MB (初期), ~500MB (全サーバー有効時)"
+	@echo "   $(BLUE)🎯 Features:$(NC) LLMが必要に応じて動的にサーバー有効化"
+	@echo ""
+	@echo "$(BLUE)📖 Usage:$(NC)"
+	@echo "   - LLM calls: list_mcp_servers() → 利用可能サーバー一覧"
+	@echo "   - LLM calls: enable_mcp_server(server_name='tavily') → Web検索有効化"
+	@echo "   - LLM calls: disable_mcp_server(server_name='tavily') → タスク完了後無効化"
 	@echo ""
 	@echo "$(YELLOW)⚠️  Gateway restart required$(NC)"
 	@echo "$(BLUE)Run: make restart$(NC)"

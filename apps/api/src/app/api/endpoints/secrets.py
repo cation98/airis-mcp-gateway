@@ -108,6 +108,26 @@ async def get_secret_values(
 
 
 @router.get(
+    "/export/env",
+    response_model=dict
+)
+async def export_secrets_as_env(db: AsyncSession = Depends(get_db)):
+    """Export all secrets as environment variables (for Gateway injection)"""
+    secrets = await crud.get_all_secrets(db)
+    env_vars = {}
+
+    for secret in secrets:
+        # Decrypt value
+        decrypted_value = encryption_manager.decrypt(secret.encrypted_value)
+        env_vars[secret.key_name] = decrypted_value
+
+    return {
+        "env_vars": env_vars,
+        "total": len(env_vars)
+    }
+
+
+@router.get(
     "/{server_name}/{key_name}",
     response_model=schemas.SecretWithValue
 )
@@ -193,24 +213,4 @@ async def delete_secrets_by_server(
     return {
         "deleted": count,
         "server_name": server_name
-    }
-
-
-@router.get(
-    "/export/env",
-    response_model=dict
-)
-async def export_secrets_as_env(db: AsyncSession = Depends(get_db)):
-    """Export all secrets as environment variables (for Gateway injection)"""
-    secrets = await crud.get_all_secrets(db)
-    env_vars = {}
-
-    for secret in secrets:
-        # Decrypt value
-        decrypted_value = encryption_manager.decrypt(secret.encrypted_value)
-        env_vars[secret.key_name] = decrypted_value
-
-    return {
-        "env_vars": env_vars,
-        "total": len(env_vars)
     }

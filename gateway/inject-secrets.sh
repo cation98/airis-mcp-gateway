@@ -1,5 +1,5 @@
 #!/bin/sh
-# Inject secrets from API as environment variables
+# Inject secrets from API as environment variables (jq version)
 
 set -e
 
@@ -24,22 +24,22 @@ for i in $(seq 1 $MAX_RETRIES); do
 done
 
 echo "🔐 Fetching secrets from API..."
-SECRETS_JSON=$(wget -q -O- "${API_URL}/api/v1/secrets/export/env" || echo '{"env_vars":{}}')
+JSON="$(wget -q -O- "${API_URL}/api/v1/secrets/export/env" || echo '{"env_vars":{}}')"
 
-# Parse JSON and export environment variables
-echo "$SECRETS_JSON" | grep -o '"[^"]*":"[^"]*"' | while read -r pair; do
-    KEY=${pair%%":"*}
-    KEY=${KEY#\"}
+# Use jq for robust JSON parsing
+COUNT="$(echo "$JSON" | jq -r '.env_vars | length')"
 
-    VALUE=${pair#*":"}
-    VALUE=${VALUE%\"}
-    VALUE=${VALUE#\"}
-
-    if [ -n "$KEY" ] && [ -n "$VALUE" ]; then
-        export "${KEY}=${VALUE}"
-        echo "✅ Exported: $KEY"
-    fi
-done
+if [ "$COUNT" -gt 0 ]; then
+    echo "📦 Found $COUNT secret(s), injecting..."
+    echo "$JSON" \
+      | jq -r '.env_vars | to_entries[] | "\(.key)=\(.value)"' \
+      | while IFS= read -r kv; do
+          export "$kv"
+          echo "✅ Exported: ${kv%%=*}"
+        done
+else
+    echo "ℹ️  No secrets found in database"
+fi
 
 echo "🚀 Starting MCP Gateway with injected secrets..."
 exec "$@"

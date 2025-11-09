@@ -16,7 +16,7 @@ This workspace is **Docker-first** and **Makefile-driven**. Keep the host as cle
 | `make doctor` | Runs Docker connectivity checks and prints `node -v` / `pnpm -v` from the toolchain container. |
 | `make init` | Resets editor configs, rebuilds the stack, and re-registers every editor (full reinstall). |
 | `make deps` | Executes `pnpm install --frozen-lockfile` inside the Node service (alias: `make install-deps`). |
-| `make install` | Lightweight wrapper around `apps/settings/src/tasks/install.yml` (Dockerized pnpm install only). |
+| `make install` | Lightweight wrapper around `scripts/tasks/pnpm-install.yml` (Dockerized pnpm install only). |
 | `make dev` | Launches the Vite dev server via `pnpm dev` in Docker (`DEV_PORT` defaults to 5273). |
 | `make build` | Builds the entire pnpm workspace in the Node container. |
 | `make lint` / `make typecheck` | Delegates ESLint and TypeScript checks to the containerised toolchain. |
