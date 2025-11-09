@@ -29,6 +29,7 @@ jobs:
             echo "::error::Merge conflicts detected. Resolve manually."; \
             exit 1; \
           }
+          git push -f origin sync/main-to-next
 
       - name: Create pull request into next
         uses: peter-evans/create-pull-request@v6
@@ -45,3 +46,4 @@ jobs:
           base: next
           branch: sync/main-to-next
           delete-branch: true
+          skip-if-no-changes: true
