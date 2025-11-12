@@ -62,7 +62,7 @@ def upgrade() -> None:
         },
         {
             'name': 'puppeteer',
-            'enabled': True,
+            'enabled': False,
             'command': 'npx',
             'args': ['-y', '@modelcontextprotocol/server-puppeteer'],
             'env': None,
@@ -71,7 +71,7 @@ def upgrade() -> None:
         },
         {
             'name': 'sqlite',
-            'enabled': True,
+            'enabled': False,
             'command': 'npx',
             'args': ['-y', 'mcp-server-sqlite', '--db-path', '/app/data.db'],
             'env': None,

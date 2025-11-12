@@ -1,0 +1,37 @@
+{
+  "installed_at": "2025-11-09T21:29:21.373532",
+  "editors": [
+    {
+      "slug": "claude-code",
+      "name": "Claude Code",
+      "config_path": "/Users/kazuki/.claude/mcp.json"
+    },
+    {
+      "slug": "claude-desktop",
+      "name": "Claude Desktop",
+      "config_path": "/Users/kazuki/Library/Application Support/Claude/claude_desktop_config.json"
+    },
+    {
+      "slug": "cursor",
+      "name": "Cursor",
+      "config_path": "/Users/kazuki/.cursor/mcp.json"
+    },
+    {
+      "slug": "zed",
+      "name": "Zed",
+      "config_path": "/Users/kazuki/.config/zed/settings.json"
+    },
+    {
+      "slug": "codex-cli",
+      "name": "Codex CLI",
+      "config_path": "/Users/kazuki/.codex/config.toml"
+    }
+  ],
+  "backups": {
+    "claude-desktop": "/Users/kazuki/github/airis-mcp-gateway/backups/20251109_212919/claude-desktop-claude_desktop_config.json",
+    "zed": "/Users/kazuki/github/airis-mcp-gateway/backups/20251109_212919/zed-settings.json",
+    "codex-cli": "/Users/kazuki/github/airis-mcp-gateway/backups/20251109_212919/codex-cli-config.toml"
+  },
+  "backup_dir": "/Users/kazuki/github/airis-mcp-gateway/backups/20251109_212919",
+  "gateway_dir": "/Users/kazuki/github/airis-mcp-gateway"
+}

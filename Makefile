@@ -355,6 +355,8 @@ profile-dynamic: ## Switch to Dynamic profile (self-management enabled, LLM cont
 	fi
 	@echo "$(YELLOW)🔴 Disabling: playwright, puppeteer, chrome-devtools, sqlite, magic$(NC)"
 	@cd $(PWD) && python3 scripts/disable_servers.py
+	@echo "$(BLUE)🔧 Updating docker-compose.yml server list...$(NC)"
+	@cd $(PWD) && python3 scripts/apply_profile.py dynamic
 	@echo ""
 	@echo "$(BLUE)📋 Profile: Dynamic$(NC)"
 	@echo "   $(GREEN)✅ Always enabled:$(NC) self-management, serena, context7, mindbase, filesystem"

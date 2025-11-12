@@ -8,14 +8,14 @@
     "memory"
   ],
   "gateway_servers": [
-    "filesystem",
     "context7",
-    "serena",
     "mindbase",
-    "self-management"
+    "self-management",
+    "serena",
+    "filesystem",
+    "sequential-thinking"
   ],
   "optional_servers": [
-    "sequential-thinking",
     "playwright",
     "puppeteer",
     "chrome-devtools",
@@ -29,16 +29,18 @@
   "features": {
     "dynamic_server_management": "self-management（LLMが必要に応じてサーバー有効化）",
     "long_term_memory": "mindbase（会話履歴 + 失敗学習）",
-    "code_understanding": "serena（セマンティック検索）",
+    "code_understanding": "serena（LSPベースのシンボル検索）",
     "latest_docs": "context7（15,000+ライブラリ）",
+    "file_operations": "filesystem（ファイル読み書き、画像読込）",
+    "complex_reasoning": "sequential-thinking（多段階推論、トークン効率化）",
     "time_awareness": "time（2004年問題解決）",
     "web_content": "fetch（URL内容取得）",
     "git_operations": "git（リポジトリ操作）",
     "short_term_memory": "memory（Built-in知識グラフ）"
   },
   "resource_usage": {
-    "memory": "~300MB（mindbase含む、Recommended比40%削減）",
-    "cpu": "低〜中（必要なサーバーのみ起動）",
+    "memory": "~400MB（mindbase + serena含む、Recommended比20%削減）",
+    "cpu": "低〜中（常時6サーバー + 必要時追加）",
     "disk": "~2GB（mindbase会話履歴）"
   },
   "use_cases": [
@@ -49,9 +51,10 @@
   ],
   "tradeoffs": {
     "pros": [
-      "初期トークン消費最小（~5-8k）",
-      "LLMが必要に応じて自動的にサーバー有効化",
-      "不要なツールを常時ロードしない",
+      "初期トークン消費適正（~3-4k、使用時の削減効果で相殺）",
+      "コード操作効率化（serena + filesystem）",
+      "推論効率化（sequential-thinking）",
+      "LLMが必要に応じて追加サーバー有効化",
       "タスク完了後に自動無効化可能"
     ],
     "cons": [

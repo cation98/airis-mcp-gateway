@@ -43,6 +43,95 @@ def _summarize_description(description: str, max_length: int = 160) -> str:
     return text
 
 
+def _extract_server_name_from_tool(tool_name: str) -> Optional[str]:
+    """
+    ツール名からMCPサーバー名を推測して抽出
+
+    Rules:
+    1. expandSchema → None (特殊ツール、常に有効)
+    2. mindbase_*, github_*, tavily_* → prefix部分がサーバー名
+    3. read_file, write_file, list_dir → filesystem or serena (曖昧)
+    4. find_symbol, find_referencing_symbols → serena
+    5. get_time, fetch_url → built-in (always enabled)
+
+    Args:
+        tool_name: ツール名
+
+    Returns:
+        サーバー名 or None (判定不能/常時有効)
+    """
+    if not tool_name:
+        return None
+
+    # expandSchemaは特殊ツール（Proxy側で生成）
+    if tool_name == "expandSchema":
+        return None
+
+    # Built-in servers (Gateway起動時に--serversで自動有効化、DBに記録されない)
+    builtin_tools = {
+        "get_time", "get_current_time",
+        "fetch", "fetch_url",
+        "git_status", "git_diff", "git_commit", "git_push",
+        "read_memory", "write_memory", "delete_memory"
+    }
+    if tool_name in builtin_tools:
+        return None  # Built-inは常時有効
+
+    # アンダースコア区切りでprefix抽出
+    parts = tool_name.split("_")
+    if len(parts) >= 2:
+        prefix = parts[0]
+
+        # 既知のサーバー名パターン
+        known_servers = {
+            "mindbase", "github", "tavily", "stripe", "twilio",
+            "supabase", "notion", "slack", "figma", "cloudflare",
+            "docker", "postgres", "mongodb", "sqlite"
+        }
+
+        if prefix in known_servers:
+            return prefix
+
+    # filesystem vs serena の曖昧なツール
+    # → とりあえずfilesystemとして扱う（serenaのツールはfind_symbolなど特徴的）
+    filesystem_tools = {
+        "read_file", "write_file", "create_file", "delete_file",
+        "list_dir", "list_directory", "search_files",
+        "read_text_file", "read_media_file", "read_multiple_files", "edit_file"
+    }
+    if tool_name in filesystem_tools:
+        return "filesystem"
+
+    # serena特有のツール
+    serena_tools = {
+        "find_symbol", "find_referencing_symbols", "get_symbols_overview",
+        "insert_after_symbol", "replace_symbol", "delete_symbol",
+        "activate_project", "switch_modes"
+    }
+    if tool_name in serena_tools:
+        return "serena"
+
+    # context7ツール
+    if tool_name.startswith("context7_") or tool_name in ["search_docs", "get_documentation"]:
+        return "context7"
+
+    # sequential-thinkingツール
+    if tool_name in ["think", "sequential_think", "reasoning"]:
+        return "sequential-thinking"
+
+    # self-managementツール
+    if tool_name in ["list_mcp_servers", "enable_mcp_server", "disable_mcp_server", "get_mcp_server_status"]:
+        return "self-management"
+
+    # playwright/puppeteerツール
+    if any(keyword in tool_name for keyword in ["browser", "page", "click", "navigate", "screenshot"]):
+        # より詳細な判定が必要だが、とりあえずplaywrightとする
+        return "playwright"
+
+    # 判定不能 → サーバー名として最初の部分を使用
+    return parts[0] if parts else None
+
+
 async def proxy_sse_stream(request: Request):
     """
     SSEストリームをDocker MCP GatewayからProxyしてschema partitioning適用
@@ -133,7 +222,7 @@ async def proxy_sse_stream(request: Request):
 
 async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    tools/list レスポンスにschema partitioning適用
+    tools/list レスポンスにschema partitioning適用 + enabled=falseのツールを除外
 
     Args:
         data: tools/list JSON-RPC 2.0 レスポンス
@@ -144,11 +233,29 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
     if "result" not in data or "tools" not in data["result"]:
         return data
 
+    # DBからenabled=trueのサーバー一覧を取得
+    from ...core.database import AsyncSessionLocal
+    from ...crud import mcp_server as crud_mcp_server
+
+    enabled_server_names = set()
+    async with AsyncSessionLocal() as db:
+        servers = await crud_mcp_server.get_servers(db)
+        enabled_server_names = {server.name for server in servers if server.enabled}
+
     tools = data["result"]["tools"]
     partitioned_tools = []
 
     for tool in tools:
         tool_name = tool.get("name", "")
+
+        # ツール名からサーバー名を抽出してフィルタリング
+        server_name = _extract_server_name_from_tool(tool_name)
+
+        # enabled=falseのサーバーのツールはスキップ
+        if server_name and server_name not in enabled_server_names:
+            print(f"[MCP Proxy] Filtering out disabled tool: {tool_name} (server: {server_name})")
+            continue
+
         input_schema = tool.get("inputSchema", {})
 
         # フルスキーマを保存（expandSchema用）

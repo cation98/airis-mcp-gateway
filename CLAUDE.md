@@ -2,6 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Quick Reference
+
+**First-time reading this repo?** Start with `PROJECT_INDEX.md` (3K tokens, 94% reduction vs. full codebase scan).
+
+**Most-used commands:**
+```bash
+make init       # Full installation (build + start + register editors)
+make dev        # UI development server with hot reload
+make test       # Run backend tests (pytest in Docker)
+make logs       # Stream all service logs
+```
+
 ## Project Overview
 
 AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates token explosion at IDE startup through OpenMCP lazy loading pattern.
@@ -10,7 +22,10 @@ AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates to
 
 **Key Innovation**: FastAPI proxy intercepts MCP protocol `tools/list` responses, partitions schemas to top-level only, and injects `expandSchema` tool for on-demand loading. Full schemas cached in memory; requests for details handled locally without Gateway roundtrip.
 
-**Key Documents**: See `docs/ARCHITECTURE.md` for technical deep-dive, `AGENTS.md` for coding conventions.
+**Key Documents**:
+- `PROJECT_INDEX.md` - Complete repository index (entry points, modules, architecture)
+- `docs/ARCHITECTURE.md` - Technical deep-dive (OpenMCP pattern, performance)
+- `AGENTS.md` - Coding conventions (TypeScript/Python style guide)
 
 ## Architecture
 
@@ -240,3 +255,122 @@ Edit `apps/settings/src/` → auto-reloads with `make dev` → build with `pnpm 
 - **Token measurement**: `make measure-tokens` analyzes `apps/api/logs/protocol_messages.jsonl` for reduction metrics
 - **Logs**: Protocol messages logged to `apps/api/logs/protocol_messages.jsonl` when `DEBUG=true`
 - **Health checks**: All services have Docker healthchecks (Gateway: port 9390, API: `/health`, UI: port 5273)
+
+## Data Flow: Schema Partitioning
+
+**Startup (Zero-Token):**
+```
+IDE → Proxy (SSE /mcp/sse)
+      ↓
+Proxy intercepts tools/list from Gateway
+      ↓
+1. Store full schemas in memory cache
+2. Partition schemas (top-level only)
+3. Inject expandSchema tool
+      ↓
+IDE receives 1,250 tokens (vs. 12,500)
+```
+
+**On-Demand Expansion:**
+```
+IDE needs nested property details
+      ↓
+IDE calls expandSchema(toolName, path)
+      ↓
+Proxy retrieves from memory cache (<10ms)
+      ↓
+IDE receives full schema for specific property
+```
+
+**Regular Tool Call:**
+```
+IDE → Proxy → Gateway → MCP Server → Result
+(Proxy is transparent, no modification)
+```
+
+## Troubleshooting
+
+### Gateway won't start
+```bash
+# Check Docker daemon
+make doctor
+
+# Check port conflicts
+lsof -i :9390 -i :9400 -i :5273
+
+# Hard reset
+make clean && make init
+```
+
+### Editor not detecting Gateway
+```bash
+# Verify symlink
+ls -la ~/.claude/mcp.json
+
+# Re-register all editors
+make install-editors
+
+# Test connection
+make verify-claude
+```
+
+### Database migration fails
+```bash
+# Check current revision
+docker compose exec api alembic current
+
+# Reset to specific revision
+docker compose exec api alembic downgrade <revision>
+
+# Re-run migration
+make db-migrate
+```
+
+### Custom server build errors
+```bash
+# Clean build artifacts
+make mindbase-clean
+make self-management-clean
+
+# Rebuild with fresh volumes
+make builder-down
+make build-custom-servers
+```
+
+### Tests failing
+```bash
+# Backend: Check DB schema isolation
+pytest apps/api/tests/ -v --tb=short
+
+# Frontend: Clear cache
+rm -rf apps/settings/node_modules/.vite
+make test-ui
+
+# Integration: Ensure services are running
+make up && make test
+```
+
+### Token reduction not working
+```bash
+# Enable protocol logging
+echo "DEBUG=true" >> .env
+make restart
+
+# Check logs
+tail -f apps/api/logs/protocol_messages.jsonl
+
+# Measure reduction
+make measure-tokens
+```
+
+## Quick Fixes
+
+**"Port already in use"**: Change `*_LISTEN_PORT` in `.env`, then `make restart`
+
+**"No module named 'app'"**: Run `docker compose run --rm test` (not `pytest` directly)
+
+**"pnpm: command not found"**: Use `make deps` (shims intentionally fail on host)
+
+**"Gateway unhealthy"**: Check `make logs-gateway` for startup errors, verify `mcp-config.json` syntax
+
+**"UI not loading"**: Ensure `make hosts-add` was run, check `http://ui.gateway.localhost:5273`
