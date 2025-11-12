@@ -1,20 +1,13 @@
 {
-  "mcpGateway": {
-    "addr": ":9390",
-    "baseURL": "http://mcp-gateway:9390",
-    "name": "AIRIS MCP Gateway",
-    "version": "1.3.0",
-    "type": "sse"
-  },
   "mcpServers": {
-    "__comment_profiles": "=== PROFILES (see profiles/ directory) ===",
-    "__comment_profiles_recommended": "Recommended: filesystem, context7, serena, mindbase (\u9577\u671f\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u5411\u3051)",
-    "__comment_profiles_minimal": "Minimal: filesystem, context7 (\u8efd\u91cf\u30fb\u9ad8\u901f)",
-    "__comment_profiles_custom": "Custom: \u9078\u629e\u7684\u6709\u52b9\u5316\uff08UI or profiles/custom.json\uff09",
-    "__comment_profiles_switch": "\u5207\u308a\u66ff\u3048: make profile-recommended | make profile-minimal",
-    "__comment_builtin": "=== BUILT-IN SERVERS (enabled via --servers flag) ===",
-    "__comment_builtin_list": "time, fetch, git, memory",
-    "__comment_gateway_npx": "=== GATEWAY NPX SERVERS (no auth required) ===",
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {}
+    },
     "filesystem": {
       "command": "npx",
       "args": [
@@ -22,90 +15,7 @@
         "@modelcontextprotocol/server-filesystem",
         "/workspace/host"
       ],
-      "enabled": true
-    },
-    "context7": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ],
-      "enabled": true
-    },
-    "sequential-thinking": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ],
-      "enabled": true
-    },
-    "playwright": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@latest"
-      ],
-      "enabled": false
-    },
-    "serena": {
-      "command": "sh",
-      "args": [
-        "-c",
-        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -v ${HOST_WORKSPACE_DIR}:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
-      ],
-      "enabled": true
-    },
-    "magic": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@21st-dev/magic"
-      ],
-      "env": {
-        "TWENTYFIRST_API_KEY": "${TWENTYFIRST_API_KEY}"
-      },
-      "enabled": false
-    },
-    "morphllm-fast-apply": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@morph-llm/morph-fast-apply"
-      ],
-      "env": {
-        "MORPH_API_KEY": "${MORPH_API_KEY}"
-      }
-    },
-    "puppeteer": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-puppeteer"
-      ],
-      "enabled": false
-    },
-    "sqlite": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-server-sqlite",
-        "--db-path",
-        "/app/data.db"
-      ],
-      "enabled": false
-    },
-    "mcp-postgres-server": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-postgres-server",
-        "--dsn",
-        "${POSTGRES_CONNECTION_STRING}"
-      ],
-      "env": {
-        "POSTGRES_CONNECTION_STRING": "${POSTGRES_CONNECTION_STRING}"
-      }
+      "env": {}
     },
     "mindbase": {
       "command": "sh",
@@ -113,247 +23,26 @@
         "-c",
         "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOST_REPO_DIR}/servers/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
       ],
-      "enabled": true
+      "env": {}
     },
-    "self-management": {
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ],
+      "env": {}
+    },
+    "serena": {
       "command": "sh",
       "args": [
         "-c",
-        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e GATEWAY_API_URL=${GATEWAY_API_URL:-http://mcp-gateway:9390/api} -v ${HOST_REPO_DIR}/servers/self-management:/app:ro -w /app node:24-alpine node dist/index.js"
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -v ${HOST_WORKSPACE_DIR}:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
       ],
-      "enabled": true
-    },
-    "__comment_disabled": "=== DISABLED (auth required - enable via frontend UI) ===",
-    "__comment_ai_search": "=== AI SEARCH & RESEARCH ===",
-    "tavily": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@tavily/mcp-server"
-      ],
-      "env": {
-        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
-      }
-    },
-    "chrome-devtools": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "chrome-devtools-mcp@latest"
-      ],
-      "enabled": false
-    },
-    "__comment_database": "=== DATABASE & BACKEND ===",
-    "__disabled_supabase": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@supabase/mcp-server-supabase"
-      ],
-      "env": {
-        "SUPABASE_URL": "${SUPABASE_URL}",
-        "SUPABASE_ANON_KEY": "${SUPABASE_ANON_KEY}"
-      }
-    },
-    "__disabled_mongodb": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@mongodb/mcp-server"
-      ],
-      "env": {
-        "MONGODB_CONNECTION_STRING": "${MONGODB_CONNECTION_STRING}"
-      }
-    },
-    "__disabled_mcp-postgres-server": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-postgres-server",
-        "--dsn",
-        "${POSTGRES_CONNECTION_STRING}"
-      ]
-    },
-    "__comment_productivity": "=== PRODUCTIVITY & COLLABORATION ===",
-    "__disabled_notion": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@notionhq/mcp-server"
-      ],
-      "env": {
-        "NOTION_API_KEY": "${NOTION_API_KEY}"
-      }
-    },
-    "__disabled_slack": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-slack"
-      ],
-      "env": {
-        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
-        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
-      }
-    },
-    "figma": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@hapins/figma-mcp"
-      ],
-      "env": {
-        "FIGMA_ACCESS_TOKEN": "${FIGMA_ACCESS_TOKEN}"
-      }
-    },
-    "__comment_payment_api": "=== PAYMENT & API INTEGRATIONS ===",
-    "stripe": {
-      "command": "bash",
-      "args": [
-        "-c",
-        "npx -y @stripe/mcp --tools=all"
-      ],
-      "env": {
-        "STRIPE_SECRET_KEY": "${STRIPE_SECRET_KEY}"
-      }
-    },
-    "twilio": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@twilio-alpha/mcp"
-      ],
-      "env": {
-        "TWILIO_ACCOUNT_SID": "${TWILIO_ACCOUNT_SID}",
-        "TWILIO_API_KEY": "${TWILIO_API_KEY}",
-        "TWILIO_API_SECRET": "${TWILIO_API_SECRET}"
-      }
-    },
-    "cloudflare": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@cloudflare/mcp-server-cloudflare"
-      ],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
-        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID}"
-      }
-    },
-    "__comment_dev_tools": "=== DEVELOPMENT TOOLS ===",
-    "github-official": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-github-official"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
-      }
-    },
-    "docker": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-docker"
-      ]
-    },
-    "dockerhub": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-dockerhub"
-      ],
-      "env": {
-        "DOCKERHUB_PAT_TOKEN": "${DOCKERHUB_PAT_TOKEN}"
-      }
-    },
-    "postgres": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-postgres"
-      ],
-      "env": {
-        "POSTGRES_URL": "${POSTGRES_URL}"
-      }
-    },
-    "__disabled_github": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
-      }
-    },
-    "__disabled_brave-search": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-brave-search"
-      ],
-      "env": {
-        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
-      }
-    },
-    "__disabled_sentry": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sentry"
-      ],
-      "env": {
-        "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}",
-        "SENTRY_ORG": "${SENTRY_ORG}"
-      }
-    },
-    "__disabled_fetch": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "mcp/fetch"
-      ]
-    },
-    "__disabled_git": {
-      "command": "sh",
-      "args": [
-        "-c",
-        "docker run -i --rm --mount type=bind,src=${HOST_WORKSPACE_DIR},dst=${HOST_WORKSPACE_DIR} mcp/git"
-      ]
-    },
-    "__disabled_memory": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-v",
-        "claude-memory:/app/dist",
-        "mcp/memory"
-      ]
-    },
-    "__disabled_time": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "mcp/time"
-      ]
-    },
-    "supabase-selfhost": {
-      "command": "sh",
-      "args": [
-        "-c",
-        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e PG_DSN -e POSTGREST_URL -e POSTGREST_JWT -e READ_ONLY -e FEATURES -v ${HOST_SUPABASE_DIR:-${HOST_WORKSPACE_DIR}/airis-mcp-supabase-selfhost}:/app:ro -w /app node:24-alpine node dist/server.js"
-      ]
+      "env": {}
     }
   },
   "log": {
-    "level": "debug"
+    "level": "info"
   }
 }
