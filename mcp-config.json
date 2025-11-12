@@ -1,21 +1,15 @@
 {
   "mcpServers": {
     "context7": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ],
-      "env": {}
+      "enabled": true
     },
     "filesystem": {
-      "command": "npx",
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
         "/workspace/host"
       ],
-      "env": {}
+      "enabled": true
     },
     "mindbase": {
       "command": "sh",
@@ -23,15 +17,11 @@
         "-c",
         "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOST_REPO_DIR}/servers/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
       ],
-      "env": {}
+      "env": {},
+      "enabled": true
     },
     "puppeteer": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-puppeteer"
-      ],
-      "env": {}
+      "enabled": true
     },
     "serena": {
       "command": "sh",
@@ -39,7 +29,8 @@
         "-c",
         "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -v ${HOST_WORKSPACE_DIR}:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
       ],
-      "env": {}
+      "env": {},
+      "enabled": true
     }
   },
   "log": {

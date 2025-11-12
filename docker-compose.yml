@@ -30,11 +30,6 @@ services:
       - --transport=sse
       - --port=${GATEWAY_LISTEN_PORT:-9390}
       - --config=/etc/docker-mcp/config.json
-      - --servers=filesystem
-      - --servers=context7
-      - --servers=serena
-      - --servers=mindbase
-      - --servers=self-management
     expose:
       - "${GATEWAY_LISTEN_PORT:-9390}"
     volumes:
@@ -88,11 +83,6 @@ services:
       - --transport=streaming
       - --port=${GATEWAY_STREAM_LISTEN_PORT:-9330}
       - --config=/etc/docker-mcp/config.json
-      - --servers=filesystem
-      - --servers=context7
-      - --servers=serena
-      - --servers=mindbase
-      - --servers=self-management
     expose:
       - "${GATEWAY_STREAM_LISTEN_PORT:-9330}"
     volumes:

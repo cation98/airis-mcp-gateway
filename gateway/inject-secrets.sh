@@ -66,9 +66,15 @@ if [ -n "${MCP_FORCE_ENABLE:-}" ]; then
 fi
 
 # === 4. Generate mcp-config.json ===
+# Catalog servers (Docker MCP Gateway): only need "enabled: true"
+# Custom servers (sh -c "docker run..."): need full definition
+CATALOG_SERVERS="filesystem,context7,puppeteer,playwright,brave,chrome-devtools,sqlite"
+
 generate_config() {
-    echo "$SERVERS_JSON" | jq --arg force "${MCP_FORCE_ENABLE:-}" '
+    echo "$SERVERS_JSON" | jq --arg force "${MCP_FORCE_ENABLE:-}" --arg catalog "$CATALOG_SERVERS" '
         def force_list: ($force | split(",") | map(.|gsub("^ +| +$";"")) | map(select(.!="")));
+        def catalog_list: ($catalog | split(","));
+        def is_catalog: (.name as $n | (catalog_list|index($n)) != null);
         def enabled_servers:
           (if (force_list|length)>0 then
              map(select(.name as $n | (force_list|index($n)) != null))
@@ -81,11 +87,24 @@ generate_config() {
             enabled_servers
             | map({
                 key: .name,
-                value: {
-                  "command": .command,
-                  "args": (.args // []),
-                  "env": (.env // {})
-                }
+                value: (
+                  if is_catalog then
+                    (
+                      if .name == "filesystem" then
+                        {"args": (.args // []), "enabled": true}
+                      else
+                        {"enabled": true}
+                      end
+                    )
+                  else
+                    {
+                      "command": .command,
+                      "args": (.args // []),
+                      "env": (.env // {}),
+                      "enabled": true
+                    }
+                  end
+                )
               })
             | from_entries
           ),
@@ -157,6 +176,35 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "Path:    $TARGET"
 echo "SHA256:  $CONFIG_HASH"
 echo "Servers: $FINAL_SERVERS"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# === 7. Register Enabled Servers to Docker MCP Gateway Registry ===
+echo "🔧 Registering enabled servers to MCP Gateway registry..."
+
+# Initialize catalog (idempotent)
+/docker-mcp catalog init 2>/dev/null || true
+
+# Reset registry to clean state
+/docker-mcp server reset 2>/dev/null || true
+
+# Separate catalog servers (known to Docker MCP) from custom servers
+CATALOG_SERVERS="$(echo "$FINAL_SERVERS" | tr ',' '\n' | grep -E "^(filesystem|context7|puppeteer|playwright|brave|chrome-devtools|sqlite)$" | tr '\n' ' ' || echo "")"
+CUSTOM_SERVERS="$(echo "$FINAL_SERVERS" | tr ',' '\n' | grep -vE "^(filesystem|context7|puppeteer|playwright|brave|chrome-devtools|sqlite)$" | tr '\n' ' ' || echo "")"
+
+# Enable catalog servers via CLI
+if [ -n "$CATALOG_SERVERS" ]; then
+    echo "  📦 Enabling catalog servers: $CATALOG_SERVERS"
+    /docker-mcp server enable $CATALOG_SERVERS 2>&1 | grep -v "^Tip:" || true
+fi
+
+# Custom servers (mindbase, serena) are handled via mcpServers definitions in config.json
+if [ -n "$CUSTOM_SERVERS" ]; then
+    echo "  🔨 Custom servers (via config.json): $CUSTOM_SERVERS"
+fi
+
+# Verify registration
+ENABLED_COUNT="$(/docker-mcp server ls 2>/dev/null | grep -c "enabled" || echo "0")"
+echo "✅ Registry updated: $ENABLED_COUNT catalog server(s) enabled"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 echo "🚀 Starting MCP Gateway with generated config..."
