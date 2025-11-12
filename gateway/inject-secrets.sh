@@ -187,19 +187,23 @@ echo "🔧 Registering enabled servers to MCP Gateway registry..."
 # Reset registry to clean state
 /docker-mcp server reset 2>/dev/null || true
 
-# Separate catalog servers (known to Docker MCP) from custom servers
-CATALOG_SERVERS="$(echo "$FINAL_SERVERS" | tr ',' '\n' | grep -E "^(filesystem|context7|puppeteer|playwright|brave|chrome-devtools|sqlite)$" | tr '\n' ' ' || echo "")"
-CUSTOM_SERVERS="$(echo "$FINAL_SERVERS" | tr ',' '\n' | grep -vE "^(filesystem|context7|puppeteer|playwright|brave|chrome-devtools|sqlite)$" | tr '\n' ' ' || echo "")"
+# Separate catalog servers (known to Docker MCP) from custom servers using jq
+CATALOG_SERVERS="$(jq -r '.mcpServers | keys | map(select(. == "filesystem" or . == "context7" or . == "puppeteer" or . == "playwright" or . == "brave" or . == "chrome-devtools" or . == "sqlite")) | join(" ")' "$TARGET")"
+CUSTOM_SERVERS="$(jq -r '.mcpServers | keys | map(select(. != "filesystem" and . != "context7" and . != "puppeteer" and . != "playwright" and . != "brave" and . != "chrome-devtools" and . != "sqlite")) | join(", ")' "$TARGET")"
 
 # Enable catalog servers via CLI
-if [ -n "$CATALOG_SERVERS" ]; then
+if [ -n "$CATALOG_SERVERS" ] && [ "$CATALOG_SERVERS" != "" ]; then
     echo "  📦 Enabling catalog servers: $CATALOG_SERVERS"
     /docker-mcp server enable $CATALOG_SERVERS 2>&1 | grep -v "^Tip:" || true
+else
+    echo "  ⚠️  No catalog servers to enable"
 fi
 
 # Custom servers (mindbase, serena) are handled via mcpServers definitions in config.json
-if [ -n "$CUSTOM_SERVERS" ]; then
+if [ -n "$CUSTOM_SERVERS" ] && [ "$CUSTOM_SERVERS" != "" ]; then
     echo "  🔨 Custom servers (via config.json): $CUSTOM_SERVERS"
+else
+    echo "  ℹ️  No custom servers defined"
 fi
 
 # Verify registration
