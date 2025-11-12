@@ -7,7 +7,7 @@ set -e
 API_URL="${API_URL:-http://api:9900}"
 MAX_RETRIES=30
 RETRY_INTERVAL=2
-TARGET="${MCP_CONFIG_PATH:-/workspace/host/airis-mcp-gateway/mcp-config.json}"
+TARGET="${MCP_CONFIG_PATH:-/etc/docker-mcp/config.json}"
 
 echo "🔎 Checking API: ${API_URL}"
 API_OK=0

@@ -43,7 +43,7 @@ services:
         source: ${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
         target: ${CONTAINER_WORKSPACE_ROOT:-/workspace}
       - claude-memory:/app/memory
-      - ./mcp-config.json:/etc/docker-mcp/config.json:ro
+      - ./mcp-config.json:/etc/docker-mcp/config.json
       - ./config/figma-catalog.yaml:/etc/docker-mcp/figma-catalog.yaml:ro
     labels:
       - "x-secret:STRIPE_API_KEY=/run/secrets/stripe_key"
@@ -101,7 +101,7 @@ services:
         source: ${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
         target: ${CONTAINER_WORKSPACE_ROOT:-/workspace}
       - claude-memory:/app/memory
-      - ./mcp-config.json:/etc/docker-mcp/config.json:ro
+      - ./mcp-config.json:/etc/docker-mcp/config.json
       - ./config/figma-catalog.yaml:/etc/docker-mcp/figma-catalog.yaml:ro
     depends_on:
       api:
