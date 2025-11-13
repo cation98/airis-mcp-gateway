@@ -9,7 +9,6 @@ RUN pip install --no-cache-dir uv
 WORKDIR /app
 
 COPY apps/api/pyproject.toml ./pyproject.toml
-COPY apps/api/uv.lock ./uv.lock
 RUN uv pip install --system -r pyproject.toml
 RUN uv pip install --system pytest pytest-asyncio httpx pytest-cov
 
@@ -101,7 +100,7 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
   CMD wget --no-verbose --tries=1 --spider "http://127.0.0.1:${GATEWAY_LISTEN_PORT:-9390}/" || exit 1
 
 ENTRYPOINT ["/usr/local/bin/inject-secrets.sh"]
-CMD ["docker-mcp", "gateway", "run", "--transport=sse", "--port=9390"]
+CMD ["/docker-mcp", "gateway", "run", "--transport=sse", "--port=9390"]
 
 
 ###########################################

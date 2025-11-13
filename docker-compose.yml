@@ -24,7 +24,7 @@ services:
       - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
       - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT:-/workspace}
     command:
-      - docker-mcp
+      - /docker-mcp
       - gateway
       - run
       - --transport=sse
@@ -77,7 +77,7 @@ services:
       - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
       - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT:-/workspace}
     command:
-      - docker-mcp
+      - /docker-mcp
       - gateway
       - run
       - --transport=streaming
