@@ -12,12 +12,13 @@
     "mindbase",
     "self-management",
     "serena",
+    "airis-agent",
     "filesystem",
     "sequential-thinking"
   ],
   "optional_servers": [
-    "playwright",
     "puppeteer",
+    "playwright",
     "chrome-devtools",
     "sqlite",
     "tavily",

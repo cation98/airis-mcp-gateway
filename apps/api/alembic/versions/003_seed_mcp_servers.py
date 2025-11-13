@@ -93,6 +93,69 @@ def upgrade() -> None:
             'description': 'Mindbase knowledge graph operations',
             'category': 'Docker Server'
         },
+        {
+            'name': 'time',
+            'enabled': True,
+            'command': None,
+            'args': None,
+            'env': None,
+            'description': 'Current time and date (built-in catalog server)',
+            'category': 'Built-in Catalog'
+        },
+        {
+            'name': 'fetch',
+            'enabled': True,
+            'command': None,
+            'args': None,
+            'env': None,
+            'description': 'Fetch URL content (built-in catalog server)',
+            'category': 'Built-in Catalog'
+        },
+        {
+            'name': 'git',
+            'enabled': True,
+            'command': None,
+            'args': None,
+            'env': None,
+            'description': 'Git repository operations (built-in catalog server)',
+            'category': 'Built-in Catalog'
+        },
+        {
+            'name': 'memory',
+            'enabled': True,
+            'command': None,
+            'args': None,
+            'env': None,
+            'description': 'Short-term memory (built-in catalog server)',
+            'category': 'Built-in Catalog'
+        },
+        {
+            'name': 'sequential-thinking',
+            'enabled': True,
+            'command': None,
+            'args': None,
+            'env': None,
+            'description': 'Complex reasoning with multi-step thinking (catalog server)',
+            'category': 'Gateway Catalog'
+        },
+        {
+            'name': 'self-management',
+            'enabled': True,
+            'command': 'node',
+            'args': ['/workspace/host/airis-mcp-gateway/servers/self-management/dist/index.js'],
+            'env': {'API_URL': '${API_INTERNAL_URL:-http://api:9900}'},
+            'description': 'Dynamic server management (LLM-controlled enable/disable)',
+            'category': 'Custom Server'
+        },
+        {
+            'name': 'airis-agent',
+            'enabled': True,
+            'command': 'uvx',
+            'args': ['--from', 'git+https://github.com/agiletec-inc/airis-agent', 'airis-agent'],
+            'env': None,
+            'description': 'AIRIS agent for autonomous task execution',
+            'category': 'UVX Server'
+        },
 
         # === DISABLED SERVERS (auth required - enable via UI) ===
 
