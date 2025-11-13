@@ -6,10 +6,31 @@
 
 ## ⚡ Quick Start (90 seconds)
 
-Prerequisites:
-- Docker Desktop **or** OrbStack running (all services start inside containers)
-- `make` / `git`
-- [`uv`](https://docs.astral.sh/uv/) (used to run the lightweight editor installers; install with `brew install uv` on macOS)
+### Prerequisites
+
+**Mac (Apple Silicon):**
+- [OrbStack](https://orbstack.dev/) (recommended) or [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- `git` (pre-installed on macOS)
+- [`uv`](https://docs.astral.sh/uv/) — install with `brew install uv`
+
+**Mac (Intel):**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- `git` (pre-installed on macOS)
+- [`uv`](https://docs.astral.sh/uv/) — install with `brew install uv`
+
+**Linux:**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) or Docker Engine + Docker Compose
+- `make` and `git` — install with `sudo apt install make git` (Debian/Ubuntu) or `sudo yum install make git` (RHEL/CentOS)
+- [`uv`](https://docs.astral.sh/uv/) — install with `curl -LsSf https://astral.sh/uv/install.sh | sh`
+
+**Windows:**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) (with WSL2 backend enabled)
+- [Git for Windows](https://git-scm.com/download/win) (includes Git Bash and `make`)
+- [`uv`](https://docs.astral.sh/uv/) — install with PowerShell: `irm https://astral.sh/uv/install.ps1 | iex`
+
+> **Why `uv`?** The installer scripts modify your IDE configuration files (e.g., `~/.claude/mcp.json` or `%APPDATA%\Claude\mcp.json`) on the host system. These files live outside Docker, so we use `uv` to run lightweight Python scripts for editor registration.
+
+### Installation (macOS / Linux)
 
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
@@ -20,6 +41,27 @@ make init                   # clean install (build, start, editor registration)
 # Optional: dev profile with UI/API preview
 # make install-dev
 ```
+
+### Installation (Windows)
+
+Open **Git Bash** (not PowerShell) and run:
+
+```bash
+git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
+cd airis-mcp-gateway
+cp .env.example .env
+
+# Add hosts entries (requires Administrator privileges)
+# Option 1: Run from Git Bash with elevated privileges
+make hosts-add
+
+# Option 2: Manually edit C:\Windows\System32\drivers\etc\hosts and add:
+# 127.0.0.1 gateway.localhost api.gateway.localhost ui.gateway.localhost
+
+make init  # clean install (build, start, editor registration)
+```
+
+> **Tip for Windows users:** If you encounter path issues, consider using [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) for a native Linux environment.
 
 `make init` will:
 - register Codex CLI, Claude Code, and Cursor via the Python installers executed with `uv`
