@@ -1,0 +1,212 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.3.0)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "version=${${{ github.event.inputs.tag }}#v}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create tarball
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          mkdir -p dist
+          tar -czf dist/airis-mcp-gateway-${VERSION}.tar.gz \
+            --exclude='.git*' \
+            --exclude='dist' \
+            --exclude='node_modules' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.venv' \
+            --exclude='apps/api/logs' \
+            --transform "s,^,airis-mcp-gateway-${VERSION}/," \
+            .
+
+      - name: Generate checksum
+        run: |
+          cd dist
+          shasum -a 256 *.tar.gz > checksums.txt
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: AIRIS MCP Gateway ${{ steps.version.outputs.version }}
+          body: |
+            ## AIRIS MCP Gateway ${{ steps.version.outputs.version }}
+
+            ### Installation
+
+            ```bash
+            brew tap agiletec-inc/tap
+            brew install airis-mcp-gateway
+            ```
+
+            Or upgrade if already installed:
+
+            ```bash
+            brew upgrade airis-mcp-gateway
+            ```
+
+            ### Quick Start
+
+            ```bash
+            make init       # Full installation
+            make up         # Start services
+            ```
+
+            See [CLAUDE.md](https://github.com/agiletec-inc/airis-mcp-gateway/blob/main/CLAUDE.md) for full documentation.
+          files: |
+            dist/*.tar.gz
+            dist/checksums.txt
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version and checksum
+        id: meta
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+          # Download tarball to calculate SHA256
+          curl -sL "https://github.com/agiletec-inc/airis-mcp-gateway/archive/refs/tags/v${VERSION}.tar.gz" -o /tmp/release.tar.gz
+          SHA256=$(shasum -a 256 /tmp/release.tar.gz | awk '{print $1}')
+          echo "sha256=${SHA256}" >> $GITHUB_OUTPUT
+          echo "SHA256: ${SHA256}"
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: agiletec-inc/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update Formula
+        run: |
+          cd homebrew-tap
+
+          VERSION=${{ steps.meta.outputs.version }}
+          SHA256=${{ steps.meta.outputs.sha256 }}
+
+          cat > Formula/airis-mcp-gateway.rb <<'EOF'
+          class AirisMcpGateway < Formula
+            desc "Unified MCP server management with 90% token reduction via lazy loading"
+            homepage "https://github.com/agiletec-inc/airis-mcp-gateway"
+            url "https://github.com/agiletec-inc/airis-mcp-gateway/archive/refs/tags/v${VERSION}.tar.gz"
+            sha256 "${SHA256}"
+            license "MIT"
+
+            depends_on "docker"
+            depends_on "python@3.11"
+
+            def install
+              # Install entire project structure
+              prefix.install Dir["*"]
+
+              # Create wrapper script
+              (bin/"airis-gateway").write <<~EOS
+                #!/bin/bash
+                cd "#{prefix}" && make "$@"
+              EOS
+
+              chmod 0755, bin/"airis-gateway"
+            end
+
+            def post_install
+              ohai "Setting up AIRIS MCP Gateway..."
+
+              # Create data directory
+              (var/"airis-mcp-gateway").mkpath
+
+              # Auto-import existing IDE configs
+              system "python3", prefix/"scripts/import_existing_configs.py" rescue nil
+            end
+
+            def caveats
+              <<~EOS
+                AIRIS MCP Gateway has been installed!
+
+                📋 Quick Start:
+                  1. Ensure Docker is running
+                  2. Run: cd #{prefix} && make init
+                  3. Restart your editors (Claude Code, Cursor, Zed, etc.)
+
+                🔧 Commands:
+                  make init       # Full installation (build + start + register editors)
+                  make up         # Start services
+                  make down       # Stop services
+                  make logs       # View logs
+                  make dev        # Start UI dev server
+
+                📚 Documentation:
+                  #{prefix}/CLAUDE.md          # Full guide
+                  #{prefix}/PROJECT_INDEX.md   # Repository structure
+
+                🌐 Access URLs:
+                  Gateway:     http://localhost:9390
+                  Settings UI: http://ui.gateway.localhost:5273
+                  API:         http://api.gateway.localhost:9400
+              EOS
+            end
+
+            test do
+              system "test", "-f", prefix/"Makefile"
+              system "test", "-f", prefix/"docker-compose.yml"
+            end
+          end
+          EOF
+
+          # Replace variables
+          sed -i.bak "s/\${VERSION}/${VERSION}/g" Formula/airis-mcp-gateway.rb
+          sed -i.bak "s/\${SHA256}/${SHA256}/g" Formula/airis-mcp-gateway.rb
+          rm Formula/airis-mcp-gateway.rb.bak
+
+      - name: Commit and push Formula
+        run: |
+          cd homebrew-tap
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add Formula/airis-mcp-gateway.rb
+          git commit -m "chore: update airis-mcp-gateway to v${{ steps.meta.outputs.version }}"
+          git push

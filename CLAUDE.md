@@ -374,3 +374,67 @@ make measure-tokens
 **"Gateway unhealthy"**: Check `make logs-gateway` for startup errors, verify `mcp-config.json` syntax
 
 **"UI not loading"**: Ensure `make hosts-add` was run, check `http://ui.gateway.localhost:5273`
+
+## Release Process
+
+### Automated Release (Recommended)
+
+Releases are fully automated via GitHub Actions. Simply push a version tag:
+
+```bash
+# Create and push a new version tag
+git tag -a v1.3.0 -m "Release v1.3.0"
+git push origin v1.3.0
+```
+
+**What happens automatically:**
+1. GitHub Actions creates tarball and GitHub Release
+2. Formula in `agiletec-inc/homebrew-tap` is auto-updated with new version and SHA256
+3. Users can upgrade via `brew upgrade airis-mcp-gateway`
+
+**Requirements:**
+- `HOMEBREW_TAP_TOKEN` secret must be set in repository settings (personal access token with `repo` scope)
+
+### Manual Formula Update (Testing)
+
+For testing or manual updates:
+
+```bash
+# Update Formula for version v1.3.0
+./scripts/update_homebrew_formula.sh v1.3.0
+
+# Review changes
+cd ~/github/homebrew-tap
+git diff Formula/airis-mcp-gateway.rb
+
+# Commit and push
+git add Formula/airis-mcp-gateway.rb
+git commit -m "chore: update airis-mcp-gateway to v1.3.0"
+git push
+```
+
+### Release Checklist
+
+Before creating a release tag:
+- [ ] All tests passing (`make test`)
+- [ ] CLAUDE.md and PROJECT_INDEX.md up to date
+- [ ] CHANGELOG.md updated (if exists)
+- [ ] Version bumped in relevant files
+- [ ] No uncommitted changes (`git status`)
+
+### Homebrew Installation
+
+Once released, users can install via:
+
+```bash
+# First-time installation
+brew tap agiletec-inc/tap
+brew install airis-mcp-gateway
+
+# Upgrade to latest version
+brew upgrade airis-mcp-gateway
+
+# Installed location
+brew --prefix airis-mcp-gateway
+# → /opt/homebrew/Cellar/airis-mcp-gateway/<version>
+```
