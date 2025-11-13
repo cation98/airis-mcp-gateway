@@ -30,12 +30,12 @@ FROM node:24-alpine AS settings-builder
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /monorepo
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml ./
 COPY apps/settings ./apps/settings
 COPY servers/mindbase/package.json ./servers/mindbase/package.json
 COPY servers/self-management/package.json ./servers/self-management/package.json
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 WORKDIR /monorepo/apps/settings
 RUN pnpm build
 
@@ -58,12 +58,12 @@ FROM node:24-alpine AS webui-builder
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /monorepo
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml ./
 COPY apps/webui ./apps/webui
 COPY servers/mindbase/package.json ./servers/mindbase/package.json
 COPY servers/self-management/package.json ./servers/self-management/package.json
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 WORKDIR /monorepo/apps/webui
 RUN pnpm build
 
@@ -110,7 +110,7 @@ FROM node:24-alpine AS mindbase-builder
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
-CMD ["sh", "-c", "pnpm install --frozen-lockfile && pnpm build && sleep infinity"]
+CMD ["sh", "-c", "pnpm install && pnpm build && sleep infinity"]
 
 
 ###########################################

@@ -14,7 +14,7 @@ class AirisMcpGateway < Formula
 
   def install
     # Install npm dependencies
-    system "pnpm", "install", "--frozen-lockfile"
+    system "pnpm", "install"
 
     # Build CLI package
     cd "packages/cli" do

@@ -260,7 +260,7 @@ services:
     profiles:
       - builder
     command: >
-      sh -c "pnpm install --frozen-lockfile &&
+      sh -c "pnpm install &&
              pnpm build &&
              echo '✅ MindBase MCP Server built: servers/mindbase/dist/' &&
              sleep infinity"

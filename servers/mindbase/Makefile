@@ -54,7 +54,7 @@ install: ## Install dependencies in Docker
 		-v "$(PWD):/app" \
 		-w /app \
 		node:22-alpine \
-		sh -c "corepack enable && pnpm install --frozen-lockfile"
+		sh -c "corepack enable && pnpm install"
 	@echo "$(GREEN)✅ Dependencies installed$(NC)"
 
 .PHONY: dev
