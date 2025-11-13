@@ -85,7 +85,7 @@ CMD ["sh", "-c", "envsubst '$$WEBUI_PORT $$API_PROXY_URL' < /etc/nginx/templates
 FROM docker/mcp-gateway:latest AS gateway
 
 LABEL maintainer="AIRIS MCP Gateway Team"
-LABEL description="AIRIS MCP Gateway - Centralized MCP Server routing with 11+ integrated servers"
+LABEL description="AIRIS MCP Gateway - Centralized MCP Server routing with docker/mcp-gateway"
 LABEL version="1.3.0"
 
 ENV AIRIS_VERSION="1.3.0" \
@@ -101,7 +101,7 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
   CMD wget --no-verbose --tries=1 --spider "http://127.0.0.1:${GATEWAY_LISTEN_PORT:-9390}/" || exit 1
 
 ENTRYPOINT ["/usr/local/bin/inject-secrets.sh"]
-CMD ["/docker-mcp", "gateway", "run", "--transport=sse", "--port=9390"]
+CMD ["docker-mcp", "gateway", "run", "--transport=sse", "--port=9390"]
 
 
 ###########################################

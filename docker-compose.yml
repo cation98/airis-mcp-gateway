@@ -24,17 +24,12 @@ services:
       - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
       - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT:-/workspace}
     command:
-      - /docker-mcp
+      - docker-mcp
       - gateway
       - run
       - --transport=sse
       - --port=${GATEWAY_LISTEN_PORT:-9390}
       - --config=/etc/docker-mcp/config.json
-      - --servers=filesystem
-      - --servers=context7
-      - --servers=serena
-      - --servers=puppeteer
-      - --servers=mindbase
     expose:
       - "${GATEWAY_LISTEN_PORT:-9390}"
     volumes:
@@ -82,17 +77,12 @@ services:
       - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
       - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT:-/workspace}
     command:
-      - /docker-mcp
+      - docker-mcp
       - gateway
       - run
       - --transport=streaming
       - --port=${GATEWAY_STREAM_LISTEN_PORT:-9330}
       - --config=/etc/docker-mcp/config.json
-      - --servers=filesystem
-      - --servers=context7
-      - --servers=serena
-      - --servers=puppeteer
-      - --servers=mindbase
     expose:
       - "${GATEWAY_STREAM_LISTEN_PORT:-9330}"
     volumes:

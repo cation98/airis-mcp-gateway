@@ -182,10 +182,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🔧 Registering enabled servers to MCP Gateway registry..."
 
 # Initialize catalog (idempotent)
-/docker-mcp catalog init 2>/dev/null || true
+docker-mcp catalog init 2>/dev/null || true
 
 # Reset registry to clean state
-/docker-mcp server reset 2>/dev/null || true
+docker-mcp server reset 2>/dev/null || true
 
 # Separate catalog servers (known to Docker MCP) from custom servers using jq
 CATALOG_SERVERS="$(jq -r '.mcpServers | keys | map(select(. == "filesystem" or . == "context7" or . == "puppeteer" or . == "playwright" or . == "brave" or . == "chrome-devtools" or . == "sqlite")) | join(" ")' "$TARGET")"
@@ -194,7 +194,7 @@ CUSTOM_SERVERS="$(jq -r '.mcpServers | keys | map(select(. != "filesystem" and .
 # Enable catalog servers via CLI
 if [ -n "$CATALOG_SERVERS" ] && [ "$CATALOG_SERVERS" != "" ]; then
     echo "  📦 Enabling catalog servers: $CATALOG_SERVERS"
-    /docker-mcp server enable $CATALOG_SERVERS 2>&1 | grep -v "^Tip:" || true
+    docker-mcp server enable $CATALOG_SERVERS 2>&1 | grep -v "^Tip:" || true
 else
     echo "  ⚠️  No catalog servers to enable"
 fi
@@ -207,7 +207,7 @@ else
 fi
 
 # Verify registration
-ENABLED_COUNT="$(/docker-mcp server ls 2>/dev/null | grep -c "enabled" || echo "0")"
+ENABLED_COUNT="$(docker-mcp server ls 2>/dev/null | grep -c "enabled" || echo "0")"
 echo "✅ Registry updated: $ENABLED_COUNT catalog server(s) enabled"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
