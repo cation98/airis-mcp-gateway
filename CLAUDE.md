@@ -12,6 +12,7 @@ make init       # Full installation (build + start + register editors)
 make dev        # UI development server with hot reload
 make test       # Run backend tests (pytest in Docker)
 make logs       # Stream all service logs
+make doctor     # Health check (Docker daemon, toolchain verification)
 ```
 
 ## Project Overview
@@ -49,7 +50,12 @@ AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates to
 - `.env`: Ports, database credentials, encryption key
 - `config/profiles/*.json`: Server presets (recommended/minimal)
 
-**Profile System**: Toggle servers by renaming keys in `mcp-config.json`:
+**Profile System**: Three profiles available (`config/profiles/`):
+- **Recommended**: filesystem, context7, serena, mindbase (~500MB)
+- **Minimal**: filesystem, context7 only (~50MB)
+- **Dynamic**: LLM-controlled via self-management server (auto enable/disable)
+
+Toggle servers by renaming keys in `mcp-config.json`:
 - Enabled: `"serena": { ... }`
 - Disabled: `"__disabled_serena": { ... }`
 - Built-in servers (time, fetch, git, memory) always enabled
@@ -86,6 +92,10 @@ docker compose run --rm test        # Same as above
 pytest tests/ --cov=app -v          # Run locally with coverage
 pytest apps/api/tests/unit/ -v      # Unit tests only
 pytest apps/api/tests/integration/  # Integration tests only
+
+# Run specific test file or function
+pytest apps/api/tests/unit/test_secret_crud.py -v
+pytest apps/api/tests/unit/test_schema_partitioning.py::test_partition_schema -v
 
 # Frontend tests (TypeScript)
 make test-ui                        # Run vitest in container
@@ -190,6 +200,25 @@ make db-migrate
 ### UI Development
 Edit `apps/settings/src/` → auto-reloads with `make dev` → build with `pnpm --filter @airis/settings build`
 
+### Using Dynamic Profile
+```bash
+# Switch to Dynamic profile (enables self-management server)
+make profile-dynamic
+make restart
+
+# LLM can now control servers via self-management tools:
+# - list_mcp_servers() - Show all available servers
+# - enable_mcp_server(server_name='tavily') - Enable web search
+# - disable_mcp_server(server_name='tavily') - Disable after task
+# - get_mcp_server_status(server_name='github') - Check status
+
+# Use case: LLM enables only needed servers per task
+# Example workflow:
+#   1. Task requires GitHub API → LLM enables 'github' server
+#   2. Complete GitHub operations
+#   3. LLM disables 'github' to reduce token overhead
+```
+
 ## Coding Conventions (from AGENTS.md)
 
 ### TypeScript/React
@@ -230,7 +259,7 @@ Edit `apps/settings/src/` → auto-reloads with `make dev` → build with `pnpm 
 - **mcp.json**: Generated from `config/mcp.json.template` by `make generate-mcp-config` (replaces `${GATEWAY_API_URL}` etc.)
 - **Secrets**: Encrypted at rest (Fernet), stored in PostgreSQL `secrets` table, injected via `${VAR_NAME}` in `mcp-config.json`
 - **Environment variables**: Auto-detected by Makefile (`HOST_WORKSPACE_DIR`, `CONTAINER_PROJECT_ROOT`, `DOCKER_NETWORK`)
-- **Profiles**: Use `make profile-recommended` / `make profile-minimal` to toggle server groups
+- **Profiles**: Use `make profile-list` to see all profiles, `make profile-recommended` / `make profile-minimal` / `make profile-dynamic` to switch
 
 ### Docker & Networking
 - **Network name**: `airis-mcp-gateway_default` (auto-created by Compose with `COMPOSE_PROJECT_NAME`)
@@ -292,14 +321,37 @@ IDE → Proxy → Gateway → MCP Server → Result
 
 ### Gateway won't start
 ```bash
-# Check Docker daemon
+# Check Docker daemon and toolchain
 make doctor
 
 # Check port conflicts
 lsof -i :9390 -i :9400 -i :5273
 
-# Hard reset
+# View Gateway logs for errors
+make logs-gateway
+
+# Hard reset (drops all volumes)
 make clean && make init
+```
+
+### Makefile issues
+```bash
+# "make: *** No rule to make target" error
+# Ensure you're in project root:
+pwd  # Should show /Users/.../airis-mcp-gateway
+
+# "docker: command not found"
+# Ensure Docker Desktop or OrbStack is running:
+docker version
+
+# Permission denied on /etc/hosts
+# hosts-add/hosts-remove require sudo:
+sudo make hosts-add
+
+# Port binding errors
+# Check if ports are in use and update .env:
+lsof -i :9400 -i :5273 -i :9390
+# Then edit GATEWAY_LISTEN_PORT, API_LISTEN_PORT, etc. in .env
 ```
 
 ### Editor not detecting Gateway
@@ -369,11 +421,15 @@ make measure-tokens
 
 **"No module named 'app'"**: Run `docker compose run --rm test` (not `pytest` directly)
 
-**"pnpm: command not found"**: Use `make deps` (shims intentionally fail on host)
+**"pnpm: command not found"**: Use `make deps` (shims intentionally fail on host to enforce Docker-first)
 
 **"Gateway unhealthy"**: Check `make logs-gateway` for startup errors, verify `mcp-config.json` syntax
 
 **"UI not loading"**: Ensure `make hosts-add` was run, check `http://ui.gateway.localhost:5273`
+
+**"Profile switch not working"**: After `make profile-*`, always run `make restart` to apply changes
+
+**"Which profile am I using?"**: Run `make profile-list` to see current profile highlighted
 
 ## Release Process
 
