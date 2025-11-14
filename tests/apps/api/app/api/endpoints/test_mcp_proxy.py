@@ -10,6 +10,7 @@ from starlette.requests import Request
 from apps.api.app.api.endpoints.mcp_proxy import (
     _build_gateway_sse_url,
     _build_stream_gateway_url,
+    _filter_stream_headers,
 )
 
 
@@ -38,6 +39,23 @@ async def _make_proxy_request(path: str, headers: Dict[str, str] | None = None):
 
     async with AsyncClient(app=app, base_url="http://testserver") as client:
         return await client.post(path, json=payload, headers=headers)
+
+
+def test_filter_stream_headers_normalizes_accept_header():
+    """Accept header should always include JSON + SSE for streamable_http clients."""
+    filtered = _filter_stream_headers({"Accept": "application/json"})
+    assert filtered["accept"] == "application/json, text/event-stream"
+
+
+def test_filter_stream_headers_appends_missing_tokens_case_insensitive():
+    headers = {"ACCEPT": "text/event-stream"}
+    filtered = _filter_stream_headers(headers)
+    assert filtered["accept"] == "text/event-stream, application/json"
+
+
+def test_filter_stream_headers_default_accept_when_missing():
+    filtered = _filter_stream_headers({})
+    assert filtered["accept"] == "application/json, text/event-stream"
 
 
 async def test_proxy_preserves_session_query():

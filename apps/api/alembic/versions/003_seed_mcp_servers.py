@@ -96,8 +96,8 @@ def upgrade() -> None:
         {
             'name': 'time',
             'enabled': True,
-            'command': None,
-            'args': None,
+            'command': 'catalog',
+            'args': [],
             'env': None,
             'description': 'Current time and date (built-in catalog server)',
             'category': 'Built-in Catalog'
@@ -105,8 +105,8 @@ def upgrade() -> None:
         {
             'name': 'fetch',
             'enabled': True,
-            'command': None,
-            'args': None,
+            'command': 'catalog',
+            'args': [],
             'env': None,
             'description': 'Fetch URL content (built-in catalog server)',
             'category': 'Built-in Catalog'
@@ -114,8 +114,8 @@ def upgrade() -> None:
         {
             'name': 'git',
             'enabled': True,
-            'command': None,
-            'args': None,
+            'command': 'catalog',
+            'args': [],
             'env': None,
             'description': 'Git repository operations (built-in catalog server)',
             'category': 'Built-in Catalog'
@@ -123,8 +123,8 @@ def upgrade() -> None:
         {
             'name': 'memory',
             'enabled': True,
-            'command': None,
-            'args': None,
+            'command': 'catalog',
+            'args': [],
             'env': None,
             'description': 'Short-term memory (built-in catalog server)',
             'category': 'Built-in Catalog'
@@ -132,8 +132,8 @@ def upgrade() -> None:
         {
             'name': 'sequential-thinking',
             'enabled': True,
-            'command': None,
-            'args': None,
+            'command': 'catalog',
+            'args': [],
             'env': None,
             'description': 'Complex reasoning with multi-step thinking (catalog server)',
             'category': 'Gateway Catalog'

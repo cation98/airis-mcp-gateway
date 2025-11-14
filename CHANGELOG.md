@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Codex CLI now connects successfully because the FastAPI proxy mirrors `/api/v1/mcp/sse` at the domain root (`/sse`) expected by the `streamable_http` transport.
+- Stream proxy rewrites `Accept` headers so Codex RMCP clients always advertise both `application/json` and `text/event-stream`, preventing handshake failures at `http://127.0.0.1:9400/api/v1/mcp`.
 - Settings UI host-port overrides respect `.env` again by introducing `UI_CONTAINER_PORT` for the internal listener while `UI_LISTEN_PORT` controls the published host port; the Nginx image now renders its config from environment variables so the container actually honors those values.
 - Added a dedicated streaming MCP gateway (`mcp-gateway-stream`) and API proxy so Codex RMCP clients can handshake over `streamable_http` without needing the SSE `sessionid` flow.
 

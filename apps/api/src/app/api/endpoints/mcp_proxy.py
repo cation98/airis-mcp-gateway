@@ -377,16 +377,53 @@ def _build_stream_gateway_url(request: Request, include_api_prefix: bool = True)
     return f"{base_url}{suffix}"
 
 
+def _normalize_stream_accept_header(accept_header: Optional[str]) -> str:
+    """
+    Ensure the upstream stream gateway always receives Accept headers that
+    declare both JSON (for Codex logging) and SSE (required by streamable_http).
+    """
+    required_media_types = ("application/json", "text/event-stream")
+
+    if not accept_header:
+        return ", ".join(required_media_types)
+
+    parts: list[str] = []
+    seen_tokens: set[str] = set()
+
+    for raw_part in accept_header.split(","):
+        part = raw_part.strip()
+        if not part:
+            continue
+        token = part.split(";", 1)[0].strip().lower()
+        parts.append(part)
+        seen_tokens.add(token)
+
+    for media_type in required_media_types:
+        if media_type not in seen_tokens:
+            parts.append(media_type)
+            seen_tokens.add(media_type)
+
+    return ", ".join(parts)
+
+
 def _filter_stream_headers(headers: dict[str, str]) -> dict[str, str]:
     """
-    Remove hop-by-hop headers that should not be forwarded.
+    Remove hop-by-hop headers that should not be forwarded and normalize Accept.
     """
-    blocked = {"host", "content-length", "accept-encoding", "connection"}
-    return {
+    blocked = {"host", "content-length", "accept-encoding", "connection", "accept"}
+    accept_header = next(
+        (value for key, value in headers.items() if key.lower() == "accept"),
+        None,
+    )
+    filtered = {
         key: value
         for key, value in headers.items()
         if key.lower() not in blocked
     }
+
+    filtered["accept"] = _normalize_stream_accept_header(accept_header)
+
+    return filtered
 
 
 def _format_sse_event(data: Dict[str, Any], event_type: str | None = "message") -> bytes:

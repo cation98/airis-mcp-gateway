@@ -1,6 +1,22 @@
 {
   "mcpServers": {
+    "airis-agent": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/agiletec-inc/airis-agent",
+        "airis-agent-mcp"
+      ],
+      "env": {},
+      "enabled": true
+    },
     "context7": {
+      "enabled": true
+    },
+    "fetch": {
+      "command": "catalog",
+      "args": [],
+      "env": {},
       "enabled": true
     },
     "filesystem": {
@@ -9,6 +25,18 @@
         "@modelcontextprotocol/server-filesystem",
         "/workspace/host"
       ],
+      "enabled": true
+    },
+    "git": {
+      "command": "catalog",
+      "args": [],
+      "env": {},
+      "enabled": true
+    },
+    "memory": {
+      "command": "catalog",
+      "args": [],
+      "env": {},
       "enabled": true
     },
     "mindbase": {
@@ -20,23 +48,34 @@
       "env": {},
       "enabled": true
     },
-    "puppeteer": {
+    "self-management": {
+      "command": "node",
+      "args": [
+        "/workspace/host/airis-mcp-gateway/servers/self-management/dist/index.js"
+      ],
+      "env": {
+        "API_URL": "${API_INTERNAL_URL:-http://api:9900}"
+      },
+      "enabled": true
+    },
+    "sequential-thinking": {
+      "command": "catalog",
+      "args": [],
+      "env": {},
       "enabled": true
     },
     "serena": {
-      "command": "uvx",
+      "command": "sh",
       "args": [
-        "--from",
-        "git+https://github.com/oraios/serena",
-        "serena",
-        "start-mcp-server",
-        "--context",
-        "ide-assistant",
-        "--enable-web-dashboard",
-        "false",
-        "--enable-gui-log-window",
-        "false"
+        "-c",
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -v ${HOST_WORKSPACE_DIR}:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
       ],
+      "env": {},
+      "enabled": true
+    },
+    "time": {
+      "command": "catalog",
+      "args": [],
       "env": {},
       "enabled": true
     }

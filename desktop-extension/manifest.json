@@ -2,7 +2,7 @@
   "schemaVersion": "1.0",
   "name": "airis-mcp-gateway",
   "displayName": "AIRIS MCP Gateway",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "Unified MCP server management - All 25 MCP servers via single Gateway. Zero-token startup, encrypted secret storage, and multi-editor support.",
   "author": "Agiletec Inc.",
   "homepage": "https://github.com/agiletec-inc/airis-mcp-gateway",

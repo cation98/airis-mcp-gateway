@@ -5,12 +5,20 @@ import { resolve } from 'node:path'
 import AutoImport from 'unplugin-auto-import/vite'
 
 const base = process.env.BASE_PATH || '/'
-const isPreview = process.env.IS_PREVIEW  ? true : false;
+const isPreview = process.env.IS_PREVIEW ? true : false
+const serverPort = Number(
+  process.env.VITE_DEV_SERVER_PORT ??
+  process.env.PORT ??
+  process.env.VITE_PORT ??
+  process.env.DEV_SERVER_PORT ??
+  5273
+)
+const serverHost = process.env.VITE_DEV_SERVER_HOST ?? process.env.HOST ?? '0.0.0.0'
 // https://vite.dev/config/
 export default defineConfig({
   define: {
-   __BASE_PATH__: JSON.stringify(base),
-   __IS_PREVIEW__: JSON.stringify(isPreview)
+    __BASE_PATH__: JSON.stringify(base),
+    __IS_PREVIEW__: JSON.stringify(isPreview)
   },
   plugins: [
     tailwindcss(),
@@ -79,8 +87,8 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000,
-    host: '0.0.0.0',
+    port: serverPort,
+    host: serverHost,
     proxy: {
       '/api': {
         target: 'http://api:9900',

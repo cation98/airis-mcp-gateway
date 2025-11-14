@@ -1,33 +1,23 @@
 {
   "name": "airis-mcp-gateway",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "private": true,
-  "description": "AIRIS MCP Gateway - Unified MCP server management",
-  "type": "module",
-  "scripts": {
-    "dev": "pnpm --filter @airis/settings dev",
-    "build": "pnpm --filter @airis/settings build",
-    "test": "pnpm --filter @airis/settings test",
-    "lint": "pnpm --filter @airis/settings lint",
-    "typecheck": "pnpm --filter @airis/settings typecheck",
-    "clean": "pnpm -r clean",
-    "menubar": "pnpm --filter @airis/menubar dev"
+  "packageManager": "pnpm@10.12.0",
+  "pnpm": {
+    "catalog": {
+      "next": "15.4.0",
+      "react": "19.0.0",
+      "typescript": "5.8.0",
+      "vitest": "2.0.0"
+    }
   },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "claude",
-    "ai",
-    "gateway"
-  ],
-  "author": "Kazuki Nakai",
-  "license": "MIT",
-  "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=9.0.0"
-  },
-  "packageManager": "pnpm@10.20.0",
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "_generated": {
+    "by": "airis-workspace",
+    "from": "workspace.yaml",
+    "warning": "⚠️  DO NOT EDIT - Regenerate with 'airis generate'"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@airis/self-management-mcp-server",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "AIRIS MCP Gateway Self-Management Server - Dynamic MCP server enable/disable control",
   "type": "module",
   "main": "dist/index.js",

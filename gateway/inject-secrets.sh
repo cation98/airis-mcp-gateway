@@ -194,7 +194,18 @@ CUSTOM_SERVERS="$(jq -r '.mcpServers | keys | map(select(. != "filesystem" and .
 # Enable catalog servers via CLI
 if [ -n "$CATALOG_SERVERS" ] && [ "$CATALOG_SERVERS" != "" ]; then
     echo "  📦 Enabling catalog servers: $CATALOG_SERVERS"
-    /docker-mcp server enable $CATALOG_SERVERS 2>&1 | grep -v "^Tip:" || true
+    # Enable each server individually to pass specific arguments
+    for server in $CATALOG_SERVERS; do
+        if [ "$server" = "filesystem" ]; then
+            # Get filesystem args from config
+            FS_ARGS="$(jq -r '.mcpServers.filesystem.args | join(" ")' "$TARGET" 2>/dev/null || echo "")"
+            if [ -n "$FS_ARGS" ]; then
+                echo "    Enabling $server with args: $FS_ARGS"
+                /docker-mcp config write filesystem $FS_ARGS 2>&1 | grep -v "^Tip:" || true
+            fi
+        fi
+        /docker-mcp server enable $server 2>&1 | grep -v "^Tip:" || true
+    done
 else
     echo "  ⚠️  No catalog servers to enable"
 fi

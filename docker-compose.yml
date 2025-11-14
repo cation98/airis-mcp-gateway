@@ -1,7 +1,6 @@
 name: airis-mcp-gateway
 
-# IMPORTANT: Use `make init` (or `make up` for advanced use) to start services (auto-sets required environment variables)
-# Running `docker compose up` directly will show warnings about unset variables.
+# Run: docker compose up -d
 
 services:
   # AIRIS MCP Gateway - すべてのMCPサーバーを統合
@@ -30,6 +29,7 @@ services:
       - --transport=sse
       - --port=${GATEWAY_LISTEN_PORT:-9390}
       - --config=/etc/docker-mcp/config.json
+      - --enable-all-servers
     expose:
       - "${GATEWAY_LISTEN_PORT:-9390}"
     volumes:
@@ -83,6 +83,7 @@ services:
       - --transport=streaming
       - --port=${GATEWAY_STREAM_LISTEN_PORT:-9330}
       - --config=/etc/docker-mcp/config.json
+      - --enable-all-servers
     expose:
       - "${GATEWAY_STREAM_LISTEN_PORT:-9330}"
     volumes:

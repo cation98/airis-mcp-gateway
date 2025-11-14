@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "airis-mcp-gateway",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "description": "Unified entrypoint for 25+ MCP servers. One command, zero manual provisioning.",
     "generated": "2025-11-12",
     "repository": "https://github.com/agiletec-inc/airis-mcp-gateway.git"
