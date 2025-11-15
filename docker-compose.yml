@@ -137,7 +137,7 @@ services:
     expose:
       - "${API_LISTEN_PORT:-9900}"
     ports:
-      - "${API_LISTEN_PORT:-9900}:${API_LISTEN_PORT:-9900}"
+      - "${GATEWAY_API_PORT:-9400}:${API_LISTEN_PORT:-9900}"
     volumes:
       - type: bind
         source: ${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
