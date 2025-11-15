@@ -16,6 +16,8 @@ const dashboard = {
   'dashboard.sections.detail.managed': '未設定のAPIキー: {{missing}} 件',
   'dashboard.sections.empty': '表示できるサーバーはありません。',
   'dashboard.sections.emptyManaged': '設定済みのコネクタがここに表示されます。',
+  'dashboard.hero.title': 'MCP Gateway 設定',
+  'dashboard.hero.subtitle': 'MCPサーバーの接続とAPIキーをまとめて管理',
   'dashboard.summary.total': 'サーバー総数',
   'dashboard.summary.active': '稼働中',
   'dashboard.summary.inactive': '停止中',
@@ -41,5 +43,3 @@ const dashboard = {
 };
 
 export default dashboard;
-  'dashboard.hero.title': 'MCP Gateway 設定',
-  'dashboard.hero.subtitle': 'MCPサーバーの接続とAPIキーをまとめて管理',

@@ -194,31 +194,6 @@ services:
       retries: 3
       start_period: 10s
 
-  # WebUI - Dynamic Profile UI (shadcn/ui + React)
-  webui:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: webui
-    container_name: airis-mcp-gateway-webui
-    expose:
-      - "${WEBUI_CONTAINER_PORT:-5274}"
-    ports:
-      - "${WEBUI_CONTAINER_PORT:-5274}:${WEBUI_CONTAINER_PORT:-5274}"
-    environment:
-      - WEBUI_PORT=${WEBUI_CONTAINER_PORT:-5274}
-      - API_PROXY_URL=${API_INTERNAL_URL:-http://api:${API_LISTEN_PORT:-9900}}
-    depends_on:
-      - mcp-gateway
-      - api
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${WEBUI_CONTAINER_PORT:-5274}/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
   # Node.js toolchain container for pnpm/node/npm shims
   node:
     image: node:24-bookworm
