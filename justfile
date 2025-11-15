@@ -18,6 +18,18 @@ up:
     docker compose up -d
     @echo "✅ Services started"
 
+# Rebuild (images + containers)
+rebuild:
+    @echo "🔁 Rebuilding Docker services..."
+    docker compose up -d --build
+    @echo "✅ Services rebuilt"
+
+# Build container images
+build:
+    @echo "🏗️ Building Docker images..."
+    docker compose build
+    @echo "✅ Images built"
+
 # Stop all services
 down:
     docker compose down --remove-orphans

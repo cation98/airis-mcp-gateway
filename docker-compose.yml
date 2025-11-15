@@ -32,6 +32,8 @@ services:
       - --enable-all-servers
     expose:
       - "${GATEWAY_LISTEN_PORT:-9390}"
+    ports:
+      - "${GATEWAY_LISTEN_PORT:-9390}:${GATEWAY_LISTEN_PORT:-9390}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - type: bind
@@ -86,6 +88,8 @@ services:
       - --enable-all-servers
     expose:
       - "${GATEWAY_STREAM_LISTEN_PORT:-9330}"
+    ports:
+      - "${GATEWAY_STREAM_LISTEN_PORT:-9330}:${GATEWAY_STREAM_LISTEN_PORT:-9330}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - type: bind
@@ -132,6 +136,8 @@ services:
     container_name: airis-mcp-gateway-api
     expose:
       - "${API_LISTEN_PORT:-9900}"
+    ports:
+      - "${API_LISTEN_PORT:-9900}:${API_LISTEN_PORT:-9900}"
     volumes:
       - type: bind
         source: ${HOST_WORKSPACE_DIR:-/Users/kazuki/github}
@@ -172,6 +178,8 @@ services:
     container_name: airis-mcp-gateway-settings-ui
     expose:
       - "${UI_CONTAINER_PORT:-5273}"
+    ports:
+      - "${UI_CONTAINER_PORT:-5273}:${UI_CONTAINER_PORT:-5273}"
     environment:
       - UI_PORT=${UI_CONTAINER_PORT:-5273}
       - API_PROXY_URL=${API_INTERNAL_URL:-http://api:${API_LISTEN_PORT:-9900}}
@@ -195,6 +203,8 @@ services:
     container_name: airis-mcp-gateway-webui
     expose:
       - "${WEBUI_CONTAINER_PORT:-5274}"
+    ports:
+      - "${WEBUI_CONTAINER_PORT:-5274}:${WEBUI_CONTAINER_PORT:-5274}"
     environment:
       - WEBUI_PORT=${WEBUI_CONTAINER_PORT:-5274}
       - API_PROXY_URL=${API_INTERNAL_URL:-http://api:${API_LISTEN_PORT:-9900}}

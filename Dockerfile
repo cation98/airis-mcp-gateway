@@ -71,7 +71,7 @@ FROM nginx:1.27-alpine AS webui
 ENV WEBUI_PORT=5274 \
     API_PROXY_URL=http://api:9900
 
-COPY --from=webui-builder /monorepo/apps/webui/dist /usr/share/nginx/html
+COPY --from=webui-builder /monorepo/apps/webui/build /usr/share/nginx/html
 COPY apps/webui/nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 EXPOSE 5274
