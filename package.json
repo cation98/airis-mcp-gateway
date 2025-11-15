@@ -2,14 +2,21 @@
   "name": "airis-mcp-gateway",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@10.12.0",
+  "packageManager": "pnpm@10.22.0",
   "pnpm": {
     "catalog": {
       "next": "16.0.3",
-      "react": "19.0.0",
+      "react": "19.2.0",
       "typescript": "5.9.3",
-      "vitest": "2.0.0"
-    }
+      "vitest": "4.0.9"
+    },
+    "onlyBuiltDependencies": [
+      "@firebase/util",
+      "@swc/core",
+      "electron",
+      "esbuild",
+      "protobufjs"
+    ]
   },
   "devDependencies": {
     "typescript": "catalog:",

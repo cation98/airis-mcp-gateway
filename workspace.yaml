@@ -2,10 +2,10 @@ version: 1
 name: airis-mcp-gateway
 mode: docker-first
 catalog:
-  react: 19.0.0
+  react: 19.2.0
   next: 16.0.3
   typescript: 5.9.3
-  vitest: 2.0.0
+  vitest: 4.0.9
 workspaces:
   apps:
   - name: dashboard

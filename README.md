@@ -5,8 +5,7 @@ Unified orchestration for the AIRIS MCP stack. This repository contains everythi
 ## What’s Inside
 
 - `apps/api` – FastAPI backend with Alembic migrations and pytest suites.
-- `apps/settings` – Vite + React admin dashboard for managing servers, secrets, and profiles.
-- `apps/webui` – Dynamic profile viewer shipped as a standalone Vite app.
+- `apps/settings` – Vite + React admin dashboard (now the single source of truth for managing servers, secrets, and profiles).
 - `apps/desktop` / `apps/menubar` – Tauri/Node shells for desktop delivery.
 - `servers/*` – Bundled MCP servers (MindBase, self-management, etc.).
 - `gateway/` – Docker entrypoints and secret injection helpers.
@@ -39,13 +38,14 @@ The `just up` recipe wraps `docker compose up -d` and waits for Postgres, API, a
 - Streamable HTTP endpoint: `http://api.gateway.localhost:9400/api/v1/mcp`
 - FastAPI docs: `http://api.gateway.localhost:9400/docs`
 - Settings UI: `http://ui.gateway.localhost:5273`
-- Web UI (profiles): `http://webui.gateway.localhost:5274`
 
 Need a full reinstall with editor bindings and config regeneration? Run `make init`. It will:
 
 1. Register Codex CLI, Claude, Cursor, and Zed through the `uv` installers.
 2. Generate `mcp.json` based on `.env` and workspace paths.
 3. Build API/UI/gateway containers, seed Postgres, and enable default MCP servers.
+
+> **Heads up:** The legacy standalone WebUI has been deprecated. All MCP management now lives inside `apps/settings`, so you only need the Settings UI endpoint during development.
 
 ## Daily Commands
 
@@ -71,7 +71,7 @@ pytest tests/                       # run backend tests against FastAPI
 Tips:
 
 - Use `pnpm --filter` to target specific apps or packages.
-- React/Vite apps live under `apps/settings` and `apps/webui`; run `pnpm dev`, `pnpm build`, and `pnpm test` from their directories once inside the container.
+- React/Vite work happens under `apps/settings`; run `pnpm dev`, `pnpm build`, and `pnpm test` from that directory once inside the container.
 - Backend coverage: `pytest tests/ --cov=app --cov-report=term-missing`.
 - Integration suites reside in `tests/integration` with fixtures in `tests/conftest.py`.
 
