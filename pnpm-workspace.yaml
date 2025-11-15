@@ -2,11 +2,15 @@
 # DO NOT EDIT - Regenerate with: airis generate
 
 packages:
-  - "apps/dashboard"
-  - "apps/api"
+  - "apps/settings"
+  - "apps/webui"
+  - "apps/desktop"
+  - "apps/menubar"
+  - "packages/*"
+  - "servers/*"
 
 catalog:
   next: 15.4.0
   react: 19.0.0
-  typescript: 5.8.0
+  typescript: 5.9.3
   vitest: 2.0.0

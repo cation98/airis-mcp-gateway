@@ -4,13 +4,22 @@ mode: docker-first
 catalog:
   react: 19.0.0
   next: 15.4.0
-  typescript: 5.8.0
+  typescript: 5.9.3
   vitest: 2.0.0
 workspaces:
   apps:
   - name: dashboard
     type: nextjs
   - name: api
+    type: node
+  - name: webui
+    type: vite
+  - name: settings
+    type: vite
+  servers:
+  - name: mindbase
+    type: node
+  - name: self-management
     type: node
   libs: []
 apps: {}

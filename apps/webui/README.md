@@ -1,7 +1,7 @@
 
-  # MCP設定画面のUI改善
+  # MCP Gateway Web UI
 
-  This is a code bundle for MCP設定画面のUI改善. The original project is available at https://www.figma.com/design/nfqRnGcnuc0y0w67IQzCcp/MCP%E8%A8%AD%E5%AE%9A%E7%94%BB%E9%9D%A2%E3%81%AEUI%E6%94%B9%E5%96%84.
+  This is a code bundle for MCP Gateway Web UI. The original project is available at https://www.figma.com/design/ofO7khwk3YQKDWGO5TE5W8/MCP-Gateway-Web-UI.
 
   ## Running the code
 
