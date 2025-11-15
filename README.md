@@ -39,7 +39,21 @@ The `just up` recipe wraps `docker compose up -d` and waits for Postgres, API, a
 - FastAPI docs: `http://api.gateway.localhost:9400/docs`
 - Settings UI: `http://ui.gateway.localhost:5273`
 
-Need a full reinstall with editor bindings and config regeneration? Run `make init`. It will:
+### Recommended: Claude Code Official Installation
+
+```bash
+# Start the Gateway first
+just up
+
+# Add to Claude Code using official command (recommended)
+claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
+```
+
+This is the cleanest approach - uses Claude Code's native HTTP transport with no Docker bridge complexity.
+
+### Alternative: Automated Multi-Editor Setup
+
+Need a full reinstall with editor bindings and config regeneration? Run `just init`. It will:
 
 1. Register Codex CLI, Claude, Cursor, and Zed through the `uv` installers.
 2. Generate `mcp.json` based on `.env` and workspace paths.
@@ -78,9 +92,9 @@ Tips:
 ## Configuration & Secrets
 
 - `.env` controls all ports (`GATEWAY_LISTEN_PORT`, `API_LISTEN_PORT`, `WEBUI_PORT`, etc.), publish URLs, and database credentials. Uncomment `HOST_*` variables only if you run `docker compose` manually.
-- `make hosts-add` / `make hosts-remove` configure `gateway*.localhost` entries so every OS resolves the same endpoints.
+- `just hosts-add` / `just hosts-remove` configure `gateway*.localhost` entries so every OS resolves the same endpoints.
 - Secrets entered through the Settings UI are encrypted with Fernet (`ENCRYPTION_MASTER_KEY`) and stored in Postgres; never commit `.env`.
-- Profiles under `config/profiles/*.yaml` define which MCP servers ship enabled. Modify them and run `make init` (or restart the stack) to propagate changes.
+- Profiles under `config/profiles/*.yaml` define which MCP servers ship enabled. Modify them and run `just init` (or restart the stack) to propagate changes.
 
 ## Testing & Quality Gates
 
@@ -96,7 +110,7 @@ CI mirrors these commands, so failing locally usually means an upstream failure 
 
 - **pnpm errors**: Run through `just workspace`; never call `pnpm` on the host (shims will block it).
 - **Container won’t start**: `docker compose logs <service>` plus `docker system prune` often clears stale layers.
-- **Editor not seeing the gateway**: rerun `make init` to regenerate MCP configs and installers.
+- **Editor not seeing the gateway**: rerun `just init` to regenerate MCP configs and installers.
 - **Ports already in use**: adjust `*_LISTEN_PORT` values in `.env` and recreate the stack.
 
 ## Contributing
