@@ -38,8 +38,8 @@ const dashboard = {
   'dashboard.alerts.conflicts.tavily': 'Tavily overlaps with {{server}}. Disable {{server}} after enabling Tavily if both are on.',
   'dashboard.alerts.conflicts.fetch': 'Fetch duplicates Tavily search. Consider turning one of them off.',
   'dashboard.alerts.conflicts.braveSearch': 'Brave Search overlaps with {{server}}. Keep only one search provider enabled.',
+  'dashboard.hero.title': 'MCP Gateway Settings',
+  'dashboard.hero.subtitle': 'Manage your MCP server connections and API keys',
 };
 
 export default dashboard;
-  'dashboard.hero.title': 'MCP Gateway Settings',
-  'dashboard.hero.subtitle': 'Manage your MCP server connections and API keys',

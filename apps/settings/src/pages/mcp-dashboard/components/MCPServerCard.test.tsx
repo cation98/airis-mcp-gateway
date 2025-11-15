@@ -37,12 +37,14 @@ describe('MCPServerCard', () => {
     expect(onRequestSecretValue).toHaveBeenCalledWith('tavily');
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('serverCard.inputs.apiKeyPlaceholder')).toHaveValue('tvly_saved_key');
+      const input = screen.getByPlaceholderText('serverCard.inputs.apiKeyPlaceholder') as HTMLInputElement;
+      expect(input.value).toBe('tvly_saved_key');
     });
 
     const toggleVisibility = screen.getByRole('button', { name: /serverCard\.inputs\.showSecret/i });
     await user.click(toggleVisibility);
-    expect(screen.getByDisplayValue('tvly_saved_key')).toHaveAttribute('type', 'text');
+    const visibleInput = screen.getByDisplayValue('tvly_saved_key') as HTMLInputElement;
+    expect(visibleInput.type).toBe('text');
   });
 
   test('saves new API key and returns to compact state', async () => {
@@ -68,9 +70,9 @@ describe('MCPServerCard', () => {
     });
 
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText('serverCard.inputs.apiKeyPlaceholder')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('serverCard.inputs.apiKeyPlaceholder')).toBeNull();
     });
 
-    expect(screen.getByText('serverCard.buttons.configure')).toBeInTheDocument();
+    expect(screen.getByText('serverCard.buttons.configure')).toBeTruthy();
   });
 });

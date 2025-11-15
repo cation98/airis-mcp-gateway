@@ -105,7 +105,7 @@ describe('MCPDashboard API key flow', () => {
     render(<MCPDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText('dashboard.header.title')).toBeInTheDocument();
+      expect(screen.getByText('dashboard.header.title')).toBeTruthy();
     });
 
     await user.click(screen.getByText('serverCard.buttons.configure'));
@@ -114,7 +114,7 @@ describe('MCPDashboard API key flow', () => {
     await user.click(screen.getByRole('button', { name: 'common.actions.save' }));
 
     await waitFor(() => {
-      expect(screen.getByText('serverCard.buttons.configured')).toBeInTheDocument();
+      expect(screen.getByText('serverCard.buttons.configured')).toBeTruthy();
     });
 
     verifyExhausted();
