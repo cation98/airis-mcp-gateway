@@ -2,6 +2,51 @@
 
 Unified orchestration for the AIRIS MCP stack. This repository contains everything required to run the FastAPI backend, the Docker-facing gateway, and the Vite-based UIs that administer bundled MCP servers.
 
+---
+
+## 🌟 Part of the AIRIS Ecosystem
+
+AIRIS MCP Gateway is one component of the **AIRIS Suite** - a unified toolkit that makes AI coding assistants smarter across all editors.
+
+### The AIRIS Suite
+
+| Component | Purpose | For Who |
+|-----------|---------|---------|
+| **[airis-agent](https://github.com/agiletec-inc/airis-agent)** | 🧠 Intelligence layer for all editors (confidence checks, deep research, self-review) | All developers using Claude Code, Cursor, Windsurf, Codex, Gemini CLI |
+| **airis-mcp-gateway** (this repo) | 🚪 Unified MCP proxy with 90% token reduction via lazy loading | Claude Code users who want faster startup |
+| **[mindbase](https://github.com/kazukinakai/mindbase)** | 💾 Local cross-session memory with semantic search | Developers who want persistent conversation history |
+| **[airis-workspace](https://github.com/agiletec-inc/airis-workspace)** | 🏗️ Docker-first monorepo manager | Teams building monorepos |
+| **[airiscode](https://github.com/agiletec-inc/airiscode)** | 🖥️ Terminal-first autonomous coding agent | CLI-first developers |
+
+### MCP Servers (Included via Gateway)
+
+- **[airis-mcp-supabase-selfhost](https://github.com/agiletec-inc/airis-mcp-supabase-selfhost)** - Self-hosted Supabase MCP with RLS support
+- **mindbase** - Memory search & storage tools (`mindbase_search`, `mindbase_store`)
+
+### Quick Install: Complete AIRIS Suite
+
+```bash
+# Option 1: Install airis-agent plugin (recommended for Claude Code users)
+/plugin marketplace add agiletec-inc/airis-agent
+/plugin install airis-agent
+
+# Option 2: Clone all AIRIS repositories at once
+uv run airis-agent install-suite --profile core
+
+# Option 3: Just use this gateway standalone (you're already here!)
+git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
+cd airis-mcp-gateway && just up
+```
+
+**What you get with the full suite:**
+- ✅ Confidence-gated workflows (prevents wrong-direction coding)
+- ✅ Deep research with evidence synthesis
+- ✅ 94% token reduction via repository indexing
+- ✅ Cross-session memory across all editors
+- ✅ Self-review and post-implementation validation
+
+---
+
 ## What’s Inside
 
 - `apps/api` – FastAPI backend with Alembic migrations and pytest suites.
