@@ -10,10 +10,20 @@ const dashboard = {
   'dashboard.sections.active': 'アクティブ ({{count}})',
   'dashboard.sections.recommended': 'おすすめMCPサーバー ({{count}})',
   'dashboard.sections.disabled': '無効化 ({{count}})',
+  'dashboard.sections.builtin': '標準サーバー ({{count}})',
+  'dashboard.sections.managed': 'AI管理コネクタ ({{count}})',
+  'dashboard.sections.detail.builtin': '常時ONのコアサーバー',
+  'dashboard.sections.detail.managed': '未設定のAPIキー: {{missing}} 件',
+  'dashboard.sections.empty': '表示できるサーバーはありません。',
+  'dashboard.sections.emptyManaged': '設定済みのコネクタがここに表示されます。',
   'dashboard.summary.total': 'サーバー総数',
   'dashboard.summary.active': '稼働中',
   'dashboard.summary.inactive': '停止中',
   'dashboard.summary.apiKeyMissing': 'APIキー未設定',
+  'dashboard.profile.recommended': 'おすすめ',
+  'dashboard.profile.dynamicTitle': 'プロファイル: Dynamic Mode',
+  'dashboard.profile.dynamicBody': 'AIが自動で有効なサーバーを切り替えます。',
+  'dashboard.profile.dynamicNote': 'APIキーを登録しておけば、あとはGatewayにお任せでOKです。',
   'dashboard.alerts.credentialsMissing': 'このサーバーの資格情報が見つかりません。APIキーを設定してから再度有効化してください。',
   'dashboard.alerts.validationRequestFailed': '接続テストのリクエストに失敗しました。',
   'dashboard.alerts.validationFailed': '接続テスト失敗: {{message}}\n\nAPIキーが正しいか確認してください。',
@@ -31,3 +41,5 @@ const dashboard = {
 };
 
 export default dashboard;
+  'dashboard.hero.title': 'MCP Gateway 設定',
+  'dashboard.hero.subtitle': 'MCPサーバーの接続とAPIキーをまとめて管理',

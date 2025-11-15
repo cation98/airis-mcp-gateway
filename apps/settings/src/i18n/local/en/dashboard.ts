@@ -10,10 +10,20 @@ const dashboard = {
   'dashboard.sections.active': 'Active ({{count}})',
   'dashboard.sections.recommended': 'Recommended MCP servers ({{count}})',
   'dashboard.sections.disabled': 'Disabled ({{count}})',
+  'dashboard.sections.builtin': 'Built-in ({{count}})',
+  'dashboard.sections.managed': 'AI-managed connectors ({{count}})',
+  'dashboard.sections.detail.builtin': 'Core servers — always enabled',
+  'dashboard.sections.detail.managed': '{{missing}} require API keys before the AI can activate them',
+  'dashboard.sections.empty': 'No servers to display.',
+  'dashboard.sections.emptyManaged': 'Connectors will appear here once profiles are synced.',
   'dashboard.summary.total': 'Total servers',
   'dashboard.summary.active': 'Active',
   'dashboard.summary.inactive': 'Inactive',
   'dashboard.summary.apiKeyMissing': 'API key missing',
+  'dashboard.profile.recommended': 'Recommended',
+  'dashboard.profile.dynamicTitle': 'Profile: Dynamic Mode',
+  'dashboard.profile.dynamicBody': 'AI automatically manages which servers are active.',
+  'dashboard.profile.dynamicNote': 'Register API keys once and the Gateway takes care of the rest.',
   'dashboard.alerts.credentialsMissing': 'No credentials found for this server. Configure the API key before enabling it.',
   'dashboard.alerts.validationRequestFailed': 'Failed to send validation request.',
   'dashboard.alerts.validationFailed': 'Connection test failed: {{message}}\n\nMake sure the API key is correct.',
@@ -31,3 +41,5 @@ const dashboard = {
 };
 
 export default dashboard;
+  'dashboard.hero.title': 'MCP Gateway Settings',
+  'dashboard.hero.subtitle': 'Manage your MCP server connections and API keys',

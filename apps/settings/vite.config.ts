@@ -2,7 +2,15 @@ import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react-swc'
 import { resolve } from 'node:path'
+import { createRequire } from 'node:module'
 import AutoImport from 'unplugin-auto-import/vite'
+
+const require = createRequire(import.meta.url)
+const reactPath = require.resolve('react')
+const reactJsxRuntimePath = require.resolve('react/jsx-runtime')
+const reactJsxDevRuntimePath = require.resolve('react/jsx-dev-runtime')
+const reactDomPath = require.resolve('react-dom')
+const reactDomClientPath = require.resolve('react-dom/client')
 
 const base = process.env.BASE_PATH || '/'
 const isPreview = process.env.IS_PREVIEW ? true : false
@@ -82,9 +90,15 @@ export default defineConfig({
     outDir: 'out',
   },
   resolve: {
-    alias: {
-      '@': resolve(__dirname, './src')
-    }
+    alias: [
+      { find: '@', replacement: resolve(__dirname, './src') },
+      { find: 'react/jsx-dev-runtime', replacement: reactJsxDevRuntimePath },
+      { find: 'react/jsx-runtime', replacement: reactJsxRuntimePath },
+      { find: 'react-dom/client', replacement: reactDomClientPath },
+      { find: 'react-dom', replacement: reactDomPath },
+      { find: 'react', replacement: reactPath }
+    ],
+    dedupe: ['react', 'react-dom']
   },
   server: {
     port: serverPort,

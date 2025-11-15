@@ -2,12 +2,12 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MCPServerCard } from './components/MCPServerCard';
-import type { ConflictNotice } from './components/MCPServerCard';
-import { ConfigEditor } from './components/ConfigEditor';
-import { TipsModal } from './components/TipsModal';
 import { MultiFieldConfigModal } from './components/MultiFieldConfigModal';
 import { getServerConfigSchema } from '../../types/mcp-config';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { Badge } from '@/components/ui/badge';
+import { Settings as SettingsIcon, Zap } from 'lucide-react';
+import companyLogo from '../../assets/company-logo.png';
 
 interface MCPServer {
   id: string;
@@ -87,21 +87,6 @@ const SINGLE_FIELD_KEY_NAMES: Record<string, string> = {
   'brave-search': 'BRAVE_API_KEY',
   dockerhub: 'DOCKERHUB_PAT_TOKEN',
   cloudflare: 'CLOUDFLARE_API_TOKEN',
-};
-
-const CONFLICT_RULES: Record<string, { conflictsWith: string[]; messageKey: string }> = {
-  tavily: {
-    conflictsWith: ['fetch', 'brave-search'],
-    messageKey: 'dashboard.alerts.conflicts.tavily',
-  },
-  fetch: {
-    conflictsWith: ['tavily'],
-    messageKey: 'dashboard.alerts.conflicts.fetch',
-  },
-  'brave-search': {
-    conflictsWith: ['tavily'],
-    messageKey: 'dashboard.alerts.conflicts.braveSearch',
-  },
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -239,8 +224,6 @@ const parseDashboardSummary = (value: unknown): DashboardStats | null => {
 
 export default function MCPDashboard() {
   const [servers, setServers] = useState<MCPServer[]>([]);
-  const [showConfigEditor, setShowConfigEditor] = useState(false);
-  const [showTips, setShowTips] = useState(false);
   const [configModalServer, setConfigModalServer] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
@@ -305,20 +288,6 @@ export default function MCPDashboard() {
     }
 
     return null;
-  };
-
-  const persistServerState = async (serverId: string, enabled: boolean): Promise<boolean> => {
-    try {
-      const response = await apiFetch(`/server-states/${serverId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled }),
-      });
-      return response.ok;
-    } catch (error) {
-      console.error('Failed to persist server state', error);
-      return false;
-    }
   };
 
   const upsertSecret = async (serverName: string, keyName: string, value: string): Promise<void> => {
@@ -440,89 +409,6 @@ export default function MCPDashboard() {
     void loadServerData();
   }, []);
 
-  const toggleServer = async (id: string): Promise<void> => {
-    const currentServer = servers.find(s => s.id === id);
-    if (!currentServer) return;
-
-    const newEnabledState = !currentServer.enabled;
-
-    if (newEnabledState && currentServer.apiKeyRequired) {
-      const config = await fetchServerSecretConfig(id);
-
-      if (Object.keys(config).length === 0) {
-        alert(t('dashboard.alerts.credentialsMissing'));
-        return;
-      }
-
-      try {
-        const validateResponse = await apiFetch(`/validate/${id}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            server_id: id,
-            config,
-          }),
-        });
-
-        if (!validateResponse.ok) {
-          alert(t('dashboard.alerts.validationRequestFailed'));
-          return;
-        }
-
-        const validationRaw: unknown = await validateResponse.json().catch(() => null);
-        const validation = parseValidationResponse(validationRaw);
-        if (!validation) {
-          alert(t('dashboard.alerts.validationRequestFailed'));
-          return;
-        }
-
-        if (!validation.valid) {
-          alert(t('dashboard.alerts.validationFailed', { message: validation.message ?? '' }));
-          return;
-        }
-
-        alert(t('dashboard.alerts.validationSuccess', { message: validation.message ?? '' }));
-      } catch (error) {
-        console.error('Validation error:', error);
-        const message = error instanceof Error ? error.message : t('common.feedback.unknownError');
-        alert(t('common.feedback.error', { message }));
-        return;
-      }
-    }
-
-    if (newEnabledState) {
-      const rule = CONFLICT_RULES[id];
-      if (rule) {
-        const conflictingActiveServers = servers.filter(
-          (server) => rule.conflictsWith.includes(server.id) && server.enabled,
-        );
-        if (conflictingActiveServers.length > 0) {
-          const names = conflictingActiveServers.map((server) => server.name).join(', ');
-          alert(t(rule.messageKey, { server: names }));
-        }
-      }
-    }
-
-    setServers(prev => prev.map(server =>
-      server.id === id
-        ? { ...server, enabled: newEnabledState, status: newEnabledState ? 'connected' : 'disconnected' }
-        : server
-    ));
-
-    const persisted = await persistServerState(id, newEnabledState);
-
-    if (!persisted) {
-      console.error(t('dashboard.alerts.saveStateFailed'));
-      setServers(prev => prev.map(server =>
-        server.id === id
-          ? { ...server, enabled: currentServer.enabled, status: currentServer.status }
-          : server
-      ));
-    }
-
-    void loadDashboardSummary();
-  };
-
   const updateApiKey = async (id: string, apiKey: string): Promise<void> => {
     // Check if server has multiple fields configuration
     const schema = getServerConfigSchema(id);
@@ -593,154 +479,133 @@ export default function MCPDashboard() {
     );
   }
 
-  const handleToggleServer = (id: string) => {
-    void toggleServer(id);
-  };
-
   const handleUpdateApiKey = (id: string, apiKey: string) => updateApiKey(id, apiKey);
 
-  const activeServers = servers.filter(s => s.enabled && s.status === 'connected');
-  const disabledServers = servers.filter(s => !s.enabled);
+  const builtinServers = servers.filter((server) => server.builtin);
+  const managedServers = servers.filter((server) => !server.builtin);
+  const configuredManagedServers = managedServers.filter((server) => server.apiKey === 'configured');
+  const needsAttentionServers = managedServers.filter(
+    (server) => server.apiKeyRequired && server.apiKey !== 'configured',
+  );
 
-  const resolveConflicts = (server: MCPServer): ConflictNotice[] => {
-    const rule = CONFLICT_RULES[server.id];
-    if (!rule) {
-      return [];
-    }
-    return rule.conflictsWith.map((otherId) => {
-      const counterpart = servers.find((item) => item.id === otherId);
-      return {
-        id: otherId,
-        message: t(rule.messageKey, { server: counterpart?.name ?? otherId }),
-        active: Boolean(counterpart?.enabled),
-      };
-    });
-  };
+  const renderServerList = (items: MCPServer[], emptyLabelKey: string) => (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {items.length === 0 ? (
+        <p className="px-4 py-6 text-sm text-muted-foreground">{t(emptyLabelKey)}</p>
+      ) : (
+        items.map((server) => (
+          <MCPServerCard
+            key={server.id}
+            server={server}
+            onUpdateApiKey={handleUpdateApiKey}
+            onRequestSecretValue={loadSingleFieldSecretValue}
+          />
+        ))
+      )}
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* ヘッダー */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="dark min-h-screen bg-background text-foreground">
+      <header className="border-b border-border bg-card/70 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <img src={companyLogo} alt="AIRIS logo" className="h-10 w-10 rounded-full border border-border object-cover" />
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('dashboard.header.title')}</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-base font-semibold text-foreground">{t('dashboard.header.title')}</p>
+              <p className="text-sm text-muted-foreground">
                 {t('dashboard.header.subtitle', { count: servers.length })}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3 justify-end">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {t('dashboard.header.activeSummary', { active: activeServers.length, total: servers.length })}
+          </div>
+          <div className="ml-auto flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <span>
+              {t('dashboard.header.activeSummary', {
+                active: builtinServers.length + configuredManagedServers.length,
+                total: servers.length,
+              })}
+            </span>
+            <LanguageSwitcher />
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8">
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex flex-wrap items-start gap-6">
+            <div className="flex items-center gap-3">
+              <SettingsIcon className="size-6 text-foreground" />
+              <div>
+                <h1 className="text-xl font-semibold text-foreground">{t('dashboard.hero.title')}</h1>
+                <p className="text-sm text-muted-foreground">{t('dashboard.hero.subtitle')}</p>
               </div>
-              <LanguageSwitcher />
-              <button
-                onClick={() => setShowTips(true)}
-                className="px-3 py-1.5 bg-amber-600 dark:bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-700 dark:hover:bg-amber-600 transition-colors whitespace-nowrap"
-              >
-                <i className="ri-lightbulb-line mr-1"></i>
-                {t('dashboard.actions.tips')}
-              </button>
-              <button
-                onClick={() => setShowConfigEditor(!showConfigEditor)}
-                className="px-3 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors whitespace-nowrap"
-              >
-                <i className="ri-code-line mr-1"></i>
-                {showConfigEditor ? t('dashboard.actions.hideConfigGenerator') : t('dashboard.actions.showConfigGenerator')}
-              </button>
+            </div>
+            <div className="ml-auto max-w-lg text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-foreground">
+                <Zap className="size-4 text-yellow-500" />
+                <span className="font-medium">{t('dashboard.profile.dynamicTitle')}</span>
+                <Badge variant="secondary">{t('dashboard.profile.recommended')}</Badge>
+              </div>
+              <p className="mt-2">{t('dashboard.profile.dynamicBody')}</p>
+              <p className="mt-1 text-xs">{t('dashboard.profile.dynamicNote')}</p>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
         {dashboardStats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('dashboard.summary.total')}</p>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{dashboardStats.total}</p>
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <p className="text-xs text-muted-foreground">{t('dashboard.summary.total')}</p>
+              <p className="text-2xl font-semibold text-foreground">{dashboardStats.total}</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 border border-green-200 dark:border-green-700 rounded-lg p-4">
-              <p className="text-xs text-green-700 dark:text-green-400">{t('dashboard.summary.active')}</p>
-              <p className="text-2xl font-semibold text-green-700 dark:text-green-400">{dashboardStats.active}</p>
+            <div className="rounded-2xl border border-green-400/40 bg-card p-4 shadow-sm">
+              <p className="text-xs text-green-500">{t('dashboard.summary.active')}</p>
+              <p className="text-2xl font-semibold text-green-500">{dashboardStats.active}</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <p className="text-xs text-gray-600 dark:text-gray-400">{t('dashboard.summary.inactive')}</p>
-              <p className="text-2xl font-semibold text-gray-800 dark:text-gray-200">{dashboardStats.inactive}</p>
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <p className="text-xs text-muted-foreground">{t('dashboard.summary.inactive')}</p>
+              <p className="text-2xl font-semibold text-foreground">{dashboardStats.inactive}</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
-              <p className="text-xs text-amber-700 dark:text-amber-400">{t('dashboard.summary.apiKeyMissing')}</p>
-              <p className="text-2xl font-semibold text-amber-700 dark:text-amber-400">{dashboardStats.apiKeyMissing}</p>
+            <div className="rounded-2xl border border-amber-400/40 bg-card p-4 shadow-sm">
+              <p className="text-xs text-amber-500">{t('dashboard.summary.apiKeyMissing')}</p>
+              <p className="text-2xl font-semibold text-amber-500">{dashboardStats.apiKeyMissing}</p>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* 設定エディター */}
-        {showConfigEditor && (
-          <div className="mb-6">
-            <ConfigEditor servers={servers} />
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <div className="size-2 rounded-full bg-green-500" />
+            <h2 className="text-lg font-medium text-foreground">{t('dashboard.sections.builtin', { count: builtinServers.length })}</h2>
+            <Badge variant="outline">{builtinServers.length}</Badge>
+            <span className="ml-auto text-xs text-muted-foreground">{t('dashboard.sections.detail.builtin')}</span>
           </div>
-        )}
+          {renderServerList(builtinServers, 'dashboard.sections.empty')}
+        </section>
 
-        {/* Tipsモーダル */}
-        {showTips && (
-          <TipsModal onClose={() => setShowTips(false)} />
-        )}
-
-        {/* 複数フィールド設定モーダル */}
-        {configModalServer && (() => {
-          const schema = getServerConfigSchema(configModalServer);
-          return schema ? (
-            <MultiFieldConfigModal
-              schema={schema}
-              onSave={(config) => saveMultiFieldConfig(configModalServer, config)}
-              onClose={() => setConfigModalServer(null)}
-            />
-          ) : null;
-        })()}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-sm font-semibold text-green-700 dark:text-green-400 mb-3 flex items-center">
-              <i className="ri-checkbox-circle-fill mr-2"></i>
-              {t('dashboard.sections.active', { count: activeServers.length })}
-            </h3>
-            <div className="space-y-3">
-              {activeServers.map(server => (
-                <MCPServerCard
-                  key={server.id}
-                  server={server}
-                  onToggle={handleToggleServer}
-                  onUpdateApiKey={handleUpdateApiKey}
-                  onRequestSecretValue={loadSingleFieldSecretValue}
-                  conflicts={resolveConflicts(server)}
-                  compact={true}
-                />
-              ))}
-            </div>
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <div className="size-2 rounded-full bg-blue-500" />
+            <h2 className="text-lg font-medium text-foreground">{t('dashboard.sections.managed', { count: managedServers.length })}</h2>
+            <Badge variant="outline">{configuredManagedServers.length}/{managedServers.length}</Badge>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {t('dashboard.sections.detail.managed', { missing: needsAttentionServers.length })}
+            </span>
           </div>
+          {renderServerList(managedServers, 'dashboard.sections.emptyManaged')}
+        </section>
+      </main>
 
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-              <i className="ri-stop-circle-line mr-2"></i>
-              {t('dashboard.sections.disabled', { count: disabledServers.length })}
-            </h3>
-            <div className="space-y-3">
-              {disabledServers.map(server => (
-                <MCPServerCard
-                  key={server.id}
-                  server={server}
-                  onToggle={handleToggleServer}
-                  onUpdateApiKey={handleUpdateApiKey}
-                  onRequestSecretValue={loadSingleFieldSecretValue}
-                  conflicts={resolveConflicts(server)}
-                  compact={true}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      {configModalServer && (() => {
+        const schema = getServerConfigSchema(configModalServer);
+        return schema ? (
+          <MultiFieldConfigModal
+            schema={schema}
+            onSave={(config) => saveMultiFieldConfig(configModalServer, config)}
+            onClose={() => setConfigModalServer(null)}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }

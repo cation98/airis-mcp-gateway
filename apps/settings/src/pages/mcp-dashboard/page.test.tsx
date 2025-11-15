@@ -4,8 +4,6 @@ import type { Mock } from 'vitest';
 import { expect, vi } from 'vitest';
 import MCPDashboard from './page';
 
-vi.mock('./components/ConfigEditor', () => ({ ConfigEditor: () => null }));
-vi.mock('./components/TipsModal', () => ({ TipsModal: () => null }));
 vi.mock('./components/MultiFieldConfigModal', () => ({ MultiFieldConfigModal: () => null }));
 vi.mock('./components/LanguageSwitcher', () => ({ LanguageSwitcher: () => null }));
 
@@ -81,7 +79,7 @@ const serverDto = {
 };
 
 describe('MCPDashboard API key flow', () => {
-  test('saves API key without enabling server', async () => {
+  test('collects API key configuration and refreshes stats', async () => {
     const { verifyExhausted } = useFetchQueue([
       { method: 'GET', url: '/api/v1/mcp-config/servers', response: jsonResponse({ servers: [serverDto] }) },
       { method: 'GET', url: '/api/v1/secrets/', response: jsonResponse({ secrets: [] }) },
@@ -117,46 +115,6 @@ describe('MCPDashboard API key flow', () => {
 
     await waitFor(() => {
       expect(screen.getByText('serverCard.buttons.configured')).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId('server-toggle-tavily')).toHaveAttribute('aria-pressed', 'false');
-    verifyExhausted();
-  });
-
-  test('enables server after validation using stored secret', async () => {
-    const { verifyExhausted } = useFetchQueue([
-      { method: 'GET', url: '/api/v1/mcp-config/servers', response: jsonResponse({ servers: [serverDto] }) },
-      { method: 'GET', url: '/api/v1/secrets/', response: jsonResponse({ secrets: [{ server_name: 'tavily', key_name: 'TAVILY_API_KEY' }] }) },
-      { method: 'GET', url: '/api/v1/server-states/', response: jsonResponse({ server_states: [] }) },
-      { method: 'GET', url: '/api/v1/dashboard/summary', response: summaryPayload({ total: 1, active: 0, inactive: 1, api_key_missing: 0 }) },
-      { method: 'GET', url: '/api/v1/secrets/tavily/values', response: jsonResponse([{ key_name: 'TAVILY_API_KEY', value: 'tvly_saved' }]) },
-      { method: 'POST', url: '/api/v1/validate/tavily', response: jsonResponse({ valid: true, message: 'ok' }) },
-      {
-        method: 'PUT',
-        url: '/api/v1/server-states/tavily',
-        response: (init) => {
-          if (!init?.body || typeof init.body !== 'string') {
-            throw new Error('Expected string body for server state update');
-          }
-          const parsed = JSON.parse(init.body) as { enabled?: boolean };
-          expect(parsed.enabled).toBe(true);
-          return jsonResponse({ server_id: 'tavily', enabled: true });
-        },
-      },
-      { method: 'GET', url: '/api/v1/dashboard/summary', response: summaryPayload({ total: 1, active: 1, inactive: 0, api_key_missing: 0 }) },
-    ]);
-
-    const user = userEvent.setup();
-    render(<MCPDashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('server-toggle-tavily')).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByTestId('server-toggle-tavily'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('server-toggle-tavily')).toHaveAttribute('aria-pressed', 'true');
     });
 
     verifyExhausted();

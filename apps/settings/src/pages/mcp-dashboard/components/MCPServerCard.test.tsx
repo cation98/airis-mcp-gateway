@@ -27,7 +27,6 @@ describe('MCPServerCard', () => {
     render(
       <MCPServerCard
         server={baseServer}
-        onToggle={vi.fn()}
         onUpdateApiKey={onUpdateApiKey}
         onRequestSecretValue={onRequestSecretValue}
       />
@@ -53,7 +52,6 @@ describe('MCPServerCard', () => {
     render(
       <MCPServerCard
         server={baseServer}
-        onToggle={vi.fn()}
         onUpdateApiKey={onUpdateApiKey}
       />
     );
