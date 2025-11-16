@@ -5,47 +5,47 @@
 ### Service Management
 ```bash
 # Start all services (Gateway + Settings UI)
-make up
+just up
 
 # Stop all services
-make down
+just down
 
 # Restart services (after config changes)
-make restart
+just restart
 
 # Show all logs (follow mode)
-make logs
+just logs
 
 # Show logs for specific service
-make logs-mcp-gateway
-make logs-settings-ui
+just logs-mcp-gateway
+just logs-settings-ui
 
 # Check running containers
-make ps
+just ps
 
 # Clean up (⚠️ destroys volumes)
-make clean
+just clean
 
 # Show available MCP servers
-make info
+just info
 ```
 
 ### Settings UI Operations
 ```bash
 # Build Settings UI image
-make ui-build
+just ui-build
 
 # Start only Settings UI
-make ui-up
+just ui-up
 
 # Stop Settings UI
-make ui-down
+just ui-down
 
 # Show Settings UI logs
-make ui-logs
+just ui-logs
 
 # Enter Settings UI container shell
-make ui-shell
+just ui-shell
 ```
 
 ## Docker Commands
@@ -122,7 +122,7 @@ cp .env.example .env
 vim .env
 
 # Restart to apply
-make restart
+just restart
 ```
 
 ## MCP Server Configuration
@@ -136,7 +136,7 @@ vim mcp-config.json
 # To enable: rename "__disabled_server" → "server"
 
 # Apply changes
-make restart
+just restart
 ```
 
 ## Git Workflow
@@ -188,11 +188,11 @@ After changes to `mcp.json` or starting/stopping Gateway:
 docker logs docker-mcp-gateway
 
 # Check compose status
-make ps
+just ps
 
 # Clean restart
-make clean
-make up
+just clean
+just up
 ```
 
 ### Settings UI Issues
@@ -201,11 +201,11 @@ make up
 docker inspect airis-settings-ui | grep -A 10 Health
 
 # View logs
-make ui-logs
+just ui-logs
 
 # Rebuild and restart
-make ui-build
-make ui-up
+just ui-build
+just ui-up
 ```
 
 ### Network Issues

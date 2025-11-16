@@ -17,6 +17,7 @@ class MCPServerInfo(BaseModel):
     apiKeyRequired: bool
     recommended: bool
     builtin: bool
+    enabled: bool
     command: str
     args: list[str]
     env: dict[str, str] | None = None
@@ -306,6 +307,7 @@ def load_mcp_servers_from_config() -> list[MCPServerInfo]:
         command = str(server_config.get("command", ""))
         args = server_config.get("args", [])
         env = server_config.get("env")
+        enabled = server_config.get("enabled", False)
 
         if not isinstance(args, list):
             args = []
@@ -319,6 +321,7 @@ def load_mcp_servers_from_config() -> list[MCPServerInfo]:
             command=command,
             args=args,
             env=env,
+            enabled=enabled,
             **metadata
         ))
 
@@ -331,6 +334,7 @@ def load_mcp_servers_from_config() -> list[MCPServerInfo]:
                 command="",
                 args=[],
                 env=None,
+                enabled=True,
                 **metadata
             ))
 

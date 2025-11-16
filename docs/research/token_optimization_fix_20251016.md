@@ -68,7 +68,7 @@ api_router.include_router(
 
 ### 1. Service Status
 ```bash
-make ps
+just ps
 ```
 **Expected:** All services running (gateway + api + postgres + ui)
 
@@ -112,7 +112,7 @@ curl -N -H "Accept: text/event-stream" http://localhost:9900/api/v1/mcp/sse --ma
 
 ### Method 3: API Logs
 ```bash
-make api-logs
+just api-logs
 ```
 
 **Look for:**
@@ -148,7 +148,7 @@ If schema partitioning causes issues:
 
 Then restart:
 ```bash
-make down && make up
+just down && just up
 ```
 
 ---
@@ -203,13 +203,13 @@ Claude Code → http://localhost:9400/api/v1/mcp/sse → FastAPI Proxy
 
 **Check:**
 ```bash
-make ps  # Verify all services running
-make api-logs  # Check for errors
+just ps  # Verify all services running
+just api-logs  # Check for errors
 ```
 
 **Solution:**
 ```bash
-make restart
+just restart
 # Restart Claude Code editor
 ```
 
@@ -223,7 +223,7 @@ make restart
 **Solution:**
 1. Verify `mcp.json` points to Port 9400
 2. Verify `routes.py` imports and registers `mcp_proxy_router`
-3. Run `make down && make up`
+3. Run `just down && just up`
 
 ### Issue: `expandSchema` tool missing
 
@@ -287,7 +287,7 @@ Add to monitoring dashboard:
 
 - [x] Proxy router re-enabled in `routes.py`
 - [x] `mcp.json` updated to use Port 9400
-- [x] Services restarted (`make down && make up`)
+- [x] Services restarted (`just down && just up`)
 - [x] API health check passed
 - [x] Proxy endpoint accessible
 - [ ] Claude Code restarted (user action required)

@@ -7,13 +7,13 @@
 - Shared Docker entrypoints live in `gateway/`, bundled MCP servers in `servers/`, profile presets in `config/profiles/`, and integration suites in `tests/`.
 
 ## Build, Test, and Development Commands
-- `make deps` – bootstrap pnpm workspaces inside the Node toolchain container (alias: `make install-deps`).
-- `make init` – wipe prior editor bindings, rebuild the stack, and re-register all IDEs (full reinstall).
-- `make dev` – run the settings UI (`pnpm dev`) for hot reload (binds to 5273 on the host).
-- `make build` / `make typecheck` / `make lint` – build artifacts, run `tsc --noEmit`, and enforce ESLint 9 rules (all containerised).
-- `make test-ui` – execute pnpm-managed UI test suites in Docker.
-- `make up` (localhost publishing) / `make up-dev` (internal DNS only) / `make down` / `make logs` – orchestrate the Docker stack; use `pytest tests/` for API coverage runs.
-- CLI shims (`pnpm` / `node` / `supabase <cmd>`) intentionally fail and redirect to the Make targets so LLMs follow the container-first workflow.
+- `just install` – bootstrap pnpm workspaces inside the Node toolchain container.
+- `just init` – wipe prior editor bindings, rebuild the stack, and re-register all IDEs (full reinstall).
+- `just dev` – run the settings UI (`pnpm dev`) for hot reload (binds to 5273 on the host).
+- `just build-all` / `just typecheck` / `just lint` – build artifacts, run `tsc --noEmit`, and enforce ESLint 9 rules (all containerised).
+- `just test-ui` – execute pnpm-managed UI test suites in Docker.
+- `just up` / `just down` / `just logs` – orchestrate the Docker stack; use `pytest tests/` for API coverage runs.
+- CLI shims (`pnpm` / `node`) intentionally fail and redirect to the just recipes so LLMs follow the container-first workflow.
 
 ## Coding Style & Naming Conventions
 - TypeScript/React: Two-space indentation, functional components in PascalCase (e.g., `MultiFieldConfigModal.tsx`), hooks in `useCamelCase`. Validate with `pnpm lint` and `pnpm typecheck`; Tailwind utility order may stay default.
@@ -28,5 +28,5 @@
 
 ## Commit & Pull Request Guidelines
 - Follow Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`) as in repository history; keep unrelated work in separate commits.
-- PRs should include a short summary, linked issue or roadmap item, commands run (`make lint`, `pytest tests/`), and screenshots for UI updates.
+- PRs should include a short summary, linked issue or roadmap item, commands run (`just lint`, `pytest tests/`), and screenshots for UI updates.
 - Flag migrations or secret-store implications in the description and request cross-package reviewers early.

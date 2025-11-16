@@ -7,7 +7,7 @@ This directory contains research reports, measurement data, and analysis documen
 ### Quick Start
 
 ```bash
-make measure-tokens
+just measure-tokens
 ```
 
 ### Documentation
@@ -73,13 +73,13 @@ apps/api/logs/
 
 ```bash
 # Measurement
-make measure-tokens      # Run measurement
-make measure-clear       # Clear logs and start fresh
+just measure-tokens      # Run measurement
+just measure-clear       # Clear logs and start fresh
 
 # Gateway
-make up                  # Start Gateway
-make restart             # Restart Gateway (enables new logging)
-make logs-api            # View API logs (ProtocolLogger output)
+just up                  # Start Gateway
+just restart             # Restart Gateway (enables new logging)
+just logs-api            # View API logs (ProtocolLogger output)
 
 # Reports
 cat docs/research/token_measurement_report.md    # View latest report

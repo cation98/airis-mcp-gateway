@@ -66,7 +66,7 @@
   "entry_points": {
     "cli": [
       {
-        "command": "make init",
+        "command": "just init",
         "description": "Full installation: build, start, register editors",
         "location": "Makefile:609"
       },
@@ -399,8 +399,8 @@
       "git clone https://github.com/agiletec-inc/airis-mcp-gateway.git",
       "cd airis-mcp-gateway",
       "cp .env.example .env",
-      "make hosts-add",
-      "make init"
+      "just hosts-add",
+      "just init"
     ],
     "development": [
       "make dev",
@@ -409,9 +409,9 @@
       "make test"
     ],
     "editor_config": [
-      "make install-editors",
-      "make verify-claude",
-      "make uninstall"
+      "just install-editors",
+      "just verify-claude",
+      "just uninstall"
     ]
   },
   "features": {
@@ -467,7 +467,7 @@
   },
   "commands": {
     "daily_operations": {
-      "make init": "Full reset + install",
+      "just init": "Full reset + install",
       "make up": "Start with host ports",
       "make restart": "Stop + start",
       "make down": "Stop containers",

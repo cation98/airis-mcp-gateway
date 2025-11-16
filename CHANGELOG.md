@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `make hosts-add` / `make hosts-remove` targets that manage `/etc/hosts` entries for `gateway.localhost`, `api.gateway.localhost`, and `ui.gateway.localhost`, keeping local domains consistent without requiring Traefik or Coolify.
+- `just hosts-add` / `just hosts-remove` targets that manage `/etc/hosts` entries for `gateway.localhost`, `api.gateway.localhost`, and `ui.gateway.localhost`, keeping local domains consistent without requiring Traefik or Coolify.
 
 ### Changed
-- `make install` is back to being a dependency-only command and now delegates to a YAML task definition at `scripts/tasks/pnpm-install.yml`, keeping the Makefile thin while ensuring pnpm runs inside the Dockerized Node shim. Use `make init` for the full editor-registration flow.
+- `just install` is back to being a dependency-only command and now delegates to a YAML task definition at `scripts/tasks/pnpm-install.yml`, keeping the Makefile thin while ensuring pnpm runs inside the Dockerized Node shim. Use `just init` for the full editor-registration flow.
+- Replaced the legacy `make` targets with `just` recipes (`just init`, `just up/down/logs`, `just install-editors`), updated `scripts/install.sh`, the Homebrew formula, CLI output, and documentation to reference the new commands, and added `scripts/wait_for_gateway.py` so the installer waits for the FastAPI proxy before registering editors.
 
 ### Planned for Phase 2 (Stabilization)
 - Real-world testing and validation
@@ -47,14 +48,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Reworked the Settings dashboard: cards now split into “Active” and “Disabled” columns, with badges showing API-key requirements and no-setup servers; conflict warnings surface inline.
 - The Codex installer now targets the Gateway base URL (no trailing `/sse`), enables `[features].rmcp_client = true`, and preserves the legacy `experimental_use_rmcp_client = true` flag so recent Codex builds connect without manual tweaks.
-- Core zero-setup servers (filesystem/context7/serena/mindbase/sequential-thinking/playwright/chrome-devtools) start enabled in `mcp-config.json` so Codex/Claude/Cursor immediately list useful tools after `make init`.
+- Core zero-setup servers (filesystem/context7/serena/mindbase/sequential-thinking/playwright/chrome-devtools) start enabled in `mcp-config.json` so Codex/Claude/Cursor immediately list useful tools after `just init`.
 - Version metadata across containers, MCP config, and internal servers bumped to `1.3.0`.
 
 ### Fixed
 - Relaxed the Tavily API key validator to accept both `tvly-` and `tvly_` prefixes and updated associated tests.
 
 ### Documentation
-- Documented the Docker + `uv` prerequisites, clarified that `make init` executes the editor installers via `uv`, and refreshed the development workflow guidance to rely on containerized commands.
+- Documented the Docker + `uv` prerequisites, clarified that `just init` executes the editor installers via `uv`, and refreshed the development workflow guidance to rely on containerized commands.
 
 ## [0.1.0] - 2025-10-15
 
@@ -115,11 +116,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - postgres: PostgreSQL with encrypted secrets (internal)
   - api: FastAPI proxy with schema partitioning (9400)
   - settings-ui: React-based configuration UI (5273)
-- Update `Makefile`: Standardized Docker-First commands
-  - `make up/down`: Service lifecycle
-  - `make install-claude`: One-command Claude Code setup
-  - `make init` (originally shipped as `make install`): Universal multi-editor installation
-  - `make api-shell`, `make ui-shell`: Container access
+- Update `justfile`: Standardized Docker-First commands
+  - `just up/down`: Service lifecycle
+  - `just install-editors`: One-command Claude Code setup
+  - `just init` (originally shipped as `just install`): Universal multi-editor installation
+  - `just api-shell`, `just ui-shell`: Container access
 
 ### Changed
 
@@ -179,7 +180,7 @@ Docker MCP Gateway (localhost:9390)
 - Token reduction: 75-90% (estimated based on schema depth)
 - Startup time: <1 second (zero-token startup)
 - MCP servers: 25 servers containerized
-- Installation: One-command (`make init`, formerly `make install`)
+- Installation: One-command (`just init`, formerly `just install`)
 
 **Note**: Real-world benchmarks pending Phase 2 validation.
 

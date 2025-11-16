@@ -306,11 +306,11 @@ npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=<ref>
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
-make init
+just init
 ```
 
-**What `make init` Does**:
-1. Starts Docker containers (`make up`)
+**What `just init` Does**:
+1. Starts Docker containers (`just up`)
 2. Waits for Gateway health check
 3. Runs Python installer script (`scripts/install_all_editors.py`)
 4. Automatically configures ALL editors (Claude Code, Claude Desktop, Cursor, Zed)
@@ -318,7 +318,7 @@ make init
 
 **Single Editor Install**:
 ```bash
-make install-claude  # Claude Code only
+just install-editors  # Claude Code only
 ```
 
 **Configuration Approach**:
@@ -351,7 +351,7 @@ make install-claude  # Claude Code only
 ### 5.4 Gaps vs Emerging Standards
 
 ⚠️ **No .mcpb Desktop Extension**: Not compatible with Anthropic's one-click system
-⚠️ **No GUI installer**: CLI-only (`make init`)
+⚠️ **No GUI installer**: CLI-only (`just init`)
 ⚠️ **Git clone required**: Not package manager distributed (npm, brew)
 ⚠️ **Mac/Linux only**: Windows support unclear
 
@@ -364,7 +364,7 @@ make install-claude  # Claude Code only
 **Best → Worst User Experience**:
 1. One-click GUI (.mcpb Desktop Extensions)
 2. Package manager (`brew install`, `npm install -g`)
-3. Automated CLI installer (`make init`, `./install.sh`)
+3. Automated CLI installer (`just init`, `./install.sh`)
 4. Manual JSON editing + npx
 5. Git clone + build from source
 
@@ -458,7 +458,7 @@ npm install -g @agiletec/airis-mcp-gateway
 
 #### **Recommendation 3: GUI Installer**
 
-**Current**: Terminal-only (`make init`)
+**Current**: Terminal-only (`just init`)
 **Proposed**: Native macOS/Windows installer app
 
 **Options**:

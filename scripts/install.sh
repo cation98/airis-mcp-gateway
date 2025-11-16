@@ -1,5 +1,5 @@
 #!/bin/bash
-# install.sh - Delegates to `make init` for a unified setup experience.
+# install.sh - Delegates to `just init` for a unified setup experience.
 # Usage: ./install.sh
 
 set -euo pipefail
@@ -38,13 +38,13 @@ fi
 echo -e "${GREEN}✅ Docker found${NC}"
 
 echo ""
-echo -e "${BLUE}🚀 Running unified installer (make init)...${NC}"
+echo -e "${BLUE}🚀 Running unified installer (just init)...${NC}"
 echo ""
 
-if make init; then
+if just init; then
     echo ""
     echo -e "${GREEN}🎉 All done!${NC}"
-    echo "👉 For future reinstalls, run ${BLUE}make init${NC} directly."
+    echo "👉 For future reinstalls, run ${BLUE}just init${NC} directly."
 else
     status=$?
     echo ""

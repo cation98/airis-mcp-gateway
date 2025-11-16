@@ -265,8 +265,8 @@ api_router.include_router(
 #### Step 1: Rebuild and Restart
 ```bash
 cd ~/github/airis-mcp-gateway
-make down
-make up
+just down
+just up
 ```
 
 #### Step 2: Run Token Reduction Test

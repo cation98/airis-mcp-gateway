@@ -52,7 +52,7 @@ Secrets are stored in PostgreSQL with encrypted values:
 
 ```bash
 # Run database migrations to create secrets table
-make db-migrate
+just db-migrate
 ```
 
 ### 3. Add Secrets via Settings UI
@@ -212,9 +212,9 @@ export ENCRYPTION_MASTER_KEY="<generated-key>"
 **Solution**: Regenerate secrets with correct master key
 
 ### Settings UI can't save secrets
-- Check API container logs: `make api-logs`
-- Verify database connection: `make db-shell`
-- Ensure migrations ran: `make db-migrate`
+- Check API container logs: `just api-logs`
+- Verify database connection: `just db-shell`
+- Ensure migrations ran: `just db-migrate`
 
 ---
 

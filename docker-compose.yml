@@ -22,6 +22,7 @@ services:
       - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-airis-mcp-gateway}
       - CONTAINER_PROJECT_ROOT=${CONTAINER_PROJECT_ROOT:-/workspace}
       - CONTAINER_WORKSPACE_ROOT=${CONTAINER_WORKSPACE_ROOT:-/workspace}
+      - MCP_GATEWAY_AUTH_TOKEN=dev-token-12345
     command:
       - /docker-mcp
       - gateway
@@ -144,6 +145,7 @@ services:
         target: ${CONTAINER_WORKSPACE_ROOT:-/workspace}
       - ./apps/api/src:/app/src:rw
       - ./apps/api/alembic:/app/alembic:rw
+      - ./mcp-config.json:/workspace/mcp-config.json:ro
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-mcp_gateway}

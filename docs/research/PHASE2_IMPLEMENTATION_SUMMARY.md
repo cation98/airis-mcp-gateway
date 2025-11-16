@@ -70,13 +70,13 @@ Validate OpenMCP Pattern theoretical token reduction (90%) with real-world measu
 
 **New Commands**:
 ```bash
-make measure-tokens   # Run measurement
-make measure-clear    # Clear logs and start fresh
+just measure-tokens   # Run measurement
+just measure-clear    # Clear logs and start fresh
 ```
 
 **Workflow**:
 ```bash
-make measure-clear → make restart → [Use Claude] → make measure-tokens
+just measure-clear → just restart → [Use Claude] → just measure-tokens
 ```
 
 ### 5. Documentation
@@ -106,10 +106,10 @@ make measure-clear → make restart → [Use Claude] → make measure-tokens
 # Comment out: data = await apply_schema_partitioning(data)
 
 # 2. Restart and measure
-make restart
-make measure-clear
+just restart
+just measure-clear
 # [Use Claude Desktop/Code]
-make measure-tokens
+just measure-tokens
 
 # 3. Save baseline
 cp metrics/token_measurement.json metrics/baseline_measurement.json
@@ -123,10 +123,10 @@ cp docs/research/token_measurement_report.md docs/research/baseline_report.md
 # Uncomment: data = await apply_schema_partitioning(data)
 
 # 2. Restart and measure
-make restart
-make measure-clear
+just restart
+just measure-clear
 # [Use Claude Desktop/Code]
-make measure-tokens
+just measure-tokens
 
 # 3. Save OpenMCP results
 cp metrics/token_measurement.json metrics/openmcp_measurement.json
@@ -249,8 +249,8 @@ airis-mcp-gateway/
 
 ### Next Steps (Execution Phase)
 
-1. **Run Gateway**: `make restart`
-2. **Clear Logs**: `make measure-clear`
+1. **Run Gateway**: `just restart`
+2. **Clear Logs**: `just measure-clear`
 3. **Test Baseline**: Follow baseline workflow
 4. **Test OpenMCP**: Follow OpenMCP workflow
 5. **Compare Results**: Validate 90% reduction

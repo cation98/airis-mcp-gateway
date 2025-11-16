@@ -89,16 +89,16 @@ LLM: "Web検索が必要です"
 
 ```bash
 # 動的管理に切り替え（推奨）
-make profile-dynamic
+just profile-dynamic
 
 # 推奨設定に切り替え
-make profile-recommended
+just profile-recommended
 
 # 最小構成に切り替え
-make profile-minimal
+just profile-minimal
 
 # 現在のプロファイル確認
-make profile-info
+just profile-info
 ```
 
 ---
@@ -121,7 +121,7 @@ cp profiles/recommended.json profiles/custom.json
 vim profiles/custom.json
 
 # 適用
-make profile-custom
+just profile-custom
 ```
 
 ---

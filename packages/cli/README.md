@@ -69,7 +69,7 @@ After installation:
 - **Gateway**: http://gateway.localhost:9390
 - **Settings UI**: http://ui.gateway.localhost:5273
 - **API Docs**: http://api.gateway.localhost:9400/docs
-- *(Need internal-only networking? Run `make up-dev` inside the repository.)*
+- *(Need internal-only networking? Remove host port bindings in `docker-compose.yml` before running `just up`.)*
 
 ## Requirements
 
@@ -109,12 +109,12 @@ AIRIS Gateway provides curated profiles to optimize your workflow:
 cd ~/.airis-mcp-gateway
 
 # Recommended Profile (long-term projects)
-make profile-recommended
-make restart
+just profile-recommended
+just restart
 
 # Minimal Profile (quick tasks, low resources)
-make profile-minimal
-make restart
+just profile-minimal
+just restart
 ```
 
 | Profile | Servers | Memory | Use Case |

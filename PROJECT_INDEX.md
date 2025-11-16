@@ -51,14 +51,14 @@ airis-mcp-gateway/
 ## 🚀 Entry Points
 
 ### CLI Commands
-- **`make init`** - Full installation: build, start, register editors
-  - Location: `Makefile:609`
-- **`make up`** - Start services with host port bindings
-  - Location: `Makefile:168`
-- **`make restart`** - Full stop/start cycle
-  - Location: `Makefile:199`
-- **`make install-editors`** - Register with all detected editors
-  - Location: `Makefile:605`
+- **`just init`** - Full installation: build, start, register editors
+  - Location: `justfile:202`
+- **`just up`** - Start services with host port bindings
+  - Location: `justfile:16`
+- **`just restart`** - Full stop/start cycle
+  - Location: `justfile:38`
+- **`just install-editors`** - Register with all detected editors
+  - Location: `justfile:186`
 
 ### API Endpoints
 - **HTTP MCP (Codex)**: `http://api.gateway.localhost:9400/api/v1/mcp`
@@ -191,8 +191,8 @@ airis-mcp-gateway/
 - **MCP Tests**: `test_mcp_tools.py` - MCP protocol tests
 
 **Test Commands**:
-- `make test` - Run backend tests (pytest)
-- `make test-ui` - Run frontend tests (vitest)
+- `just test` - Run backend tests (pytest)
+- `just test-ui` - Run frontend tests (vitest)
 - `pytest apps/api/tests/ --cov=app` - Backend with coverage
 
 ---
@@ -239,40 +239,40 @@ airis-mcp-gateway/
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
 cp .env.example .env
-make hosts-add              # Add *.localhost to /etc/hosts (sudo)
-make init                   # Build, start, register editors
+just hosts-add              # Add *.localhost to /etc/hosts (sudo)
+just init                   # Build, start, register editors
 ```
 
 ### 2. Development Workflow
 ```bash
-make dev                    # Start Vite dev server (Settings UI)
-make logs                   # Stream all service logs
-make restart                # Full stop/start cycle
-make test                   # Run backend tests
-make test-ui                # Run frontend tests
+just dev                    # Start Vite dev server (Settings UI)
+just logs                   # Stream all service logs
+just restart                # Full stop/start cycle
+just test                   # Run backend tests
+just test-ui                # Run frontend tests
 ```
 
 ### 3. Editor Configuration
 ```bash
-make install-editors        # Register with all editors
-make verify-claude          # Test Claude Code installation
-make uninstall              # Remove from all editors
+just install-editors        # Register with all editors
+just verify-claude          # Test Claude Code installation
+just uninstall              # Remove from all editors
 ```
 
 ### 4. Database Operations
 ```bash
-make db-migrate             # Run Alembic migrations
-make db-shell               # PostgreSQL psql shell
+just db-migrate             # Run Alembic migrations
+just db-shell               # PostgreSQL psql shell
 # Create migration:
 docker compose exec api alembic revision --autogenerate -m "description"
 ```
 
 ### 5. Profile Management
 ```bash
-make profile-list           # List available profiles
-make profile-recommended    # Switch to recommended profile
-make profile-minimal        # Switch to minimal profile
-make profile-dynamic        # Switch to LLM-controlled profile
+just profile-list           # List available profiles
+just profile-recommended    # Switch to recommended profile
+just profile-minimal        # Switch to minimal profile
+just profile-dynamic        # Switch to LLM-controlled profile
 ```
 
 ---
@@ -363,38 +363,36 @@ make profile-dynamic        # Switch to LLM-controlled profile
 
 ### Daily Operations
 ```bash
-make init           # Full reset + install
-make up             # Start with host ports
-make up-dev         # Start with internal DNS only
-make restart        # Stop + start
-make down           # Stop containers
-make clean          # Stop + drop volumes
-make logs           # Stream all logs
-make ps             # Container status
+just init           # Full reset + install
+just up             # Start with host ports
+just restart        # Stop + start
+just down           # Stop containers
+just clean          # Clean build artifacts
+just logs           # Stream all logs
+just ps             # Container status
 ```
 
 ### Development
 ```bash
-make deps           # Install pnpm deps
-make dev            # Vite dev server (UI)
-make build          # Build all workspaces
-make lint           # ESLint
-make typecheck      # TypeScript checks
-make test           # Backend tests
-make test-ui        # Frontend tests
+just install        # Install pnpm deps
+just dev            # Vite dev server (UI)
+just build-all      # Build all workspaces
+just lint           # ESLint
+just typecheck      # TypeScript checks
+just test           # Backend tests
+just test-ui        # Frontend tests
 ```
 
 ### Database
 ```bash
-make db-migrate     # Run migrations
-make db-shell       # PostgreSQL shell
+just db-migrate     # Run migrations
+just db-shell       # PostgreSQL shell
 ```
 
 ### Custom Servers
 ```bash
-make mindbase-build          # Build MindBase MCP server
-make self-management-build   # Build Self-Management server
-make build-custom-servers    # Build both
+just mindbase-build          # Build MindBase MCP server
+just build-custom-servers    # Build all custom servers
 ```
 
 ---
@@ -442,11 +440,9 @@ make build-custom-servers    # Build both
 ## 📞 Support & Resources
 
 ### Help Commands
-- `make help` - Show all available targets
-- `make doctor` - Health check (Docker, toolchain)
-- `make verify-claude` - Test Claude Code installation
-- `make info` - List available MCP servers
-- `make profile-list` - Show profile options
+- `just --list` - Show all available recipes
+- `just doctor` - Health check (Docker, toolchain)
+- `just verify-claude` - Test Claude Code installation
 
 ### Documentation
 - `/help` in Claude Code - Get help

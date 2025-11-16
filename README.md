@@ -147,7 +147,7 @@ Tips:
 |------|---------|
 | Backend unit tests | `docker compose exec workspace pytest tests/` |
 | UI tests / lint | `docker compose exec workspace pnpm lint`, `pnpm typecheck`, `pnpm test-ui` (see `apps/settings` docs) |
-| Build verification | `docker compose exec workspace pnpm build` or use `make build` inside the workspace container. |
+| Build verification | `docker compose exec workspace pnpm build` or use `just build` inside the workspace container. |
 
 CI mirrors these commands, so failing locally usually means an upstream failure as well.
 

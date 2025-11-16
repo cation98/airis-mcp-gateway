@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Most-used commands:**
 ```bash
-make init       # Full installation (build + start + register editors)
-make dev        # UI development server with hot reload
-make test       # Run backend tests (pytest in Docker)
-make logs       # Stream all service logs
-make doctor     # Health check (Docker daemon, toolchain verification)
+just init       # Full installation (build + start + register editors)
+just dev        # UI development server with hot reload
+just test       # Run backend tests (pytest in Docker)
+just logs       # Stream all service logs
+just doctor     # Health check (Docker daemon, toolchain verification)
 ```
 
 ## Project Overview
@@ -50,10 +50,9 @@ AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates to
 - `.env`: Ports, database credentials, encryption key
 - `config/profiles/*.json`: Server presets (recommended/minimal)
 
-**Profile System**: Three profiles available (`config/profiles/`):
+**Profile System**: Server presets available in `config/profiles/`:
 - **Recommended**: filesystem, context7, serena, mindbase (~500MB)
 - **Minimal**: filesystem, context7 only (~50MB)
-- **Dynamic**: LLM-controlled via self-management server (auto enable/disable)
 
 Toggle servers by renaming keys in `mcp-config.json`:
 - Enabled: `"serena": { ... }`
@@ -64,30 +63,29 @@ Toggle servers by renaming keys in `mcp-config.json`:
 
 ### Daily Operations
 ```bash
-make init           # Full reset: clean editor configs, build custom servers, start services, register all editors (Claude, Cursor, Zed, Codex)
-make up             # Start services with localhost publishing (ports exposed on host)
-make up-dev         # Start services with internal-only DNS (no host ports)
-make restart        # Full stop/start cycle (no editor registration)
-make down           # Stop containers, keep volumes
-make clean          # Stop containers + drop volumes (destructive)
-make logs           # Stream all logs
-make logs-api       # Show API logs only
-make logs-gateway   # Show Gateway logs only
-make test           # Run pytest in container (config + unit tests)
-make doctor         # Health check (Docker, toolchain shims)
+just init           # Full reset: clean editor configs, build custom servers, start services, register all editors (Claude, Cursor, Zed, Codex)
+just up             # Start services with localhost publishing (ports exposed on host)
+just restart        # Full stop/start cycle (no editor registration)
+just down           # Stop containers, keep volumes
+just clean          # Clean build artifacts (does NOT remove volumes)
+just logs           # Stream all logs
+just logs-api       # Show API logs only
+just logs-gateway   # Show Gateway logs only
+just test           # Run pytest in container (config + unit tests)
+just doctor         # Health check (Docker, toolchain shims)
 ```
 
 ### Development
 ```bash
 # Workspace builds
-make deps           # Install pnpm deps in container (runs apps/settings/src/tasks/install.yml)
-make dev            # Start Vite dev server on port 5273 (UI hot reload)
-make build          # Build all TypeScript workspaces
-make lint           # ESLint all workspaces
-make typecheck      # Run tsc --noEmit
+just install        # Install pnpm deps in container
+just dev            # Start Vite dev server on port 5273 (UI hot reload)
+just build-all      # Build all TypeScript workspaces
+just lint           # ESLint all workspaces
+just typecheck      # Run tsc --noEmit
 
 # Backend tests (Python)
-make test                           # Full test suite in Docker
+just test                           # Full test suite in Docker
 docker compose run --rm test        # Same as above
 pytest tests/ --cov=app -v          # Run locally with coverage
 pytest apps/api/tests/unit/ -v      # Unit tests only
@@ -98,12 +96,12 @@ pytest apps/api/tests/unit/test_secret_crud.py -v
 pytest apps/api/tests/unit/test_schema_partitioning.py::test_partition_schema -v
 
 # Frontend tests (TypeScript)
-make test-ui                        # Run vitest in container
+just test-ui                        # Run vitest in container
 pnpm test                           # Run locally (if inside toolchain)
 
 # Database
-make db-migrate     # Run Alembic migrations
-make db-shell       # PostgreSQL psql shell
+just db-migrate     # Run Alembic migrations
+just db-shell       # PostgreSQL psql shell
 docker compose exec api alembic revision --autogenerate -m "description"  # Create migration
 
 # Running individual Python files/scripts
@@ -113,24 +111,24 @@ python scripts/install_all_editors.py  # Also works if venv active
 
 ### Building Custom Servers
 ```bash
-make mindbase-build                 # Build TypeScript server → dist/
-docker compose --profile builder up # Build with isolated node_modules
+just mindbase-build                 # Build TypeScript server → dist/
+just build-custom-servers           # Build with isolated node_modules
 ```
 
 **Builder Pattern**: Source code mounted read-only, `node_modules` in Docker volumes, `dist/` written to host for Gateway consumption.
 
 ### Editor Installation
 ```bash
-make install-claude     # DEPRECATED: Use make init instead
-make install-editors    # Register with all detected editors (Claude, Cursor, Zed, Codex)
-make install-dev        # Start with UI/API + register editors (development mode)
-make uninstall          # Remove from all editors, restore backups
-make verify-claude      # Test Claude Code installation
-make hosts-add          # Add gateway*.localhost to /etc/hosts (sudo required)
-make hosts-remove       # Remove gateway hostnames from /etc/hosts
+just install-editors     # DEPRECATED: Use just init instead
+just install-editors    # Register with all detected editors (Claude, Cursor, Zed, Codex)
+just install-dev        # Start with UI/API + register editors (development mode)
+just uninstall          # Remove from all editors, restore backups
+just verify-claude      # Test Claude Code installation
+just hosts-add          # Add gateway*.localhost to /etc/hosts (sudo required)
+just hosts-remove       # Remove gateway hostnames from /etc/hosts
 ```
 
-**Auto-import**: `make init` automatically:
+**Auto-import**: `just init` automatically:
 1. Runs `scripts/import_existing_configs.py` to scan `~/.claude/`, `~/.cursor/`, `~/.windsurf/`, `~/.config/zed/`
 2. Merges existing MCP servers into `mcp-config.json`
 3. Backs up original configs to `<editor>/.mcp.json.backup.<timestamp>`
@@ -183,28 +181,28 @@ servers/
 ### Adding MCP Server
 1. Edit `mcp-config.json` → add under `mcpServers`
 2. Add secrets via UI or `/api/v1/secrets`
-3. `make restart` + restart IDE
+3. `just restart` + restart IDE
 
 ### Adding API Endpoint
 1. Create file in `apps/api/app/api/endpoints/`
 2. Register in `apps/api/app/api/routes.py`
 3. Define schemas in `apps/api/app/schemas/`
-4. Run `make test`
+4. Run `just test`
 
 ### Database Migration
 ```bash
 docker compose exec api alembic revision --autogenerate -m "description"
-make db-migrate
+just db-migrate
 ```
 
 ### UI Development
-Edit `apps/settings/src/` → auto-reloads with `make dev` → build with `pnpm --filter @airis/settings build`
+Edit `apps/settings/src/` → auto-reloads with `just dev` → build with `pnpm --filter @airis/settings build`
 
 ### Using Dynamic Profile
 ```bash
 # Switch to Dynamic profile (enables self-management server)
-make profile-dynamic
-make restart
+# (Profile switching not yet implemented in justfile)
+just restart
 
 # LLM can now control servers via self-management tools:
 # - list_mcp_servers() - Show all available servers
@@ -249,39 +247,37 @@ make restart
 
 ### Git Commits
 - Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`, `chore:`)
-- PRs: summary, linked issue/roadmap item, commands run (`make lint`, `pytest tests/`), screenshots for UI changes
+- PRs: summary, linked issue/roadmap item, commands run (`just lint`, `pytest tests/`), screenshots for UI changes
 - Flag migrations, secret-store changes, or Docker networking modifications in PR description
 
 ## Important Notes
 
 ### Configuration & Secrets
 - **mcp-config.json**: Keys starting with `__comment_` = documentation only, `__disabled_<name>` = server disabled (Gateway ignores)
-- **mcp.json**: Generated from `config/mcp.json.template` by `make generate-mcp-config` (replaces `${GATEWAY_API_URL}` etc.)
+- **mcp.json**: IDE client config (symlinked to editor config directories)
 - **Secrets**: Encrypted at rest (Fernet), stored in PostgreSQL `secrets` table, injected via `${VAR_NAME}` in `mcp-config.json`
-- **Environment variables**: Auto-detected by Makefile (`HOST_WORKSPACE_DIR`, `CONTAINER_PROJECT_ROOT`, `DOCKER_NETWORK`)
-- **Profiles**: Use `make profile-list` to see all profiles, `make profile-recommended` / `make profile-minimal` / `make profile-dynamic` to switch
+- **Environment variables**: Defined in `.env` file (`GATEWAY_LISTEN_PORT`, `API_LISTEN_PORT`, `DOCKER_NETWORK`, etc.)
 
 ### Docker & Networking
 - **Network name**: `airis-mcp-gateway_default` (auto-created by Compose with `COMPOSE_PROJECT_NAME`)
 - **Custom servers**: Must join `airis-mcp-gateway_default` network or use `DOCKER_NETWORK` env var
 - **Internal URLs**: `http://mcp-gateway:9390`, `http://api:9900`, `http://settings-ui:5273`
 - **External URLs**: `http://api.gateway.localhost:9400` (proxy), `http://ui.gateway.localhost:5273` (UI)
-- **Port binding**: `make up` binds to localhost, `make up-dev` uses internal DNS only
+- **Port binding**: `just up` binds to localhost based on the `ports` entries in `docker-compose.yml`
 
 ### Testing & CI
 - **Test isolation**: Each pytest test gets isolated DB schema via `@pytest.fixture(scope="session")`
-- **Test command**: Always run `docker compose run --rm test` or `make test` (not `pytest` directly on host)
+- **Test command**: Always run `just test` (not `pytest` directly on host)
 - **Coverage**: `pytest tests/ --cov=app --cov-report=term-missing` shows missing lines
-- **Host validation**: `make check-host-ports` ensures no hardcoded `localhost` or `host.docker.internal` in source
 
 ### Editor Integration
-- **Symlinks**: Changes to `mcp.json` auto-propagate to `~/.claude/mcp.json` if symlinked by `make init`
+- **Symlinks**: Changes to `mcp.json` auto-propagate to `~/.claude/mcp.json` if symlinked by `just init`
 - **Backup locations**: `~/<editor>/.mcp.json.backup.<timestamp>` for restored configs
 - **Multi-editor**: `scripts/install_all_editors.py` handles Claude Desktop, Claude Code, Cursor, Zed, Codex CLI
 - **Transport detection**: Codex uses HTTP if available, falls back to STDIO bridge via `mcp-proxy`
 
 ### Performance & Monitoring
-- **Token measurement**: `make measure-tokens` analyzes `apps/api/logs/protocol_messages.jsonl` for reduction metrics
+- **Token measurement**: `just measure-tokens` analyzes `apps/api/logs/protocol_messages.jsonl` for reduction metrics
 - **Logs**: Protocol messages logged to `apps/api/logs/protocol_messages.jsonl` when `DEBUG=true`
 - **Health checks**: All services have Docker healthchecks (Gateway: port 9390, API: `/health`, UI: port 5273)
 
@@ -322,23 +318,22 @@ IDE → Proxy → Gateway → MCP Server → Result
 ### Gateway won't start
 ```bash
 # Check Docker daemon and toolchain
-make doctor
+just doctor
 
 # Check port conflicts
 lsof -i :9390 -i :9400 -i :5273
 
 # View Gateway logs for errors
-make logs-gateway
+just logs-gateway
 
 # Hard reset (drops all volumes)
-make clean && make init
+just down && docker volume prune -f && just init
 ```
 
-### Makefile issues
+### Command issues
 ```bash
-# "make: *** No rule to make target" error
-# Ensure you're in project root:
-pwd  # Should show /Users/.../airis-mcp-gateway
+# "just: command not found"
+# Install just: brew install just (macOS) or cargo install just
 
 # "docker: command not found"
 # Ensure Docker Desktop or OrbStack is running:
@@ -346,7 +341,7 @@ docker version
 
 # Permission denied on /etc/hosts
 # hosts-add/hosts-remove require sudo:
-sudo make hosts-add
+sudo just hosts-add
 
 # Port binding errors
 # Check if ports are in use and update .env:
@@ -360,10 +355,10 @@ lsof -i :9400 -i :5273 -i :9390
 ls -la ~/.claude/mcp.json
 
 # Re-register all editors
-make install-editors
+just install-editors
 
 # Test connection
-make verify-claude
+just verify-claude
 ```
 
 ### Database migration fails
@@ -375,18 +370,14 @@ docker compose exec api alembic current
 docker compose exec api alembic downgrade <revision>
 
 # Re-run migration
-make db-migrate
+just db-migrate
 ```
 
 ### Custom server build errors
 ```bash
-# Clean build artifacts
-make mindbase-clean
-make self-management-clean
-
-# Rebuild with fresh volumes
-make builder-down
-make build-custom-servers
+# Clean build artifacts and rebuild
+just builder-down
+just build-custom-servers
 ```
 
 ### Tests failing
@@ -396,40 +387,36 @@ pytest apps/api/tests/ -v --tb=short
 
 # Frontend: Clear cache
 rm -rf apps/settings/node_modules/.vite
-make test-ui
+just test-ui
 
 # Integration: Ensure services are running
-make up && make test
+just up && just test
 ```
 
 ### Token reduction not working
 ```bash
 # Enable protocol logging
 echo "DEBUG=true" >> .env
-make restart
+just restart
 
 # Check logs
 tail -f apps/api/logs/protocol_messages.jsonl
 
 # Measure reduction
-make measure-tokens
+just measure-tokens
 ```
 
 ## Quick Fixes
 
-**"Port already in use"**: Change `*_LISTEN_PORT` in `.env`, then `make restart`
+**"Port already in use"**: Change `*_LISTEN_PORT` in `.env`, then `just restart`
 
-**"No module named 'app'"**: Run `docker compose run --rm test` (not `pytest` directly)
+**"No module named 'app'"**: Run `just test` (not `pytest` directly)
 
-**"pnpm: command not found"**: Use `make deps` (shims intentionally fail on host to enforce Docker-first)
+**"pnpm: command not found"**: Use `just install` (shims intentionally fail on host to enforce Docker-first)
 
-**"Gateway unhealthy"**: Check `make logs-gateway` for startup errors, verify `mcp-config.json` syntax
+**"Gateway unhealthy"**: Check `just logs-gateway` for startup errors, verify `mcp-config.json` syntax
 
-**"UI not loading"**: Ensure `make hosts-add` was run, check `http://ui.gateway.localhost:5273`
-
-**"Profile switch not working"**: After `make profile-*`, always run `make restart` to apply changes
-
-**"Which profile am I using?"**: Run `make profile-list` to see current profile highlighted
+**"UI not loading"**: Ensure `just hosts-add` was run, check `http://ui.gateway.localhost:5273`
 
 ## Release Process
 
@@ -472,7 +459,7 @@ git push
 ### Release Checklist
 
 Before creating a release tag:
-- [ ] All tests passing (`make test`)
+- [ ] All tests passing (`just test`)
 - [ ] CLAUDE.md and PROJECT_INDEX.md up to date
 - [ ] CHANGELOG.md updated (if exists)
 - [ ] Version bumped in relevant files

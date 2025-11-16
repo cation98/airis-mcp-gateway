@@ -10,16 +10,16 @@ This guide explains how to measure the actual token reduction achieved by the Op
 
 ```bash
 # 1. Clear previous measurements (optional)
-make measure-clear
+just measure-clear
 
 # 2. Restart Gateway to enable logging
-make restart
+just restart
 
 # 3. Use Claude Desktop/Code to trigger some MCP operations
 # (e.g., search files, call tools, etc.)
 
 # 4. Run measurement
-make measure-tokens
+just measure-tokens
 ```
 
 ## Architecture
@@ -70,10 +70,10 @@ To measure baseline (full schema) token usage:
 
 2. **Restart and Measure**:
    ```bash
-   make restart
-   make measure-clear
+   just restart
+   just measure-clear
    # Use Claude Desktop/Code
-   make measure-tokens
+   just measure-tokens
    ```
 
 3. **Save Baseline Results**:
@@ -93,10 +93,10 @@ To measure baseline (full schema) token usage:
 
 2. **Restart and Measure**:
    ```bash
-   make restart
-   make measure-clear
+   just restart
+   just measure-clear
    # Use Claude Desktop/Code
-   make measure-tokens
+   just measure-tokens
    ```
 
 3. **Save OpenMCP Results**:
@@ -168,10 +168,10 @@ Test with these 3 representative servers:
 # - sequential
 
 # 2. Restart Gateway
-make restart
+just restart
 
 # 3. Clear measurements
-make measure-clear
+just measure-clear
 
 # 4. Use Claude Desktop/Code to:
 #    - Call context7 (e.g., "search React documentation")
@@ -179,7 +179,7 @@ make measure-clear
 #    - Call sequential (e.g., "analyze this problem")
 
 # 5. Measure
-make measure-tokens
+just measure-tokens
 
 # 6. Review report
 cat docs/research/token_measurement_report.md
@@ -202,13 +202,13 @@ Measure cache effectiveness across multiple tool calls.
 
 ```bash
 # Clear logs
-make measure-clear
+just measure-clear
 
 # Use Claude Desktop/Code to call same tool 3+ times
 # Example: "search React hooks" → "search Vue composition" → "search Angular services"
 
 # Measure
-make measure-tokens
+just measure-tokens
 
 # Check expandSchema section in report
 cat docs/research/token_measurement_report.md
@@ -240,9 +240,9 @@ airis-mcp-gateway/
 
 | Command | Description |
 |---------|-------------|
-| `make measure-tokens` | Run token measurement |
-| `make measure-clear` | Clear logs and start fresh |
-| `make restart` | Restart Gateway (enables new logging) |
+| `just measure-tokens` | Run token measurement |
+| `just measure-clear` | Clear logs and start fresh |
+| `just restart` | Restart Gateway (enables new logging) |
 
 ## Troubleshooting
 
@@ -251,10 +251,10 @@ airis-mcp-gateway/
 **Problem**: `apps/api/logs/protocol_messages.jsonl` doesn't exist
 
 **Solutions**:
-1. Ensure Gateway is running: `make up`
+1. Ensure Gateway is running: `just up`
 2. Ensure Claude Desktop/Code is connected
 3. Trigger some MCP operations (search files, call tools)
-4. Check SSE Proxy logs: `make logs-api`
+4. Check SSE Proxy logs: `just logs-api`
 
 ### Error: Empty measurement results
 

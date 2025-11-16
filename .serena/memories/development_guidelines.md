@@ -175,7 +175,7 @@ docker logs docker-mcp-gateway
 cat mcp-config.json | python3 -m json.tool
 
 # 4. Restart
-make restart
+just restart
 ```
 
 ### Settings UI Issues
@@ -184,10 +184,10 @@ make restart
 docker inspect airis-settings-ui | grep -A 5 Health
 
 # 2. View logs
-make ui-logs
+just ui-logs
 
 # 3. Rebuild if needed
-make ui-build && make ui-up
+just ui-build && just ui-up
 ```
 
 ### Network Issues
@@ -207,7 +207,7 @@ curl http://settings.airis.traefik
 ## Testing Strategy
 
 ### Manual Testing
-- Test in development mode first (`make ui-up`)
+- Test in development mode first (`just ui-up`)
 - Access via both port (5173) and Traefik domain
 - Test Gateway communication if MCP changes
 - Verify health checks pass
@@ -216,10 +216,10 @@ curl http://settings.airis.traefik
 - Ensure TypeScript compiles (`npx tsc --noEmit`)
 - Run ESLint (`npm run lint`)
 - Test production build (`npm run build`)
-- Verify Docker image builds (`make ui-build`)
+- Verify Docker image builds (`just ui-build`)
 
 ### Integration Testing
-- Test with fresh containers (`make clean && make up`)
+- Test with fresh containers (`just clean && just up`)
 - Verify symlinked `mcp.json` works across editors
 - Test API key injection (Docker secrets)
 - Verify Gateway serves MCP servers correctly

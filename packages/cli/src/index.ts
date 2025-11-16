@@ -90,7 +90,7 @@ program
       spinner.warn('Could not update (continuing with current version)');
     }
 
-    const installCmd = options.claudeOnly ? 'make install-claude' : 'make init';
+    const installCmd = options.claudeOnly ? 'just install-editors' : 'just init';
 
     // Step 3: Run unified install (Docker + editors)
     if (options.docker !== false) {
@@ -122,7 +122,7 @@ program
     console.log('  1. ' + chalk.yellow('Restart all editors') + ' (Claude Code, Cursor, Zed, etc.)');
     console.log('  2. Test MCP tools in any editor');
     console.log('  3. Access Settings UI: ' + chalk.cyan(UI_PUBLIC_URL));
-    console.log('     ' + chalk.gray("(Need internal-only mode? Run 'make up-dev'.)"));
+    console.log('     ' + chalk.gray('Need internal-only mode? See docs to disable host ports.'));
     console.log('\n');
   });
 
@@ -140,7 +140,7 @@ program
     const spinner = ora('Uninstalling Gateway...').start();
 
     try {
-      execSync('make uninstall', { cwd: GATEWAY_DIR, stdio: 'inherit' });
+      execSync('just uninstall', { cwd: GATEWAY_DIR, stdio: 'inherit' });
       spinner.succeed('Gateway uninstalled');
     } catch (error) {
       spinner.fail('Failed to uninstall');
@@ -162,11 +162,11 @@ program
 
     const spinner = ora('Starting Gateway...').start();
     try {
-      execSync('make up', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+      execSync('just up', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Gateway started');
       console.log(chalk.cyan('\n🔗 Gateway (public): ' + GATEWAY_PUBLIC_URL));
       console.log(chalk.cyan('🎨 Settings UI: ' + UI_PUBLIC_URL));
-      console.log(chalk.gray("💡 Need internal-only networking? Run 'make up-dev'."));
+      console.log(chalk.gray('💡 Need internal-only networking? Remove host port bindings first.'));
     } catch (error) {
       spinner.fail('Failed to start');
       console.error(chalk.red(`Error: ${error}`));
@@ -185,7 +185,7 @@ program
 
     const spinner = ora('Stopping Gateway...').start();
     try {
-      execSync('make down', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+      execSync('just down', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Gateway stopped');
     } catch (error) {
       spinner.fail('Failed to stop');
@@ -205,7 +205,7 @@ program
 
     try {
       console.log(chalk.blue.bold('\n📊 AIRIS Gateway Status\n'));
-      execSync('make ps', { cwd: GATEWAY_DIR, stdio: 'inherit' });
+      execSync('just ps', { cwd: GATEWAY_DIR, stdio: 'inherit' });
     } catch (error) {
       console.error(chalk.red(`Error: ${error}`));
       process.exit(1);
@@ -223,7 +223,7 @@ program
     }
 
     try {
-      const cmd = options.follow ? 'make logs' : 'docker compose logs';
+      const cmd = options.follow ? 'just logs' : 'docker compose logs';
       execSync(cmd, { cwd: GATEWAY_DIR, stdio: 'inherit' });
     } catch (error) {
       console.error(chalk.red(`Error: ${error}`));
@@ -254,7 +254,7 @@ program
 
     spinner.start('Restarting Gateway...');
     try {
-      execSync('make restart', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+      execSync('just restart', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Gateway restarted with new version');
     } catch (error) {
       spinner.fail('Failed to restart');

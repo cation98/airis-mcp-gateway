@@ -130,7 +130,7 @@ chore: clean up MCP config
 ### Enabling/Disabling Servers
 1. Edit `mcp-config.json`
 2. Rename key: `"server"` → `"__disabled_server"`
-3. Run `make restart`
+3. Run `just restart`
 
 ## Documentation Standards
 

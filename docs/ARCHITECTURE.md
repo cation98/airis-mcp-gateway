@@ -524,7 +524,7 @@ Authentication handled by individual MCP servers via environment variables.
 
 ```bash
 # 1. Start Gateway
-make up
+just up
 
 # 2. Verify services
 docker compose ps
@@ -533,7 +533,7 @@ docker compose ps
 python test_token_reduction.py
 
 # 4. Install to editors
-make install-claude
+just install-claude
 ```
 
 ### Docker Compose Configuration

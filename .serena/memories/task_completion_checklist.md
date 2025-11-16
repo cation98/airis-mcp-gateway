@@ -21,7 +21,7 @@
 ### 2. Testing
 - [ ] **Manual Testing**: Test changes in development mode
   ```bash
-  make ui-up
+  just ui-up
   # Visit http://localhost:5173
   ```
 - [ ] **Health Check**: Verify service health after changes
@@ -42,11 +42,11 @@
   ```
 - [ ] **Gateway Restart**: Apply changes
   ```bash
-  make restart
+  just restart
   ```
 - [ ] **Verify Servers**: Check available servers
   ```bash
-  make info
+  just info
   ```
 
 #### Docker Compose Changes
@@ -56,7 +56,7 @@
   ```
 - [ ] **Service Restart**: Apply changes
   ```bash
-  make down && make up
+  just down && just up
   ```
 
 ### 4. Documentation
@@ -104,7 +104,7 @@
 ### 7. Container Health
 - [ ] **Check Logs**: No errors in service logs
   ```bash
-  make logs
+  just logs
   ```
 - [ ] **Resource Usage**: Verify reasonable CPU/memory usage
   ```bash
@@ -140,8 +140,8 @@ git push origin <branch-name>
   ```
 - [ ] **Testing on Clean State**: Test with fresh containers
   ```bash
-  make clean
-  make up
+  just clean
+  just up
   ```
 - [ ] **Multi-Editor Testing**: If changing `mcp.json`, test across editors
   - Claude Code

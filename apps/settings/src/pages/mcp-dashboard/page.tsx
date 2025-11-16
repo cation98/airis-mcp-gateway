@@ -481,6 +481,30 @@ export default function MCPDashboard() {
 
   const handleUpdateApiKey = (id: string, apiKey: string) => updateApiKey(id, apiKey);
 
+  // Section categorization (Figma design-based)
+  const alwaysActiveServers = servers.filter((server) =>
+    server.id === 'filesystem' || server.id === 'self-management'
+  );
+
+  const activeServers = servers.filter((server) =>
+    server.enabled &&
+    !server.apiKeyRequired &&
+    server.id !== 'filesystem' &&
+    server.id !== 'self-management'
+  );
+
+  const needsApiKeyServers = servers.filter((server) =>
+    server.apiKeyRequired
+  );
+
+  const idleServers = servers.filter((server) =>
+    !server.enabled &&
+    !server.apiKeyRequired &&
+    server.id !== 'filesystem' &&
+    server.id !== 'self-management'
+  );
+
+  // Legacy categories for stats
   const builtinServers = servers.filter((server) => server.builtin);
   const managedServers = servers.filter((server) => !server.builtin);
   const configuredManagedServers = managedServers.filter((server) => server.apiKey === 'configured');
@@ -576,23 +600,41 @@ export default function MCPDashboard() {
         <section className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <div className="size-2 rounded-full bg-green-500" />
-            <h2 className="text-lg font-medium text-foreground">{t('dashboard.sections.builtin', { count: builtinServers.length })}</h2>
-            <Badge variant="outline">{builtinServers.length}</Badge>
-            <span className="ml-auto text-xs text-muted-foreground">{t('dashboard.sections.detail.builtin')}</span>
+            <h2 className="text-lg font-medium text-foreground">Always Active ({alwaysActiveServers.length})</h2>
+            <Badge variant="outline">{alwaysActiveServers.length}</Badge>
+            <span className="ml-auto text-xs text-muted-foreground">Core servers — always enabled</span>
           </div>
-          {renderServerList(builtinServers, 'dashboard.sections.empty')}
+          {renderServerList(alwaysActiveServers, 'dashboard.sections.empty')}
         </section>
 
         <section className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <div className="size-2 rounded-full bg-blue-500" />
-            <h2 className="text-lg font-medium text-foreground">{t('dashboard.sections.managed', { count: managedServers.length })}</h2>
-            <Badge variant="outline">{configuredManagedServers.length}/{managedServers.length}</Badge>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {t('dashboard.sections.detail.managed', { missing: needsAttentionServers.length })}
-            </span>
+            <h2 className="text-lg font-medium text-foreground">Active ({activeServers.length})</h2>
+            <Badge variant="outline">{activeServers.length}</Badge>
+            <span className="ml-auto text-xs text-muted-foreground">Currently enabled — no API key required</span>
           </div>
-          {renderServerList(managedServers, 'dashboard.sections.emptyManaged')}
+          {renderServerList(activeServers, 'dashboard.sections.empty')}
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <div className="size-2 rounded-full bg-amber-500" />
+            <h2 className="text-lg font-medium text-foreground">Needs API Keys ({needsApiKeyServers.length})</h2>
+            <Badge variant="outline">{needsApiKeyServers.filter(s => s.apiKey === 'configured').length}/{needsApiKeyServers.length}</Badge>
+            <span className="ml-auto text-xs text-muted-foreground">Configure API keys to enable</span>
+          </div>
+          {renderServerList(needsApiKeyServers, 'dashboard.sections.emptyManaged')}
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <div className="size-2 rounded-full bg-gray-500" />
+            <h2 className="text-lg font-medium text-foreground">Idle ({idleServers.length})</h2>
+            <Badge variant="outline">{idleServers.length}</Badge>
+            <span className="ml-auto text-xs text-muted-foreground">LLM can activate via self-management</span>
+          </div>
+          {renderServerList(idleServers, 'dashboard.sections.empty')}
         </section>
       </main>
 

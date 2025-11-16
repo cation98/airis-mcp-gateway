@@ -51,7 +51,7 @@ class AirisMcpGateway < Formula
     # Create wrapper script
     (bin/"airis-gateway").write <<~EOS
       #!/bin/bash
-      cd "#{prefix}" && make "\$@"
+      cd "#{prefix}" && just "\$@"
     EOS
 
     chmod 0755, bin/"airis-gateway"
@@ -73,15 +73,15 @@ class AirisMcpGateway < Formula
 
       📋 Quick Start:
         1. Ensure Docker is running
-        2. Run: cd #{prefix} && make init
+        2. Run: cd #{prefix} && just init
         3. Restart your editors (Claude Code, Cursor, Zed, etc.)
 
       🔧 Commands:
-        make init       # Full installation (build + start + register editors)
-        make up         # Start services
-        make down       # Stop services
-        make logs       # View logs
-        make dev        # Start UI dev server
+        just init       # Full installation (build + start + register editors)
+        just up         # Start services
+        just down       # Stop services
+        just logs       # View logs
+        just dev-next settings   # Start UI dev server
 
       📚 Documentation:
         #{prefix}/CLAUDE.md          # Full guide
@@ -95,7 +95,7 @@ class AirisMcpGateway < Formula
   end
 
   test do
-    system "test", "-f", prefix/"Makefile"
+    system "test", "-f", prefix/"justfile"
     system "test", "-f", prefix/"docker-compose.yml"
   end
 end
