@@ -88,6 +88,36 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         run: pnpm build
 
+      - name: Package CLI for distribution
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          VERSION=${{steps.version.outputs.version}}
+
+          echo "📦 Packaging CLI for distribution..."
+
+          # Create distribution directory
+          mkdir -p dist/airis-mcp-gateway
+
+          # Copy CLI files
+          cp -r packages/cli/bin dist/airis-mcp-gateway/
+          cp -r packages/cli/dist dist/airis-mcp-gateway/
+          cp -r packages/cli/node_modules dist/airis-mcp-gateway/
+          cp packages/cli/package.json dist/airis-mcp-gateway/
+
+          # Copy scripts for post_install
+          cp -r scripts dist/airis-mcp-gateway/
+
+          # Copy config files
+          cp mcp-config.json dist/airis-mcp-gateway/ 2>/dev/null || true
+          cp docker-compose.yml dist/airis-mcp-gateway/ 2>/dev/null || true
+
+          # Create tarball
+          cd dist
+          tar -czf airis-mcp-gateway-${VERSION}-universal.tar.gz airis-mcp-gateway
+
+          echo "✅ Created airis-mcp-gateway-${VERSION}-universal.tar.gz"
+          ls -lh airis-mcp-gateway-${VERSION}-universal.tar.gz
+
       - name: Create GitHub Release
         if: steps.check_tag.outputs.exists == 'false'
         env:
@@ -98,6 +128,7 @@ jobs:
           echo "🚀 Creating GitHub Release v${VERSION}..."
 
           gh release create "v${VERSION}" \
+            dist/airis-mcp-gateway-${VERSION}-universal.tar.gz \
             --title "Release v${VERSION}" \
             --notes "Auto-generated release from CI/CD" \
             --generate-notes
@@ -118,9 +149,8 @@ jobs:
 
           echo "📦 Updating Homebrew Formula for v${VERSION}..."
 
-          # Calculate SHA256 from GitHub release tarball
-          TARBALL_URL="https://github.com/agiletec-inc/airis-mcp-gateway/archive/refs/tags/v${VERSION}.tar.gz"
-          SHA256=$(curl -sL "$TARBALL_URL" | shasum -a 256 | cut -d' ' -f1)
+          # Calculate SHA256 from pre-built CLI tarball
+          SHA256=$(shasum -a 256 dist/airis-mcp-gateway-${VERSION}-universal.tar.gz | cut -d' ' -f1)
 
           echo "SHA256: $SHA256"
 
@@ -128,9 +158,9 @@ jobs:
           git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/agiletec-inc/homebrew-tap.git" /tmp/homebrew-tap
           cd /tmp/homebrew-tap
 
-          # Update Formula
+          # Update Formula with new URL pattern (pre-built tarball)
           FORMULA_PATH="Formula/airis-mcp-gateway.rb"
-          sed -i "s|url \"https://github.com/agiletec-inc/airis-mcp-gateway/archive/refs/tags/v[^\"]*\.tar\.gz\"|url \"https://github.com/agiletec-inc/airis-mcp-gateway/archive/refs/tags/v${VERSION}.tar.gz\"|" "$FORMULA_PATH"
+          sed -i "s|url \"https://github.com/agiletec-inc/airis-mcp-gateway/[^\"]*\"|url \"https://github.com/agiletec-inc/airis-mcp-gateway/releases/download/v${VERSION}/airis-mcp-gateway-${VERSION}-universal.tar.gz\"|" "$FORMULA_PATH"
           sed -i "s|sha256 \"[a-f0-9]*\"|sha256 \"${SHA256}\"|" "$FORMULA_PATH"
 
           # Commit and push

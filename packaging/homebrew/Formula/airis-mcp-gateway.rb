@@ -1,38 +1,25 @@
 class AirisMcpGateway < Formula
   desc "Unified MCP server management for Claude Code, Cursor, Zed, and more"
   homepage "https://github.com/agiletec-inc/airis-mcp-gateway"
-  url "https://github.com/agiletec-inc/airis-mcp-gateway/archive/refs/tags/v1.2.0.tar.gz"
-  sha256 "f8714303bf03102b02b79d147110f9fe03777afceb2f521d42a72c3da96d815d"
+  url "https://github.com/agiletec-inc/airis-mcp-gateway/releases/download/v1.3.4/airis-mcp-gateway-1.3.4-universal.tar.gz"
+  sha256 "PLACEHOLDER"
   license "MIT"
-  head "https://github.com/agiletec-inc/airis-mcp-gateway.git", branch: "master"
 
-  depends_on "node" => :build
-  depends_on "pnpm" => :build
+  depends_on "node"
 
   # Note: Requires Docker-compatible runtime (OrbStack, Docker Desktop, Colima, etc.)
   # Not enforced as dependency to allow flexibility in runtime choice
 
   def install
-    # Install only CLI package dependencies using filter to avoid entire monorepo
-    system "pnpm", "install", "--frozen-lockfile", "--filter", "@agiletec/airis-mcp-gateway"
+    # Pre-built tarball includes: bin, dist, node_modules, scripts
+    # No pnpm install or build needed - just copy files
 
-    # Build CLI package
-    system "pnpm", "--filter", "@agiletec/airis-mcp-gateway", "build"
-
-    # Install only necessary files (exclude root node_modules to reduce size)
-    # CLI package with its node_modules (required for runtime)
-    (prefix/"packages/cli").install Dir["packages/cli/bin", "packages/cli/dist", "packages/cli/node_modules", "packages/cli/package.json"]
-
-    # Scripts for post_install
-    prefix.install "scripts"
-
-    # Config files
-    prefix.install "mcp-config.json" if File.exist?("mcp-config.json")
-    prefix.install "docker-compose.yml" if File.exist?("docker-compose.yml")
+    # Install CLI files
+    prefix.install Dir["*"]
 
     # Create symlink for CLI
-    bin.install_symlink prefix/"packages/cli/bin/airis-gateway.js" => "airis-gateway"
-    bin.install_symlink prefix/"packages/cli/bin/airis-gateway.js" => "airis-mcp"
+    bin.install_symlink prefix/"bin/airis-gateway.js" => "airis-gateway"
+    bin.install_symlink prefix/"bin/airis-gateway.js" => "airis-mcp"
   end
 
   def post_install
