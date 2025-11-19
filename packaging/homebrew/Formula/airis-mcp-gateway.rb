@@ -19,9 +19,9 @@ class AirisMcpGateway < Formula
     # Build CLI package
     system "pnpm", "--filter", "@agiletec/airis-mcp-gateway", "build"
 
-    # Install only necessary files (exclude node_modules to reduce size)
-    # CLI package
-    (prefix/"packages/cli").install Dir["packages/cli/bin", "packages/cli/dist", "packages/cli/package.json"]
+    # Install only necessary files (exclude root node_modules to reduce size)
+    # CLI package with its node_modules (required for runtime)
+    (prefix/"packages/cli").install Dir["packages/cli/bin", "packages/cli/dist", "packages/cli/node_modules", "packages/cli/package.json"]
 
     # Scripts for post_install
     prefix.install "scripts"
