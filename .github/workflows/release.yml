@@ -88,14 +88,6 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         run: pnpm build
 
-      - name: Install production dependencies for CLI
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          cd packages/cli
-          # Remove dev dependencies and reinstall production only
-          rm -rf node_modules
-          pnpm install --prod --frozen-lockfile
-
       - name: Package CLI for distribution
         if: steps.check_tag.outputs.exists == 'false'
         run: |
@@ -109,8 +101,12 @@ jobs:
           # Copy CLI files
           cp -r packages/cli/bin dist/airis-mcp-gateway/
           cp -r packages/cli/dist dist/airis-mcp-gateway/
-          cp -r packages/cli/node_modules dist/airis-mcp-gateway/
           cp packages/cli/package.json dist/airis-mcp-gateway/
+
+          # Install production dependencies directly in dist
+          cd dist/airis-mcp-gateway
+          npm install --omit=dev --ignore-scripts
+          cd ../..
 
           # Copy scripts for post_install
           cp -r scripts dist/airis-mcp-gateway/
