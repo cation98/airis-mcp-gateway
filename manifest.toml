@@ -11,6 +11,10 @@ workdir = "/app"
 volumes = ["workspace-node-modules:/app/node_modules"]
 
 [catalog]
+vite = "lts"
+typescript = "lts"
+tailwindcss = "lts"
+react = "lts"
 
 [workspaces]
 apps = []
