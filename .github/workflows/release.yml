@@ -84,6 +84,14 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         run: pnpm install
 
+      - name: Update CLI version
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          VERSION=${{steps.version.outputs.version}}
+          # Update version in CLI package.json
+          cd packages/cli
+          npm pkg set version="$VERSION"
+
       - name: Build
         if: steps.check_tag.outputs.exists == 'false'
         run: pnpm build
