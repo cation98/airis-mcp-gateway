@@ -13,13 +13,11 @@ class AirisMcpGateway < Formula
   # Not enforced as dependency to allow flexibility in runtime choice
 
   def install
-    # Install npm dependencies
-    system "pnpm", "install"
+    # Install only CLI package dependencies using filter to avoid entire monorepo
+    system "pnpm", "install", "--frozen-lockfile", "--filter", "@agiletec/airis-mcp-gateway"
 
     # Build CLI package
-    cd "packages/cli" do
-      system "pnpm", "build"
-    end
+    system "pnpm", "--filter", "@agiletec/airis-mcp-gateway", "build"
 
     # Install CLI globally
     prefix.install Dir["*"]
