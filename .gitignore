@@ -28,7 +28,6 @@ servers/*/node_modules/
 apps/*/node_modules/
 node_modules/
 .pnpm-store/
-pnpm-lock.yaml
 package-lock.json
 
 # Build outputs
