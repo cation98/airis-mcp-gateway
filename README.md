@@ -18,24 +18,43 @@ AIRIS MCP Gateway is one component of the **AIRIS Suite** - a unified toolkit th
 | **[airis-workspace](https://github.com/agiletec-inc/airis-workspace)** | 🏗️ Docker-first monorepo manager | Teams building monorepos |
 | **[airiscode](https://github.com/agiletec-inc/airiscode)** | 🖥️ Terminal-first autonomous coding agent | CLI-first developers |
 
-### MCP Servers (Included via Gateway)
+### MCP Servers (Included by Default)
 
-- **[airis-mcp-supabase-selfhost](https://github.com/agiletec-inc/airis-mcp-supabase-selfhost)** - Self-hosted Supabase MCP with RLS support
-- **mindbase** - Memory search & storage tools (`mindbase_search`, `mindbase_store`)
+The Gateway comes with these MCP servers pre-configured and ready to use:
 
-### Quick Install: Complete AIRIS Suite
+| Server | Description | Tools |
+|--------|-------------|-------|
+| **[airis-mcp-supabase-selfhost](https://github.com/agiletec-inc/airis-mcp-supabase-selfhost)** | Self-hosted Supabase MCP with RLS support | `supabase_query`, `supabase_insert`, etc. |
+| **[MindBase](https://github.com/agiletec-inc/mindbase)** | Local cross-session memory with semantic search | `mindbase_search`, `mindbase_store` |
+
+**Note**: These servers are installed and configured automatically when you install the Gateway. No additional setup required.
+
+### Quick Install (Recommended: Homebrew)
 
 ```bash
-# Option 1: Install airis-agent plugin (recommended for Claude Code users)
-/plugin marketplace add agiletec-inc/airis-agent
-/plugin install airis-agent
+# Install AIRIS MCP Gateway
+brew install agiletec-inc/tap/airis-mcp-gateway
 
-# Option 2: Clone all AIRIS repositories at once
-uv run airis-agent install-suite --profile core
+# Start the gateway
+airis-mcp-gateway up
 
-# Option 3: Just use this gateway standalone (you're already here!)
+# Add to Claude Code
+claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
+```
+
+### Install (Alternative: From Source)
+
+```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway && just up
+```
+
+### For Claude Code Users
+
+```bash
+# Add airis-agent plugin for enhanced AI capabilities
+/plugin marketplace add agiletec-inc/airis-agent
+/plugin install airis-agent
 ```
 
 **What you get with the full suite:**
