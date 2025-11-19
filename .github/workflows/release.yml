@@ -103,3 +103,41 @@ jobs:
             --generate-notes
 
           echo "✅ Release v${VERSION} created successfully!"
+
+      - name: Update Homebrew Formula
+        if: steps.check_tag.outputs.exists == 'false'
+        env:
+          HOMEBREW_TAP_TOKEN: ${{secrets.HOMEBREW_TAP_TOKEN}}
+        run: |
+          VERSION=${{steps.version.outputs.version}}
+
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "⚠️  HOMEBREW_TAP_TOKEN not set, skipping Formula update"
+            exit 0
+          fi
+
+          echo "📦 Updating Homebrew Formula for v${VERSION}..."
+
+          # Calculate SHA256 from GitHub release tarball
+          TARBALL_URL="https://github.com/agiletec-inc/airis-mcp-gateway/archive/refs/tags/v${VERSION}.tar.gz"
+          SHA256=$(curl -sL "$TARBALL_URL" | shasum -a 256 | cut -d' ' -f1)
+
+          echo "SHA256: $SHA256"
+
+          # Clone homebrew-tap
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/agiletec-inc/homebrew-tap.git" /tmp/homebrew-tap
+          cd /tmp/homebrew-tap
+
+          # Update Formula
+          FORMULA_PATH="Formula/airis-mcp-gateway.rb"
+          sed -i "s|url \"https://github.com/agiletec-inc/airis-mcp-gateway/archive/refs/tags/v[^\"]*\.tar\.gz\"|url \"https://github.com/agiletec-inc/airis-mcp-gateway/archive/refs/tags/v${VERSION}.tar.gz\"|" "$FORMULA_PATH"
+          sed -i "s|sha256 \"[a-f0-9]*\"|sha256 \"${SHA256}\"|" "$FORMULA_PATH"
+
+          # Commit and push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$FORMULA_PATH"
+          git commit -m "chore: update airis-mcp-gateway to v${VERSION}"
+          git push
+
+          echo "✅ Homebrew Formula updated to v${VERSION}"
