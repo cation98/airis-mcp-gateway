@@ -6,7 +6,16 @@ import ora from 'ora';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { homedir } from 'os';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Read version from package.json
+const packageJsonPath = join(__dirname, '..', 'package.json');
+const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+const version = packageJson.version;
 
 const program = new Command();
 
@@ -54,7 +63,7 @@ const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://api.gateway.local
 program
   .name('airis-gateway')
   .description('AIRIS MCP Gateway - Unified MCP server management')
-  .version('1.0.0');
+  .version(version);
 
 program
   .command('install')
