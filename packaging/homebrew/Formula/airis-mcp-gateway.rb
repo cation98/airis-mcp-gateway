@@ -19,8 +19,16 @@ class AirisMcpGateway < Formula
     # Build CLI package
     system "pnpm", "--filter", "@agiletec/airis-mcp-gateway", "build"
 
-    # Install CLI globally
-    prefix.install Dir["*"]
+    # Install only necessary files (exclude node_modules to reduce size)
+    # CLI package
+    (prefix/"packages/cli").install Dir["packages/cli/bin", "packages/cli/dist", "packages/cli/package.json"]
+
+    # Scripts for post_install
+    prefix.install "scripts"
+
+    # Config files
+    prefix.install "mcp-config.json" if File.exist?("mcp-config.json")
+    prefix.install "docker-compose.yml" if File.exist?("docker-compose.yml")
 
     # Create symlink for CLI
     bin.install_symlink prefix/"packages/cli/bin/airis-gateway.js" => "airis-gateway"
