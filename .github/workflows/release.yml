@@ -88,6 +88,14 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         run: pnpm build
 
+      - name: Install production dependencies for CLI
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          cd packages/cli
+          # Remove dev dependencies and reinstall production only
+          rm -rf node_modules
+          pnpm install --prod --frozen-lockfile
+
       - name: Package CLI for distribution
         if: steps.check_tag.outputs.exists == 'false'
         run: |
