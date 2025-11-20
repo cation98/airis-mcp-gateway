@@ -32,17 +32,14 @@ The Gateway comes with these MCP servers pre-configured and ready to use:
 ### Quick Install
 
 ```bash
-# 1. Install airis-workspace CLI
-brew install agiletec-inc/tap/airis-workspace
-
-# 2. Clone Gateway
+# 1. Clone Gateway
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
 
-# 3. Start the gateway
-airis up
+# 2. Start the gateway
+docker compose up -d
 
-# 4. Add to Claude Code
+# 3. Add to Claude Code
 claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
 ```
 
@@ -86,17 +83,14 @@ claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9
 ## Quick Start
 
 ```bash
-# Install airis CLI first (if not already installed)
-brew install agiletec-inc/tap/airis-workspace
-
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
 cp .env.example .env           # adjust ports/domains if needed
 docker compose pull            # optional but speeds up the first run
-airis up                       # builds containers and starts everything
+docker compose up -d           # builds containers and starts everything
 ```
 
-The `airis up` command wraps `docker compose up -d` and waits for Postgres, API, and UI containers to report healthy. Once the stack is live:
+The `docker compose up -d` command starts all services in detached mode. Once the stack is live:
 
 - Gateway SSE: `http://api.gateway.localhost:9400/api/v1/mcp/sse`
 - Streamable HTTP endpoint: `http://api.gateway.localhost:9400/api/v1/mcp`
@@ -107,7 +101,7 @@ The `airis up` command wraps `docker compose up -d` and waits for Postgres, API,
 
 ```bash
 # Start the Gateway first
-airis up
+docker compose up -d
 
 # Add to Claude Code using official command
 claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
@@ -119,34 +113,33 @@ This uses Claude Code's native HTTP transport - clean and simple, no Docker brid
 
 | Command | Description |
 |---------|-------------|
-| `airis up` | Start (or rebuild) the stack. |
-| `airis down` | Stop containers without pruning volumes. |
-| `airis logs` | Tail all service logs. |
-| `airis status` | Show container status. |
-| `airis shell <app>` | Drop into app container shell for ad‑hoc commands. |
-| `airis dev <app>` | Start development server for specific app. |
+| `docker compose up -d` | Start (or rebuild) the stack. |
+| `docker compose down` | Stop containers without pruning volumes. |
+| `docker compose logs -f` | Tail all service logs. |
+| `docker compose ps` | Show container status. |
+| `docker compose exec <service> sh` | Drop into service container shell. |
 
-The `airis` CLI provides a unified interface for managing the Gateway stack. All commands are defined in `manifest.toml`.
+Standard Docker Compose commands for managing the Gateway stack.
 
 ## Development
 
 ```bash
-# Enter app container shell
-airis shell api                     # API development
-airis shell settings                # UI development
+# Enter service container shell
+docker compose exec workspace sh    # Workspace container
+docker compose exec api sh          # API development
 
-# Start development servers
-airis dev api                       # FastAPI with hot reload
-airis dev settings                  # Vite dev server
+# View logs
+docker compose logs -f api          # API logs
+docker compose logs -f settings     # UI logs
 
 # Run tests
-airis test api                      # Backend tests with coverage
+docker compose exec workspace pnpm test
 ```
 
 Tips:
 
-- Use `airis shell <app>` to access container shells with all dependencies ready
-- Development servers run with hot reload enabled
+- Use `docker compose exec <service> sh` to access container shells
+- All services run with hot reload enabled
 - Backend coverage: `pytest tests/ --cov=app --cov-report=term-missing`
 - Integration suites reside in `tests/integration` with fixtures in `tests/conftest.py`
 
@@ -170,8 +163,8 @@ CI mirrors these commands, so failing locally usually means an upstream failure 
 ## Troubleshooting
 
 - **Container won't start**: `docker compose logs <service>` plus `docker system prune` often clears stale layers
-- **Claude Code not seeing the gateway**: Ensure `airis up` is running and re-run `claude mcp add` command
-- **Ports already in use**: adjust `*_LISTEN_PORT` values in `.env` and restart with `airis down && airis up`
+- **Claude Code not seeing the gateway**: Ensure `docker compose up -d` is running and re-run `claude mcp add` command
+- **Ports already in use**: adjust `*_LISTEN_PORT` values in `.env` and restart with `docker compose down && docker compose up -d`
 - **MCP tools not appearing**: Check `mcp-config.json` and ensure servers are `"enabled": true`
 
 ## Contributing
