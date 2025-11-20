@@ -83,15 +83,15 @@ workdir = ""
 
 [rule.verify]
 commands = [
-    "just lint",
-    "just test-all",
+    "airis run lint",
+    "airis run test-all",
 ]
 
 [rule.ci]
 commands = [
-    "just lint",
-    "just test-all",
-    "just typecheck",
+    "airis run lint",
+    "airis run test-all",
+    "airis run typecheck",
 ]
 
 [packages]
@@ -160,6 +160,9 @@ install = "docker compose exec workspace pnpm install"
 dev = "docker compose exec workspace pnpm dev"
 build = "docker compose exec workspace pnpm build"
 test = "docker compose exec workspace pnpm test"
+lint = "docker compose exec workspace pnpm lint"
+typecheck = "docker compose exec workspace pnpm typecheck"
+test-all = "docker compose exec workspace pnpm test"
 clean = "rm -rf ./node_modules ./dist ./.next ./build ./target"
 logs = "docker compose logs -f"
 ps = "docker compose ps"

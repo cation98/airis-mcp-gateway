@@ -8,11 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Most-used commands:**
 ```bash
-just init       # Full installation (build + start + register editors)
-just dev        # UI development server with hot reload
-just test       # Run backend tests (pytest in Docker)
-just logs       # Stream all service logs
-just doctor     # Health check (Docker daemon, toolchain verification)
+airis up        # Start Docker services
+airis dev       # UI development server with hot reload
+airis test      # Run backend tests (pytest in Docker)
+airis logs      # Stream all service logs
+airis doctor    # Health check (Docker daemon, toolchain verification)
 ```
 
 ## Project Overview
@@ -63,29 +63,25 @@ Toggle servers by renaming keys in `mcp-config.json`:
 
 ### Daily Operations
 ```bash
-just init           # Full reset: clean editor configs, build custom servers, start services, register all editors (Claude, Cursor, Zed, Codex)
-just up             # Start services with localhost publishing (ports exposed on host)
-just restart        # Full stop/start cycle (no editor registration)
-just down           # Stop containers, keep volumes
-just clean          # Clean build artifacts (does NOT remove volumes)
-just logs           # Stream all logs
-just logs-api       # Show API logs only
-just logs-gateway   # Show Gateway logs only
-just test           # Run pytest in container (config + unit tests)
-just doctor         # Health check (Docker, toolchain shims)
+airis up            # Start services with localhost publishing (ports exposed on host)
+airis down          # Stop containers, keep volumes
+airis clean         # Clean build artifacts (does NOT remove volumes)
+airis logs          # Stream all logs
+airis test          # Run pytest in container (config + unit tests)
+airis doctor        # Health check (Docker, toolchain shims)
 ```
 
 ### Development
 ```bash
 # Workspace builds
-just install        # Install pnpm deps in container
-just dev            # Start Vite dev server on port 5273 (UI hot reload)
-just build-all      # Build all TypeScript workspaces
-just lint           # ESLint all workspaces
-just typecheck      # Run tsc --noEmit
+airis install       # Install pnpm deps in container
+airis dev           # Start Vite dev server on port 5273 (UI hot reload)
+airis build         # Build all TypeScript workspaces
+airis lint          # ESLint all workspaces
+airis typecheck     # Run tsc --noEmit
 
 # Backend tests (Python)
-just test                           # Full test suite in Docker
+airis test                          # Full test suite in Docker
 docker compose run --rm test        # Same as above
 pytest tests/ --cov=app -v          # Run locally with coverage
 pytest apps/api/tests/unit/ -v      # Unit tests only
@@ -96,12 +92,11 @@ pytest apps/api/tests/unit/test_secret_crud.py -v
 pytest apps/api/tests/unit/test_schema_partitioning.py::test_partition_schema -v
 
 # Frontend tests (TypeScript)
-just test-ui                        # Run vitest in container
-pnpm test                           # Run locally (if inside toolchain)
+airis shell                         # Enter workspace container, then run pnpm test
 
 # Database
-just db-migrate     # Run Alembic migrations
-just db-shell       # PostgreSQL psql shell
+docker compose exec api alembic upgrade head  # Run Alembic migrations
+docker compose exec db psql -U postgres       # PostgreSQL psql shell
 docker compose exec api alembic revision --autogenerate -m "description"  # Create migration
 
 # Running individual Python files/scripts
@@ -111,28 +106,23 @@ python scripts/install_all_editors.py  # Also works if venv active
 
 ### Building Custom Servers
 ```bash
-just mindbase-build                 # Build TypeScript server → dist/
-just build-custom-servers           # Build with isolated node_modules
+# Build TypeScript servers in Docker
+docker compose exec workspace pnpm --filter mindbase build
+docker compose exec workspace pnpm build  # Build all workspaces
 ```
 
 **Builder Pattern**: Source code mounted read-only, `node_modules` in Docker volumes, `dist/` written to host for Gateway consumption.
 
 ### Editor Installation
 ```bash
-just install-editors     # DEPRECATED: Use just init instead
-just install-editors    # Register with all detected editors (Claude, Cursor, Zed, Codex)
-just install-dev        # Start with UI/API + register editors (development mode)
-just uninstall          # Remove from all editors, restore backups
-just verify-claude      # Test Claude Code installation
-just hosts-add          # Add gateway*.localhost to /etc/hosts (sudo required)
-just hosts-remove       # Remove gateway hostnames from /etc/hosts
+python scripts/install_all_editors.py           # Register with all detected editors (Claude, Cursor, Zed, Codex)
+python scripts/install_all_editors.py uninstall # Remove from all editors, restore backups
 ```
 
-**Auto-import**: `just init` automatically:
-1. Runs `scripts/import_existing_configs.py` to scan `~/.claude/`, `~/.cursor/`, `~/.windsurf/`, `~/.config/zed/`
-2. Merges existing MCP servers into `mcp-config.json`
-3. Backs up original configs to `<editor>/.mcp.json.backup.<timestamp>`
-4. Registers unified Gateway via `scripts/install_all_editors.py`
+**Auto-import**: Installation script automatically:
+1. Scans `~/.claude/`, `~/.cursor/`, `~/.windsurf/`, `~/.config/zed/`
+2. Backs up original configs to `<editor>/.mcp.json.backup.<timestamp>`
+3. Registers unified Gateway
 
 **Codex CLI Transport**: Installer attempts HTTP endpoint first (`http://api.gateway.localhost:9400/api/v1/mcp`), falls back to STDIO bridge if unreachable. Set `CODEX_GATEWAY_BEARER_ENV` for auth.
 
@@ -174,35 +164,34 @@ servers/
 - NO host-side `node_modules`, `dist`, `__pycache__` (all in named volumes)
 - All builds in containers with isolated volumes
 - Source code: bind mounts (read-only for builders), Build artifacts: named volumes
-- CLI shims (`bin/pnpm`, `bin/node`, `bin/supabase`) fail with instructions to use Make targets
+- Use `airis` CLI commands instead of direct pnpm/npm calls
 
 ## Development Workflows
 
 ### Adding MCP Server
 1. Edit `mcp-config.json` → add under `mcpServers`
 2. Add secrets via UI or `/api/v1/secrets`
-3. `just restart` + restart IDE
+3. `airis down && airis up` + restart IDE
 
 ### Adding API Endpoint
 1. Create file in `apps/api/app/api/endpoints/`
 2. Register in `apps/api/app/api/routes.py`
 3. Define schemas in `apps/api/app/schemas/`
-4. Run `just test`
+4. Run `airis test`
 
 ### Database Migration
 ```bash
 docker compose exec api alembic revision --autogenerate -m "description"
-just db-migrate
+docker compose exec api alembic upgrade head
 ```
 
 ### UI Development
-Edit `apps/settings/src/` → auto-reloads with `just dev` → build with `pnpm --filter @airis/settings build`
+Edit `apps/settings/src/` → auto-reloads with `airis dev` → build with `airis build`
 
 ### Using Dynamic Profile
 ```bash
 # Switch to Dynamic profile (enables self-management server)
-# (Profile switching not yet implemented in justfile)
-just restart
+airis down && airis up
 
 # LLM can now control servers via self-management tools:
 # - list_mcp_servers() - Show all available servers
@@ -247,7 +236,7 @@ just restart
 
 ### Git Commits
 - Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`, `chore:`)
-- PRs: summary, linked issue/roadmap item, commands run (`just lint`, `pytest tests/`), screenshots for UI changes
+- PRs: summary, linked issue/roadmap item, commands run (`airis lint`, `airis test`), screenshots for UI changes
 - Flag migrations, secret-store changes, or Docker networking modifications in PR description
 
 ## Important Notes
@@ -263,21 +252,20 @@ just restart
 - **Custom servers**: Must join `airis-mcp-gateway_default` network or use `DOCKER_NETWORK` env var
 - **Internal URLs**: `http://mcp-gateway:9390`, `http://api:9900`, `http://settings-ui:5273`
 - **External URLs**: `http://api.gateway.localhost:9400` (proxy), `http://ui.gateway.localhost:5273` (UI)
-- **Port binding**: `just up` binds to localhost based on the `ports` entries in `docker-compose.yml`
+- **Port binding**: `airis up` binds to localhost based on the `ports` entries in `docker-compose.yml`
 
 ### Testing & CI
 - **Test isolation**: Each pytest test gets isolated DB schema via `@pytest.fixture(scope="session")`
-- **Test command**: Always run `just test` (not `pytest` directly on host)
+- **Test command**: Always run `airis test` (not `pytest` directly on host)
 - **Coverage**: `pytest tests/ --cov=app --cov-report=term-missing` shows missing lines
 
 ### Editor Integration
-- **Symlinks**: Changes to `mcp.json` auto-propagate to `~/.claude/mcp.json` if symlinked by `just init`
+- **Symlinks**: Changes to `mcp.json` auto-propagate to `~/.claude/mcp.json` if symlinked
 - **Backup locations**: `~/<editor>/.mcp.json.backup.<timestamp>` for restored configs
 - **Multi-editor**: `scripts/install_all_editors.py` handles Claude Desktop, Claude Code, Cursor, Zed, Codex CLI
 - **Transport detection**: Codex uses HTTP if available, falls back to STDIO bridge via `mcp-proxy`
 
 ### Performance & Monitoring
-- **Token measurement**: `just measure-tokens` analyzes `apps/api/logs/protocol_messages.jsonl` for reduction metrics
 - **Logs**: Protocol messages logged to `apps/api/logs/protocol_messages.jsonl` when `DEBUG=true`
 - **Health checks**: All services have Docker healthchecks (Gateway: port 9390, API: `/health`, UI: port 5273)
 
@@ -318,30 +306,23 @@ IDE → Proxy → Gateway → MCP Server → Result
 ### Gateway won't start
 ```bash
 # Check Docker daemon and toolchain
-just doctor
+airis doctor
 
 # Check port conflicts
 lsof -i :9390 -i :9400 -i :5273
 
 # View Gateway logs for errors
-just logs-gateway
+airis logs
 
 # Hard reset (drops all volumes)
-just down && docker volume prune -f && just init
+airis down && docker volume prune -f && airis up
 ```
 
 ### Command issues
 ```bash
-# "just: command not found"
-# Install just: brew install just (macOS) or cargo install just
-
 # "docker: command not found"
 # Ensure Docker Desktop or OrbStack is running:
 docker version
-
-# Permission denied on /etc/hosts
-# hosts-add/hosts-remove require sudo:
-sudo just hosts-add
 
 # Port binding errors
 # Check if ports are in use and update .env:
@@ -355,10 +336,7 @@ lsof -i :9400 -i :5273 -i :9390
 ls -la ~/.claude/mcp.json
 
 # Re-register all editors
-just install-editors
-
-# Test connection
-just verify-claude
+python scripts/install_all_editors.py
 ```
 
 ### Database migration fails
@@ -370,53 +348,50 @@ docker compose exec api alembic current
 docker compose exec api alembic downgrade <revision>
 
 # Re-run migration
-just db-migrate
+docker compose exec api alembic upgrade head
 ```
 
 ### Custom server build errors
 ```bash
 # Clean build artifacts and rebuild
-just builder-down
-just build-custom-servers
+airis clean
+airis build
 ```
 
 ### Tests failing
 ```bash
 # Backend: Check DB schema isolation
-pytest apps/api/tests/ -v --tb=short
+airis test
 
 # Frontend: Clear cache
 rm -rf apps/settings/node_modules/.vite
-just test-ui
+airis shell  # then run pnpm test
 
 # Integration: Ensure services are running
-just up && just test
+airis up && airis test
 ```
 
 ### Token reduction not working
 ```bash
 # Enable protocol logging
 echo "DEBUG=true" >> .env
-just restart
+airis down && airis up
 
 # Check logs
 tail -f apps/api/logs/protocol_messages.jsonl
-
-# Measure reduction
-just measure-tokens
 ```
 
 ## Quick Fixes
 
-**"Port already in use"**: Change `*_LISTEN_PORT` in `.env`, then `just restart`
+**"Port already in use"**: Change `*_LISTEN_PORT` in `.env`, then `airis down && airis up`
 
-**"No module named 'app'"**: Run `just test` (not `pytest` directly)
+**"No module named 'app'"**: Run `airis test` (not `pytest` directly)
 
-**"pnpm: command not found"**: Use `just install` (shims intentionally fail on host to enforce Docker-first)
+**"pnpm: command not found"**: Use `airis install` or `airis shell` to enter container
 
-**"Gateway unhealthy"**: Check `just logs-gateway` for startup errors, verify `mcp-config.json` syntax
+**"Gateway unhealthy"**: Check `airis logs` for startup errors, verify `mcp-config.json` syntax
 
-**"UI not loading"**: Ensure `just hosts-add` was run, check `http://ui.gateway.localhost:5273`
+**"UI not loading"**: Check `http://ui.gateway.localhost:5273`
 
 ## Release Process
 
@@ -459,7 +434,7 @@ git push
 ### Release Checklist
 
 Before creating a release tag:
-- [ ] All tests passing (`just test`)
+- [ ] All tests passing (`airis test`)
 - [ ] CLAUDE.md and PROJECT_INDEX.md up to date
 - [ ] CHANGELOG.md updated (if exists)
 - [ ] Version bumped in relevant files
