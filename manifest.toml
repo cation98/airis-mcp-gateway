@@ -21,7 +21,7 @@ apps = []
 libs = []
 
 [dev]
-autostart = [
+apps = [
     "measurement",
     "tests",
     "settings",
@@ -32,42 +32,19 @@ autostart = [
     "self-management",
     "mindbase",
 ]
+autostart = []
 
 [apps.measurement]
 path = "tools/measurement"
-type = "python"
 
 [apps.tests]
 path = "tests"
-type = "python"
-
-[apps.settings]
-path = "apps/settings"
-type = "node"
-
-[apps.menubar]
-path = "apps/menubar"
-type = "node"
-
-[apps.desktop]
-path = "apps/desktop"
-type = "node"
-
-[apps.figma]
-path = "apps/figma"
-type = "node"
-
-[apps.api]
-path = "apps/api"
-type = "python"
 
 [apps.self-management]
 path = "servers/self-management"
-type = "node"
 
 [apps.mindbase]
 path = "servers/mindbase"
-type = "node"
 
 [libs.augmentor-runtime]
 path = "packages/augmentor-runtime"

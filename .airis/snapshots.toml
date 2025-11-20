@@ -1,0 +1,69 @@
+[[snapshot]]
+path = "package.json"
+backup_path = ".airis/backups/package.json.2025-11-20.json"
+format = "json"
+captured_at = "2025-11-20T02:00:44Z"
+hash = "sha256:a9fb4c08dee048f95077e142d6cc9b27eedbc4cb6e7a4a1c89c447a308eda913"
+
+[[snapshot]]
+path = "pnpm-workspace.yaml"
+backup_path = ".airis/backups/pnpm-workspace.yaml.2025-11-20.yaml"
+format = "yaml"
+captured_at = "2025-11-20T02:00:44Z"
+hash = "sha256:4399215eb45a2e8e212e431755061e570e2f70de52bcfcce4e0788e7057922a6"
+
+[[snapshot]]
+path = "justfile"
+backup_path = ".airis/backups/justfile.2025-11-20.txt"
+format = "txt"
+captured_at = "2025-11-20T02:00:44Z"
+hash = "sha256:9d2aac34f2f385bf5ec6b3c0a32a5448c1b41750952fa8e9b625f410f24e60e3"
+
+[[snapshot]]
+path = "docker-compose.yml"
+backup_path = ".airis/backups/docker-compose.yml.2025-11-20.yml"
+format = "yml"
+captured_at = "2025-11-20T02:00:44Z"
+hash = "sha256:9fcd443e38b463cebfa56de514b278d95bac8a0cf4622e5e4d3feda27325cbda"
+
+[[snapshot]]
+path = ".github/workflows/ci.yml"
+backup_path = ".airis/backups/.github.workflows.ci.yml.2025-11-20.yml"
+format = "yml"
+captured_at = "2025-11-20T02:00:44Z"
+hash = "sha256:dccd04c77cb1eb9d2610f27126ddee558edb5d4f3a56c21cc271846544351ad1"
+
+[[snapshot]]
+path = ".github/workflows/release.yml"
+backup_path = ".airis/backups/.github.workflows.release.yml.2025-11-20.yml"
+format = "yml"
+captured_at = "2025-11-20T02:00:44Z"
+hash = "sha256:b9059d966642ea97b1a72b1e4ccd600798d6242d573580045702988e1fcb7b07"
+
+[[snapshot]]
+path = "apps/settings/package.json"
+backup_path = ".airis/backups/apps.settings.package.json.2025-11-20.json"
+format = "json"
+captured_at = "2025-11-20T02:00:44Z"
+hash = "sha256:bba2537abb4610b2da8acbc1322e11449a4b666c78edfcb57be5bf80112b9e43"
+
+[[snapshot]]
+path = "apps/menubar/package.json"
+backup_path = ".airis/backups/apps.menubar.package.json.2025-11-20.json"
+format = "json"
+captured_at = "2025-11-20T02:00:44Z"
+hash = "sha256:714d01c78699e536a602d92733b2a27958c902460d16e8a54f4cc554970e219c"
+
+[[snapshot]]
+path = "apps/desktop/package.json"
+backup_path = ".airis/backups/apps.desktop.package.json.2025-11-20.json"
+format = "json"
+captured_at = "2025-11-20T02:00:44Z"
+hash = "sha256:8718128ac3f03adc628710847bfe106116b520b1d1b7a43bf44a557fb6b52a78"
+
+[[snapshot]]
+path = "apps/figma/package.json"
+backup_path = ".airis/backups/apps.figma.package.json.2025-11-20.json"
+format = "json"
+captured_at = "2025-11-20T02:00:44Z"
+hash = "sha256:5ff961c85b67d571febbc7fe39c94661074a5322a01fb79035ecf364a5f60083"
