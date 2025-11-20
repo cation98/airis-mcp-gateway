@@ -12,59 +12,13 @@ from pathlib import Path
 from typing import Dict, Any
 
 
-# Essential MCP servers that should always be available
+# Gateway-only configuration for global MCP
+# All other MCP servers (airis-agent, airis-workspace, context7, etc.)
+# are managed internally by the gateway via mcp-config.json
 ESSENTIAL_SERVERS = {
-    "airis-agent": {
-        "command": "uvx",
-        "args": [
-            "--from",
-            "git+https://github.com/agiletec-inc/airis-agent",
-            "airis-agent-mcp"
-        ],
-        "env": {}
-    },
-    "airis-workspace": {
-        "command": "uvx",
-        "args": [
-            "--from",
-            "git+https://github.com/agiletec-inc/airis-agent",
-            "airis-workspace-mcp"
-        ],
-        "env": {}
-    },
-    "context7": {
-        "command": "npx",
-        "args": ["-y", "@context7/mcp-server"]
-    },
-    "mindbase": {
-        "command": "sh",
-        "args": [
-            "-c",
-            "docker run --rm -i --network airis-mcp-gateway_default -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOME}/github/airis-mcp-gateway/servers/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
-        ]
-    },
-    "serena": {
-        "command": "sh",
-        "args": [
-            "-c",
-            "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -v ${HOME}:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
-        ]
-    },
-    "filesystem": {
-        "command": "npx",
-        "args": [
-            "-y",
-            "@modelcontextprotocol/server-filesystem",
-            "${HOME}"
-        ]
-    },
-    "git": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-git"]
-    },
-    "memory": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-memory"]
+    "airis-mcp-gateway": {
+        "url": "http://api.gateway.localhost:9400/api/v1/mcp",
+        "transport": "http"
     }
 }
 

@@ -1,14 +1,21 @@
 {
   "mcpServers": {
     "airis-agent": {
-      "command": "docker",
+      "command": "uvx",
       "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--network",
-        "airis-mcp-gateway_default",
-        "airis-agent:latest"
+        "--from",
+        "git+https://github.com/agiletec-inc/airis-agent",
+        "airis-agent-mcp"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "airis-workspace": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/agiletec-inc/airis-agent",
+        "airis-workspace-mcp"
       ],
       "env": {},
       "enabled": true
