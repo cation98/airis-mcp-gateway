@@ -21,31 +21,48 @@
       "enabled": true
     },
     "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {},
       "enabled": true
     },
     "fetch": {
-      "command": "catalog",
-      "args": [],
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
       "env": {},
       "enabled": true
     },
     "filesystem": {
+      "command": "npx",
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
         "/workspace/host"
       ],
+      "env": {},
       "enabled": true
     },
     "git": {
-      "command": "catalog",
-      "args": [],
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git"
+      ],
       "env": {},
       "enabled": true
     },
     "memory": {
-      "command": "catalog",
-      "args": [],
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
       "env": {},
       "enabled": true
     },
@@ -58,19 +75,12 @@
       "env": {},
       "enabled": true
     },
-    "self-management": {
-      "command": "node",
-      "args": [
-        "/workspace/host/airis-mcp-gateway/servers/self-management/dist/index.js"
-      ],
-      "env": {
-        "API_URL": "${API_INTERNAL_URL:-http://api:9900}"
-      },
-      "enabled": true
-    },
     "sequential-thinking": {
-      "command": "catalog",
-      "args": [],
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
       "env": {},
       "enabled": true
     },
@@ -84,8 +94,11 @@
       "enabled": true
     },
     "time": {
-      "command": "catalog",
-      "args": [],
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-time"
+      ],
       "env": {},
       "enabled": true
     }

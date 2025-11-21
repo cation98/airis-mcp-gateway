@@ -55,8 +55,6 @@ services:
     build:
       context: .
       dockerfile: tools/measurement/Dockerfile
-    env_file:
-      - ./tools/measurement/.env
     volumes:
       - ./tools/measurement:/app
       - ./libs:/app/libs
@@ -66,15 +64,13 @@ services:
       - "traefik.http.routers.measurement.rule=Host(`measurement.localhost`)"
       - "traefik.http.routers.measurement.entrypoints=web"
     networks:
-      - traefik
+      - coolify
 
   tests:
     container_name: airis-mcp-gateway-tests
     build:
       context: .
       dockerfile: tests/Dockerfile
-    env_file:
-      - ./tests/.env
     volumes:
       - ./tests:/app
       - ./libs:/app/libs
@@ -84,15 +80,13 @@ services:
       - "traefik.http.routers.tests.rule=Host(`tests.localhost`)"
       - "traefik.http.routers.tests.entrypoints=web"
     networks:
-      - traefik
+      - coolify
 
   settings:
     container_name: airis-mcp-gateway-settings
     build:
       context: .
       dockerfile: apps/settings/Dockerfile
-    env_file:
-      - ./apps/settings/.env
     volumes:
       - ./apps/settings:/app
       - ./libs:/app/libs
@@ -102,15 +96,13 @@ services:
       - "traefik.http.routers.settings.rule=Host(`settings.localhost`)"
       - "traefik.http.routers.settings.entrypoints=web"
     networks:
-      - traefik
+      - coolify
 
   menubar:
     container_name: airis-mcp-gateway-menubar
     build:
       context: .
       dockerfile: apps/menubar/Dockerfile
-    env_file:
-      - ./apps/menubar/.env
     volumes:
       - ./apps/menubar:/app
       - ./libs:/app/libs
@@ -120,15 +112,13 @@ services:
       - "traefik.http.routers.menubar.rule=Host(`menubar.localhost`)"
       - "traefik.http.routers.menubar.entrypoints=web"
     networks:
-      - traefik
+      - coolify
 
   desktop:
     container_name: airis-mcp-gateway-desktop
     build:
       context: .
       dockerfile: apps/desktop/Dockerfile
-    env_file:
-      - ./apps/desktop/.env
     volumes:
       - ./apps/desktop:/app
       - ./libs:/app/libs
@@ -138,15 +128,13 @@ services:
       - "traefik.http.routers.desktop.rule=Host(`desktop.localhost`)"
       - "traefik.http.routers.desktop.entrypoints=web"
     networks:
-      - traefik
+      - coolify
 
   figma:
     container_name: airis-mcp-gateway-figma
     build:
       context: .
       dockerfile: apps/figma/Dockerfile
-    env_file:
-      - ./apps/figma/.env
     volumes:
       - ./apps/figma:/app
       - ./libs:/app/libs
@@ -156,15 +144,13 @@ services:
       - "traefik.http.routers.figma.rule=Host(`figma.localhost`)"
       - "traefik.http.routers.figma.entrypoints=web"
     networks:
-      - traefik
+      - coolify
 
   api:
     container_name: airis-mcp-gateway-api
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    env_file:
-      - ./apps/api/.env
     volumes:
       - ./apps/api:/app
       - ./libs:/app/libs
@@ -174,15 +160,13 @@ services:
       - "traefik.http.routers.api.rule=Host(`api.localhost`)"
       - "traefik.http.routers.api.entrypoints=web"
     networks:
-      - traefik
+      - coolify
 
   self-management:
     container_name: airis-mcp-gateway-self-management
     build:
       context: .
       dockerfile: servers/self-management/Dockerfile
-    env_file:
-      - ./servers/self-management/.env
     volumes:
       - ./servers/self-management:/app
       - ./libs:/app/libs
@@ -192,15 +176,13 @@ services:
       - "traefik.http.routers.self-management.rule=Host(`self-management.localhost`)"
       - "traefik.http.routers.self-management.entrypoints=web"
     networks:
-      - traefik
+      - coolify
 
   mindbase:
     container_name: airis-mcp-gateway-mindbase
     build:
       context: .
       dockerfile: servers/mindbase/Dockerfile
-    env_file:
-      - ./servers/mindbase/.env
     volumes:
       - ./servers/mindbase:/app
       - ./libs:/app/libs
@@ -210,13 +192,15 @@ services:
       - "traefik.http.routers.mindbase.rule=Host(`mindbase.localhost`)"
       - "traefik.http.routers.mindbase.entrypoints=web"
     networks:
-      - traefik
+      - coolify
 
 
 networks:
   default:
     name: airis-mcp-gateway_default
     external: false
+  coolify:
+    external: true
 
 volumes:
   node_modules:   # ルートnode_modules（ホストに出ない）

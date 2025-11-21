@@ -22,23 +22,26 @@ libs = []
 
 [dev]
 apps = [
-    "measurement",
-    "tests",
     "settings",
     "menubar",
     "desktop",
     "figma",
-    "api",
     "self-management",
     "mindbase",
 ]
 autostart = []
 
-[apps.measurement]
-path = "tools/measurement"
+[apps.settings]
+path = "apps/settings"
 
-[apps.tests]
-path = "tests"
+[apps.menubar]
+path = "apps/menubar"
+
+[apps.desktop]
+path = "apps/desktop"
+
+[apps.figma]
+path = "apps/figma"
 
 [apps.self-management]
 path = "servers/self-management"

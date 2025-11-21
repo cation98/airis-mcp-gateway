@@ -10,22 +10,22 @@ RUN pip install --no-cache-dir uv
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml ./
+COPY apps/api/pyproject.toml ./
 
 # Install dependencies with UV (including dev dependencies for testing)
 RUN uv pip install --system -r pyproject.toml
 RUN uv pip install --system pytest pytest-asyncio httpx pytest-cov
 
 # Copy application code
-COPY app ./app
+COPY apps/api/src/app ./app
 
 # Copy tests
-COPY tests ./tests
+COPY apps/api/tests ./tests
 
 # Copy Alembic migrations
-COPY alembic ./alembic
-COPY alembic.ini ./alembic.ini
-COPY entrypoint.sh ./entrypoint.sh
+COPY apps/api/alembic ./alembic
+COPY apps/api/alembic.ini ./alembic.ini
+COPY apps/api/entrypoint.sh ./entrypoint.sh
 
 RUN chmod +x ./entrypoint.sh
 

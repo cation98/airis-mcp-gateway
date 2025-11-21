@@ -68,7 +68,7 @@ fi
 # === 4. Generate mcp-config.json ===
 # Catalog servers (Docker MCP Gateway): only need "enabled: true"
 # Custom servers (sh -c "docker run..."): need full definition
-CATALOG_SERVERS="filesystem,context7,puppeteer,playwright,brave,chrome-devtools,sqlite"
+CATALOG_SERVERS="puppeteer,playwright,brave,chrome-devtools,sqlite"
 
 generate_config() {
     echo "$SERVERS_JSON" | jq --arg force "${MCP_FORCE_ENABLE:-}" --arg catalog "$CATALOG_SERVERS" '
@@ -113,6 +113,9 @@ generate_config() {
           }
         }'
 }
+
+# Ensure target directory exists
+mkdir -p "$(dirname "$TARGET")"
 
 if [ "$API_OK" = "1" ] && [ "$SERVER_COUNT" != "0" ]; then
     echo "🛠  Generating mcp-config.json from API..."
@@ -188,8 +191,8 @@ echo "🔧 Registering enabled servers to MCP Gateway registry..."
 /docker-mcp server reset 2>/dev/null || true
 
 # Separate catalog servers (known to Docker MCP) from custom servers using jq
-CATALOG_SERVERS="$(jq -r '.mcpServers | keys | map(select(. == "filesystem" or . == "context7" or . == "puppeteer" or . == "playwright" or . == "brave" or . == "chrome-devtools" or . == "sqlite")) | join(" ")' "$TARGET")"
-CUSTOM_SERVERS="$(jq -r '.mcpServers | keys | map(select(. != "filesystem" and . != "context7" and . != "puppeteer" and . != "playwright" and . != "brave" and . != "chrome-devtools" and . != "sqlite")) | join(", ")' "$TARGET")"
+CATALOG_SERVERS="$(jq -r '.mcpServers | keys | map(select(. == "puppeteer" or . == "playwright" or . == "brave" or . == "chrome-devtools" or . == "sqlite")) | join(" ")' "$TARGET")"
+CUSTOM_SERVERS="$(jq -r '.mcpServers | keys | map(select(. != "puppeteer" and . != "playwright" and . != "brave" and . != "chrome-devtools" and . != "sqlite")) | join(", ")' "$TARGET")"
 
 # Enable catalog servers via CLI
 if [ -n "$CATALOG_SERVERS" ] && [ "$CATALOG_SERVERS" != "" ]; then
