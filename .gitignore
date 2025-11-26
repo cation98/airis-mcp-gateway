@@ -35,6 +35,7 @@ apps/*/out/
 apps/*/dist/
 apps/*/build/
 packages/*/dist/
+servers/*/dist/
 *.tsbuildinfo
 
 # Python cache
