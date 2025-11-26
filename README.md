@@ -48,12 +48,34 @@ AIRIS MCP Gateway provides:
 
 ## 🚀 Quick Start
 
+### Installation Options
+
+**Option A: Homebrew (Recommended for macOS)**
+```bash
+brew tap agiletec-inc/tap
+brew install airis-mcp-gateway
+airis-gateway install
+```
+
+**Option B: Git Clone (All platforms)**
+```bash
+git clone https://github.com/agiletec-inc/airis-mcp-gateway.git ~/.airis-mcp-gateway
+cd ~/.airis-mcp-gateway
+./scripts/install.sh
+```
+
+Both methods will:
+1. Create `.env` with your system paths
+2. Start Docker containers
+3. Configure your editors (Claude Code, Cursor, Zed, etc.)
+
+---
+
 ### For Google Antigravity Users
 
 ```bash
-# 1. Start AIRIS MCP Gateway
-git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
-cd airis-mcp-gateway
+# 1. Start AIRIS MCP Gateway (if not already running)
+cd ~/.airis-mcp-gateway
 docker compose up -d
 
 # 2. Verify health
@@ -83,12 +105,13 @@ cp config/antigravity-mcp.json ~/Library/Application\ Support/Antigravity/User/g
 ### For Claude Code Users
 
 ```bash
-# 1. Start AIRIS MCP Gateway
-git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
-cd airis-mcp-gateway
-docker compose up -d
+# If using Homebrew installation
+airis-gateway install   # Auto-configures Claude Code
 
-# 2. Connect to Claude Code
+# If using git clone installation
+./scripts/install.sh    # Auto-configures Claude Code
+
+# Or manually connect:
 claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
 ```
 
@@ -110,7 +133,7 @@ cat > ~/Library/LaunchAgents/com.agiletec.airis-mcp-gateway.plist << 'EOF'
         <string>/usr/local/bin/docker</string>
         <string>compose</string>
         <string>-f</string>
-        <string>/Users/YOUR_USERNAME/github/airis-mcp-gateway/docker-compose.yml</string>
+        <string>/Users/YOUR_USERNAME/.airis-mcp-gateway/docker-compose.yml</string>
         <string>up</string>
         <string>-d</string>
     </array>
