@@ -8,12 +8,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Most-used commands:**
 ```bash
-airis up        # Start Docker services
-airis dev       # UI development server with hot reload
-airis test      # Run backend tests (pytest in Docker)
-airis logs      # Stream all service logs
-airis doctor    # Health check (Docker daemon, toolchain verification)
+docker compose up -d      # Start all services
+docker compose down       # Stop services
+docker compose logs -f    # Stream all logs
+docker compose ps         # Check service status
 ```
+
+> **Note**: If you have [airis-workspace](https://github.com/agiletec-inc/airis-workspace) installed, you can use `airis up`, `airis down`, etc. as shortcuts.
 
 ## Project Overview
 
@@ -63,36 +64,38 @@ Toggle servers by renaming keys in `mcp-config.json`:
 
 ### Daily Operations
 ```bash
-airis up            # Start services with localhost publishing (ports exposed on host)
-airis down          # Stop containers, keep volumes
-airis clean         # Clean build artifacts (does NOT remove volumes)
-airis logs          # Stream all logs
-airis test          # Run pytest in container (config + unit tests)
-airis doctor        # Health check (Docker, toolchain shims)
+docker compose up -d              # Start all services (detached)
+docker compose down               # Stop containers, keep volumes
+docker compose logs -f            # Stream all logs
+docker compose ps                 # Check service status
+docker compose restart <service>  # Restart specific service
 ```
 
 ### Development
 ```bash
-# Workspace builds
-airis install       # Install pnpm deps in container
-airis dev           # Start Vite dev server on port 5273 (UI hot reload)
-airis build         # Build all TypeScript workspaces
-airis lint          # ESLint all workspaces
-airis typecheck     # Run tsc --noEmit
+# Install dependencies (inside container)
+docker compose exec workspace pnpm install
+
+# Run dev server (UI hot reload on port 5273)
+docker compose exec workspace pnpm --filter @airis/settings dev
+
+# Build all TypeScript workspaces
+docker compose exec workspace pnpm build
+
+# Lint & typecheck
+docker compose exec workspace pnpm lint
+docker compose exec workspace pnpm typecheck
 
 # Backend tests (Python)
-airis test                          # Full test suite in Docker
-docker compose run --rm test        # Same as above
-pytest tests/ --cov=app -v          # Run locally with coverage
-pytest apps/api/tests/unit/ -v      # Unit tests only
-pytest apps/api/tests/integration/  # Integration tests only
+docker compose run --rm tests pytest tests/ --cov=app -v
+docker compose exec api pytest apps/api/tests/unit/ -v      # Unit tests only
+docker compose exec api pytest apps/api/tests/integration/  # Integration tests only
 
 # Run specific test file or function
-pytest apps/api/tests/unit/test_secret_crud.py -v
-pytest apps/api/tests/unit/test_schema_partitioning.py::test_partition_schema -v
+docker compose exec api pytest apps/api/tests/unit/test_secret_crud.py -v
 
 # Frontend tests (TypeScript)
-airis shell                         # Enter workspace container, then run pnpm test
+docker compose exec workspace pnpm test
 
 # Database
 docker compose exec api alembic upgrade head  # Run Alembic migrations
@@ -164,20 +167,20 @@ servers/
 - NO host-side `node_modules`, `dist`, `__pycache__` (all in named volumes)
 - All builds in containers with isolated volumes
 - Source code: bind mounts (read-only for builders), Build artifacts: named volumes
-- Use `airis` CLI commands instead of direct pnpm/npm calls
+- Use `docker compose exec workspace` for pnpm/npm commands
 
 ## Development Workflows
 
 ### Adding MCP Server
 1. Edit `mcp-config.json` → add under `mcpServers`
 2. Add secrets via UI or `/api/v1/secrets`
-3. `airis down && airis up` + restart IDE
+3. `docker compose down && docker compose up -d` + restart IDE
 
 ### Adding API Endpoint
 1. Create file in `apps/api/app/api/endpoints/`
 2. Register in `apps/api/app/api/routes.py`
 3. Define schemas in `apps/api/app/schemas/`
-4. Run `airis test`
+4. Run tests: `docker compose run --rm tests pytest`
 
 ### Database Migration
 ```bash
@@ -186,12 +189,12 @@ docker compose exec api alembic upgrade head
 ```
 
 ### UI Development
-Edit `apps/settings/src/` → auto-reloads with `airis dev` → build with `airis build`
+Edit `apps/settings/src/` → auto-reloads with dev server → build with `docker compose exec workspace pnpm build`
 
 ### Using Dynamic Profile
 ```bash
 # Switch to Dynamic profile (enables self-management server)
-airis down && airis up
+docker compose down && docker compose up -d
 
 # LLM can now control servers via self-management tools:
 # - list_mcp_servers() - Show all available servers
@@ -236,7 +239,7 @@ airis down && airis up
 
 ### Git Commits
 - Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `refactor:`, `chore:`)
-- PRs: summary, linked issue/roadmap item, commands run (`airis lint`, `airis test`), screenshots for UI changes
+- PRs: summary, linked issue/roadmap item, commands run (lint, test), screenshots for UI changes
 - Flag migrations, secret-store changes, or Docker networking modifications in PR description
 
 ## Important Notes
@@ -252,12 +255,12 @@ airis down && airis up
 - **Custom servers**: Must join `airis-mcp-gateway_default` network or use `DOCKER_NETWORK` env var
 - **Internal URLs**: `http://mcp-gateway:9390`, `http://api:9900`, `http://settings-ui:5273`
 - **External URLs**: `http://api.gateway.localhost:9400` (proxy), `http://ui.gateway.localhost:5273` (UI)
-- **Port binding**: `airis up` binds to localhost based on the `ports` entries in `docker-compose.yml`
+- **Port binding**: `docker compose up -d` binds to localhost based on the `ports` entries in `docker-compose.yml`
 
 ### Testing & CI
 - **Test isolation**: Each pytest test gets isolated DB schema via `@pytest.fixture(scope="session")`
-- **Test command**: Always run `airis test` (not `pytest` directly on host)
-- **Coverage**: `pytest tests/ --cov=app --cov-report=term-missing` shows missing lines
+- **Test command**: Always run tests inside containers (`docker compose run --rm tests pytest`)
+- **Coverage**: `docker compose exec api pytest tests/ --cov=app --cov-report=term-missing`
 
 ### Editor Integration
 - **Symlinks**: Changes to `mcp.json` auto-propagate to `~/.claude/mcp.json` if symlinked
@@ -305,17 +308,17 @@ IDE → Proxy → Gateway → MCP Server → Result
 
 ### Gateway won't start
 ```bash
-# Check Docker daemon and toolchain
-airis doctor
+# Check Docker daemon
+docker version
 
 # Check port conflicts
 lsof -i :9390 -i :9400 -i :5273
 
 # View Gateway logs for errors
-airis logs
+docker compose logs -f
 
 # Hard reset (drops all volumes)
-airis down && docker volume prune -f && airis up
+docker compose down && docker volume prune -f && docker compose up -d
 ```
 
 ### Command issues
@@ -354,28 +357,28 @@ docker compose exec api alembic upgrade head
 ### Custom server build errors
 ```bash
 # Clean build artifacts and rebuild
-airis clean
-airis build
+rm -rf apps/*/dist packages/*/dist
+docker compose exec workspace pnpm build
 ```
 
 ### Tests failing
 ```bash
 # Backend: Check DB schema isolation
-airis test
+docker compose run --rm tests pytest
 
 # Frontend: Clear cache
 rm -rf apps/settings/node_modules/.vite
-airis shell  # then run pnpm test
+docker compose exec workspace pnpm test
 
 # Integration: Ensure services are running
-airis up && airis test
+docker compose up -d && docker compose run --rm tests pytest
 ```
 
 ### Token reduction not working
 ```bash
 # Enable protocol logging
 echo "DEBUG=true" >> .env
-airis down && airis up
+docker compose down && docker compose up -d
 
 # Check logs
 tail -f apps/api/logs/protocol_messages.jsonl
@@ -383,13 +386,13 @@ tail -f apps/api/logs/protocol_messages.jsonl
 
 ## Quick Fixes
 
-**"Port already in use"**: Change `*_LISTEN_PORT` in `.env`, then `airis down && airis up`
+**"Port already in use"**: Change `*_LISTEN_PORT` in `.env`, then `docker compose down && docker compose up -d`
 
-**"No module named 'app'"**: Run `airis test` (not `pytest` directly)
+**"No module named 'app'"**: Run tests inside container (`docker compose run --rm tests pytest`)
 
-**"pnpm: command not found"**: Use `airis install` or `airis shell` to enter container
+**"pnpm: command not found"**: Use `docker compose exec workspace pnpm install` or enter container shell
 
-**"Gateway unhealthy"**: Check `airis logs` for startup errors, verify `mcp-config.json` syntax
+**"Gateway unhealthy"**: Check `docker compose logs` for startup errors, verify `mcp-config.json` syntax
 
 **"UI not loading"**: Check `http://ui.gateway.localhost:5273`
 
@@ -434,7 +437,7 @@ git push
 ### Release Checklist
 
 Before creating a release tag:
-- [ ] All tests passing (`airis test`)
+- [ ] All tests passing (`docker compose run --rm tests pytest`)
 - [ ] CLAUDE.md and PROJECT_INDEX.md up to date
 - [ ] CHANGELOG.md updated (if exists)
 - [ ] Version bumped in relevant files
@@ -456,3 +459,18 @@ brew upgrade airis-mcp-gateway
 brew --prefix airis-mcp-gateway
 # → /opt/homebrew/Cellar/airis-mcp-gateway/<version>
 ```
+
+## Optional: airis-workspace CLI
+
+If you have [airis-workspace](https://github.com/agiletec-inc/airis-workspace) installed, you can use shorter commands:
+
+| docker compose | airis CLI |
+|---------------|-----------|
+| `docker compose up -d` | `airis up` |
+| `docker compose down` | `airis down` |
+| `docker compose logs -f` | `airis logs` |
+| `docker compose exec workspace pnpm install` | `airis install` |
+| `docker compose exec workspace pnpm build` | `airis build` |
+| `docker compose run --rm tests pytest` | `airis test` |
+
+These are convenience shortcuts — the underlying docker compose commands work for everyone.
