@@ -3,7 +3,7 @@
 ## 1. Xcode で新規プロジェクトを作成
 
 ```bash
-cd /Users/kazuki/github/airis-mcp-gateway/servers/menubar
+cd servers/menubar
 open -a Xcode .
 ```
 
@@ -13,7 +13,7 @@ Xcode で:
 3. プロジェクト名: `MenuBar`
 4. Interface: SwiftUI
 5. Language: Swift
-6. 保存先: `/Users/kazuki/github/airis-mcp-gateway/servers/menubar`
+6. 保存先: リポジトリ内の `servers/menubar` ディレクトリ
 
 ## 2. LSUIElement を追加（メニューバーのみで起動）
 

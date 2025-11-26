@@ -21,19 +21,6 @@
         "version": "19.2.0",
         "entry_point": "src/main.tsx",
         "description": "Settings UI for MCP server management"
-      },
-      "webui": {
-        "type": "react",
-        "language": "typescript",
-        "description": "Alternative web UI"
-      },
-      "desktop": {
-        "type": "tauri",
-        "description": "Desktop wrapper for Settings UI"
-      },
-      "menubar": {
-        "type": "electron",
-        "description": "macOS menubar application"
       }
     },
     "servers": {

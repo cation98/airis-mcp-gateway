@@ -75,9 +75,7 @@ command:
 ### 標準起動（ホストポート公開）
 
 ```bash
-# webui を除外して起動（webui はビルドエラーあり）
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d \
-  postgres api mcp-gateway settings-ui
+docker compose up -d
 ```
 
 ### サービス確認
@@ -160,38 +158,10 @@ Gateway起動時に自動追加されるツール：
 | Settings UI | ✅ | http://localhost:5273/ 表示 |
 | OrbStack互換性 | ✅ | `/var/run/docker.sock` マウント動作 |
 
-### ⚠️ 未解決の問題
-
-| 項目 | 状態 | 対策 |
-|------|------|------|
-| webui ビルドエラー | ❌ | Tailwind CSS設定の問題、要修正 |
-| pnpm lockfile | ⚠️ | `ERR_PNPM_OUTDATED_LOCKFILE`、要更新 |
-| Dashboard API | ❌ | `/workspace/mcp-config.json` パス問題 |
-
 ## 📚 関連ドキュメント
 
 - **公式**: [Docker MCP Gateway Docs](https://docs.docker.com/ai/mcp-gateway/)
 - **GitHub**: [docker/mcp-gateway](https://github.com/docker/mcp-gateway)
-- **調査レポート**: 本リポジトリの research findings (confidence: 0.95/1.0)
-
-## 🎯 次のステップ
-
-1. **webui のTailwind CSS修正**
-   - `apps/webui/` の Tailwind v3 → v4 移行
-   - または webui を削除して settings-ui に統合
-
-2. **pnpm lockfile 更新**
-   - `pnpm install --no-frozen-lockfile` をコンテナ内で実行
-   - node_modules のクリーンアップ
-
-3. **Dashboard API修正**
-   - `mcp-config.json` のパス解決
-   - または dashboard を無効化
-
-4. **エンドツーエンドテスト**
-   - Claude Code / Cursor から Gateway へ接続
-   - Schema partitioning 動作確認
-   - Tool call のテスト
 
 ## 📌 コミット履歴
 

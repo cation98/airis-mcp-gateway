@@ -20,14 +20,11 @@ airis-mcp-gateway/
 │   │   │   ├── crud/          # Database operations
 │   │   │   └── schemas/       # Pydantic schemas
 │   │   └── tests/             # Pytest test suite
-│   ├── settings/              # React settings UI (@airis/settings)
-│   │   └── src/
-│   │       ├── pages/         # React pages
-│   │       ├── i18n/          # Internationalization (en/ja)
-│   │       └── validation/    # Zod schemas
-│   ├── webui/                 # Alternative web UI
-│   ├── desktop/               # Tauri desktop wrapper
-│   └── menubar/               # macOS menubar app
+│   └── settings/              # React settings UI (@airis/settings)
+│       └── src/
+│           ├── pages/         # React pages
+│           ├── i18n/          # Internationalization (en/ja)
+│           └── validation/    # Zod schemas
 ├── servers/
 │   ├── mindbase/              # Custom MCP: AI conversation memory
 │   └── self-management/       # Custom MCP: Dynamic server control
@@ -51,14 +48,10 @@ airis-mcp-gateway/
 ## 🚀 Entry Points
 
 ### CLI Commands
-- **`just init`** - Full installation: build, start, register editors
-  - Location: `justfile:202`
-- **`just up`** - Start services with host port bindings
-  - Location: `justfile:16`
-- **`just restart`** - Full stop/start cycle
-  - Location: `justfile:38`
-- **`just install-editors`** - Register with all detected editors
-  - Location: `justfile:186`
+- **`./scripts/install.sh`** - Full installation: env setup, build, start, register editors
+- **`docker compose up -d`** - Start services with host port bindings
+- **`docker compose down && docker compose up -d`** - Full stop/start cycle
+- **`python scripts/install_all_editors.py`** - Register with all detected editors
 
 ### API Endpoints
 - **HTTP MCP (Codex)**: `http://api.gateway.localhost:9400/api/v1/mcp`
@@ -191,9 +184,9 @@ airis-mcp-gateway/
 - **MCP Tests**: `test_mcp_tools.py` - MCP protocol tests
 
 **Test Commands**:
-- `just test` - Run backend tests (pytest)
-- `just test-ui` - Run frontend tests (vitest)
-- `pytest apps/api/tests/ --cov=app` - Backend with coverage
+- `docker compose exec api pytest tests/ -v` - Run backend tests (pytest)
+- `docker compose exec workspace pnpm test` - Run frontend tests (vitest)
+- `docker compose exec api pytest tests/ --cov=app` - Backend with coverage
 
 ---
 
@@ -238,41 +231,27 @@ airis-mcp-gateway/
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
-cp .env.example .env
-just hosts-add              # Add *.localhost to /etc/hosts (sudo)
-just init                   # Build, start, register editors
+./scripts/install.sh        # Creates .env, starts Docker, configures editors
 ```
 
 ### 2. Development Workflow
 ```bash
-just dev                    # Start Vite dev server (Settings UI)
-just logs                   # Stream all service logs
-just restart                # Full stop/start cycle
-just test                   # Run backend tests
-just test-ui                # Run frontend tests
+docker compose logs -f       # Stream all service logs
+docker compose down && docker compose up -d  # Full stop/start cycle
+docker compose exec api pytest tests/ -v     # Run backend tests
 ```
 
 ### 3. Editor Configuration
 ```bash
-just install-editors        # Register with all editors
-just verify-claude          # Test Claude Code installation
-just uninstall              # Remove from all editors
+python scripts/install_all_editors.py            # Register with all editors
+python scripts/install_all_editors.py uninstall  # Remove from all editors
 ```
 
 ### 4. Database Operations
 ```bash
-just db-migrate             # Run Alembic migrations
-just db-shell               # PostgreSQL psql shell
-# Create migration:
-docker compose exec api alembic revision --autogenerate -m "description"
-```
-
-### 5. Profile Management
-```bash
-just profile-list           # List available profiles
-just profile-recommended    # Switch to recommended profile
-just profile-minimal        # Switch to minimal profile
-just profile-dynamic        # Switch to LLM-controlled profile
+docker compose exec api alembic upgrade head     # Run migrations
+docker compose exec postgres psql -U postgres    # PostgreSQL shell
+docker compose exec api alembic revision --autogenerate -m "description"  # Create migration
 ```
 
 ---
@@ -363,36 +342,27 @@ just profile-dynamic        # Switch to LLM-controlled profile
 
 ### Daily Operations
 ```bash
-just init           # Full reset + install
-just up             # Start with host ports
-just restart        # Stop + start
-just down           # Stop containers
-just clean          # Clean build artifacts
-just logs           # Stream all logs
-just ps             # Container status
+./scripts/install.sh                          # Full reset + install
+docker compose up -d                          # Start with host ports
+docker compose down && docker compose up -d   # Stop + start
+docker compose down                           # Stop containers
+docker compose logs -f                        # Stream all logs
+docker compose ps                             # Container status
 ```
 
 ### Development
 ```bash
-just install        # Install pnpm deps
-just dev            # Vite dev server (UI)
-just build-all      # Build all workspaces
-just lint           # ESLint
-just typecheck      # TypeScript checks
-just test           # Backend tests
-just test-ui        # Frontend tests
+docker compose exec workspace pnpm install    # Install pnpm deps
+docker compose exec workspace pnpm build      # Build all workspaces
+docker compose exec workspace pnpm lint       # ESLint
+docker compose exec workspace pnpm typecheck  # TypeScript checks
+docker compose exec api pytest tests/ -v      # Backend tests
 ```
 
 ### Database
 ```bash
-just db-migrate     # Run migrations
-just db-shell       # PostgreSQL shell
-```
-
-### Custom Servers
-```bash
-just mindbase-build          # Build MindBase MCP server
-just build-custom-servers    # Build all custom servers
+docker compose exec api alembic upgrade head  # Run migrations
+docker compose exec postgres psql -U postgres # PostgreSQL shell
 ```
 
 ---
@@ -440,13 +410,13 @@ just build-custom-servers    # Build all custom servers
 ## 📞 Support & Resources
 
 ### Help Commands
-- `just --list` - Show all available recipes
-- `just doctor` - Health check (Docker, toolchain)
-- `just verify-claude` - Test Claude Code installation
+- `docker compose ps` - Check service status
+- `docker compose logs -f` - View all logs
+- `docker compose exec api python -c "print('healthy')"` - Health check
 
 ### Documentation
 - `/help` in Claude Code - Get help
-- GitHub Issues: https://github.com/anthropics/claude-code/issues
+- GitHub Issues: https://github.com/agiletec-inc/airis-mcp-gateway/issues
 - API Docs: http://api.gateway.localhost:9400/docs
 
 ---

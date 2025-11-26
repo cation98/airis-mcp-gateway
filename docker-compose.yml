@@ -98,12 +98,12 @@ services:
     environment:
       - API_URL=http://api:9900
       - GATEWAY_LISTEN_PORT=9390
-      - HOST_REPO_DIR=/Users/kazuki/github/airis-mcp-gateway
-      - HOST_WORKSPACE_DIR=/Users/kazuki/github
+      - HOST_REPO_DIR=${HOST_REPO_DIR:-.}
+      - HOST_WORKSPACE_DIR=${HOST_WORKSPACE_DIR:-${HOME}/github}
       - DOCKER_NETWORK=airis-mcp-gateway-network
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /Users/kazuki/github:/workspace/host
+      - ${HOST_WORKSPACE_DIR:-${HOME}/github}:/workspace/host
     depends_on:
       - api
     restart: unless-stopped

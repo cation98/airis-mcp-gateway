@@ -8,12 +8,8 @@ catalog:
   vitest: 4.0.9
 workspaces:
   apps:
-  - name: dashboard
-    type: nextjs
   - name: api
-    type: node
-  - name: webui
-    type: vite
+    type: python
   - name: settings
     type: vite
   servers:

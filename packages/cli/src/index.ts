@@ -99,27 +99,14 @@ program
       spinner.warn('Could not update (continuing with current version)');
     }
 
-    // Step 3: Start Docker containers
-    if (options.docker !== false) {
-      spinner.start('Starting Docker containers...');
-      try {
-        execSync('docker compose up -d', { cwd: GATEWAY_DIR, stdio: 'pipe' });
-        spinner.succeed('Docker containers started');
-      } catch (error) {
-        spinner.fail('Failed to start Docker containers');
-        console.error(chalk.red('Please ensure Docker is running and try again'));
-        process.exit(1);
-      }
-    }
-
-    // Step 4: Configure editors
-    spinner.start('Configuring editors...');
+    // Step 3: Run unified install script (handles .env setup, Docker, editors)
+    spinner.start('Running unified install...');
     try {
-      execSync('python scripts/install_all_editors.py', { cwd: GATEWAY_DIR, stdio: 'inherit' });
-      spinner.succeed('Editors configured');
+      execSync('bash scripts/install.sh', { cwd: GATEWAY_DIR, stdio: 'inherit' });
+      spinner.succeed('Installation complete');
     } catch (error) {
-      spinner.fail('Failed to configure editors');
-      console.error(chalk.red(`Error: ${error}`));
+      spinner.fail('Installation failed');
+      console.error(chalk.red('Please ensure Docker is running and try again'));
       process.exit(1);
     }
 

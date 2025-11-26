@@ -56,3 +56,12 @@ backups/
 uv.lock
 apps/api/.coverage
 secrets.json
+
+# Local editor installation state
+.installed_editors.json
+
+# Serena memory (local AI context)
+.serena/
+
+# Casks (local macOS app builds)
+Casks/
