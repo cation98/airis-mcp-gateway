@@ -47,7 +47,7 @@ def upgrade() -> None:
         },
         {
             'name': 'serena',
-            'enabled': True,
+            'enabled': False,
             'command': 'sh',
             'args': [
                 '-c',
@@ -80,7 +80,7 @@ def upgrade() -> None:
         },
         {
             'name': 'mindbase',
-            'enabled': True,
+            'enabled': False,
             'command': 'sh',
             'args': [
                 '-c',
@@ -104,7 +104,7 @@ def upgrade() -> None:
         },
         {
             'name': 'fetch',
-            'enabled': True,
+            'enabled': False,
             'command': 'catalog',
             'args': [],
             'env': None,
@@ -113,7 +113,7 @@ def upgrade() -> None:
         },
         {
             'name': 'git',
-            'enabled': True,
+            'enabled': False,
             'command': 'catalog',
             'args': [],
             'env': None,
@@ -131,7 +131,7 @@ def upgrade() -> None:
         },
         {
             'name': 'sequential-thinking',
-            'enabled': True,
+            'enabled': False,
             'command': 'catalog',
             'args': [],
             'env': None,
@@ -139,21 +139,30 @@ def upgrade() -> None:
             'category': 'Gateway Catalog'
         },
         {
-            'name': 'self-management',
+            'name': 'airis-mcp-gateway-control',
             'enabled': True,
             'command': 'node',
-            'args': ['/workspace/host/airis-mcp-gateway/servers/self-management/dist/index.js'],
-            'env': {'API_URL': '${API_INTERNAL_URL:-http://api:9900}'},
-            'description': 'Dynamic server management (LLM-controlled enable/disable)',
+            'args': ['/workspace/host/airis-mcp-gateway/servers/airis-mcp-gateway-control/dist/index.js'],
+            'env': {'API_URL': 'http://api:9900'},
+            'description': 'Gateway control (LLM-controlled enable/disable)',
             'category': 'Custom Server'
         },
         {
             'name': 'airis-agent',
-            'enabled': True,
+            'enabled': False,
             'command': 'uvx',
-            'args': ['--from', 'git+https://github.com/agiletec-inc/airis-agent', 'airis-agent'],
+            'args': ['--from', 'git+https://github.com/agiletec-inc/airis-agent', 'airis-agent-mcp'],
             'env': None,
             'description': 'AIRIS agent for autonomous task execution',
+            'category': 'UVX Server'
+        },
+        {
+            'name': 'airis-workspace',
+            'enabled': False,
+            'command': 'uvx',
+            'args': ['--from', 'git+https://github.com/agiletec-inc/airis-agent', 'airis-workspace-mcp'],
+            'env': None,
+            'description': 'Workspace management (init, validate, sync)',
             'category': 'UVX Server'
         },
 

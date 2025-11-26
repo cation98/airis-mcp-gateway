@@ -95,7 +95,6 @@ services:
       context: .
       dockerfile: Dockerfile
       target: gateway
-    command: ["/docker-mcp", "gateway", "run", "--transport=streamable-http", "--port=9390"]
     environment:
       - API_URL=http://api:9900
       - GATEWAY_LISTEN_PORT=9390
@@ -148,6 +147,22 @@ services:
       - "traefik.http.routers.mindbase.rule=Host(`mindbase.localhost`)"
       - "traefik.http.routers.mindbase.entrypoints=web"
 
+  gateway-control:
+    container_name: airis-mcp-gateway-control
+    build:
+      context: .
+      dockerfile: servers/airis-mcp-gateway-control/Dockerfile
+    env_file:
+      - ./servers/airis-mcp-gateway-control/.env
+    volumes:
+      - ./servers/airis-mcp-gateway-control:/app
+      - ./libs:/app/libs
+      - gateway-control-node-modules:/app/node_modules
+    labels:
+      - "traefik.enable=${TRAEFIK_ENABLED:-true}"
+      - "traefik.http.routers.gateway-control.rule=Host(`gateway-control.localhost`)"
+      - "traefik.http.routers.gateway-control.entrypoints=web"
+
 networks:
   default:
     name: airis-mcp-gateway-network
@@ -162,3 +177,4 @@ volumes:
   settings-node-modules:
   api-node-modules:
   mindbase-node-modules:
+  gateway-control-node-modules:

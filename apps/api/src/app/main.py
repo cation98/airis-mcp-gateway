@@ -24,18 +24,16 @@ async def lifespan(app: FastAPI):
         existing_states = await mcp_server_state.get_all_server_states(db)
         existing_ids = {state.server_id for state in existing_states}
 
-        # Default server list (from mcp-config.json / Gateway)
+        # Default server list (minimal set - others managed via DB)
         default_servers = [
-            "filesystem", "context7", "sequential-thinking", "playwright",
-            "serena", "puppeteer", "sqlite", "mindbase", "self-management",
-            "chrome-devtools", "time", "fetch", "git", "memory"
+            "filesystem", "context7", "time", "memory",
+            "airis-mcp-gateway-control"
         ]
 
-        # Initialize missing servers (sqlite=OFF, others=ON)
+        # Initialize missing servers (all ON for default set)
         for server_id in default_servers:
             if server_id not in existing_ids:
-                enabled = (server_id != "sqlite")  # sqlite: OFF, others: ON
-                await mcp_server_state.create_server_state(db, server_id, enabled)
+                await mcp_server_state.create_server_state(db, server_id, enabled=True)
 
     yield
 

@@ -23,10 +23,7 @@ libs = []
 [dev]
 apps = [
     "settings",
-    "menubar",
-    "desktop",
-    "figma",
-    "self-management",
+    "airis-mcp-gateway-control",
     "mindbase",
 ]
 autostart = []
@@ -34,17 +31,8 @@ autostart = []
 [apps.settings]
 path = "apps/settings"
 
-[apps.menubar]
-path = "apps/menubar"
-
-[apps.desktop]
-path = "apps/desktop"
-
-[apps.figma]
-path = "apps/figma"
-
-[apps.self-management]
-path = "servers/self-management"
+[apps.airis-mcp-gateway-control]
+path = "servers/airis-mcp-gateway-control"
 
 [apps.mindbase]
 path = "servers/mindbase"
@@ -92,7 +80,7 @@ vitest = "4.0.9"
 
 [packages.root.devDependencies]
 typescript = "5.6.2"
-eslint = "9.3.0"
+"@biomejs/biome" = "^1.9.4"
 
 [packages.root.optionalDependencies]
 
@@ -140,7 +128,8 @@ install = "docker compose exec workspace pnpm install"
 dev = "docker compose exec workspace pnpm dev"
 build = "docker compose exec workspace pnpm build"
 test = "docker compose exec workspace pnpm test"
-lint = "docker compose exec workspace pnpm lint"
+lint = "docker compose exec workspace pnpm biome check ."
+format = "docker compose exec workspace pnpm biome format --write ."
 typecheck = "docker compose exec workspace pnpm typecheck"
 test-all = "docker compose exec workspace pnpm test"
 clean = "rm -rf ./node_modules ./dist ./.next ./build ./target"

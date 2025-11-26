@@ -1,0 +1,125 @@
+{
+  "__comment": "Google Antigravity MCP Configuration for AIRIS MCP Gateway",
+  "__setup": [
+    "1. Ensure AIRIS MCP Gateway is running: docker compose ps",
+    "2. Copy this file to ~/.antigravity/mcp_config.json (or equivalent location)",
+    "3. Restart Antigravity IDE",
+    "4. Verify tools are loaded: airis-agent, context7, sequential-thinking, etc."
+  ],
+  "mcpServers": {
+    "airis-gateway-core": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-everything"
+      ],
+      "env": {
+        "MCP_SERVER_URL": "http://api.gateway.localhost:9400/api/v1/mcp/sse"
+      },
+      "description": "AIRIS MCP Gateway (SSE transport) - 90% token reduction via schema partitioning"
+    },
+    "airis-agent": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/agiletec-inc/airis-agent",
+        "airis-agent-mcp"
+      ],
+      "env": {},
+      "description": "AIRIS Agent tools: confidence_check, deep_research, docs_optimize"
+    },
+    "airis-workspace": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/agiletec-inc/airis-agent",
+        "airis-workspace-mcp"
+      ],
+      "env": {},
+      "description": "AIRIS Workspace: manifest sync, repo indexing, project structure"
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {},
+      "description": "Context7: 15,000+ library docs (official references)"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/YOUR_USERNAME/projects"
+      ],
+      "env": {},
+      "description": "Filesystem access (REPLACE /Users/YOUR_USERNAME/projects with your workspace)"
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git"
+      ],
+      "env": {},
+      "description": "Git operations: status, diff, commit, push"
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {},
+      "description": "Short-term memory: knowledge graph for current session"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "env": {},
+      "description": "Multi-step reasoning API for complex tasks"
+    }
+  },
+  "__optional_servers": {
+    "__comment": "Enable by removing '__' prefix from server name",
+    "__github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_TOKEN_HERE"
+      },
+      "description": "GitHub API: repos, issues, PRs"
+    },
+    "__tavily": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-tavily"
+      ],
+      "env": {
+        "TAVILY_API_KEY": "YOUR_KEY_HERE"
+      },
+      "description": "Web search via Tavily"
+    },
+    "__serena": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "docker run --rm -i --network airis-mcp-gateway_default -v ~/projects:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
+      ],
+      "env": {},
+      "description": "Serena: semantic code search (Docker required)"
+    }
+  },
+  "log": {
+    "level": "info"
+  }
+}

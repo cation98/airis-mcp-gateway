@@ -90,7 +90,7 @@ LABEL version="1.3.0"
 ENV AIRIS_VERSION="1.3.0" \
     AIRIS_MCP_GATEWAY="true"
 
-# Install jq for robust JSON parsing (Alpine)
+# Install jq for JSON processing (Alpine)
 RUN apk add --no-cache jq
 
 COPY gateway/inject-secrets.sh /usr/local/bin/inject-secrets.sh
@@ -100,7 +100,10 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
   CMD wget --no-verbose --tries=1 --spider "http://127.0.0.1:${GATEWAY_LISTEN_PORT:-9390}/" || exit 1
 
 ENTRYPOINT ["/usr/local/bin/inject-secrets.sh"]
-CMD ["/docker-mcp", "gateway", "run", "--transport=sse", "--port=9390", "--config=/etc/docker-mcp/config.json"]
+CMD ["/docker-mcp", "gateway", "run", \
+     "--transport=sse", \
+     "--port=9390", \
+     "--config=/etc/docker-mcp/config.json"]
 
 
 ###########################################

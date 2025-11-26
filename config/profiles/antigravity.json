@@ -1,0 +1,62 @@
+{
+  "name": "Antigravity",
+  "description": "Google Antigravity IDE integration (Token-optimized via Gateway proxy)",
+  "builtin_servers": [
+    "time",
+    "fetch",
+    "git",
+    "memory"
+  ],
+  "gateway_servers": [
+    "filesystem",
+    "context7",
+    "airis-agent",
+    "airis-workspace",
+    "sequential-thinking"
+  ],
+  "optional_servers": [
+    "serena",
+    "mindbase",
+    "github",
+    "tavily"
+  ],
+  "features": {
+    "token_optimization": "90% token reduction via schema partitioning (12.5K → 1.25K tokens)",
+    "confidence_gate": "airis-agent (pre-implementation verification)",
+    "deep_research": "airis-agent (multi-wave research with official docs)",
+    "code_understanding": "serena (semantic search)",
+    "latest_docs": "context7 (15,000+ libraries)",
+    "multi_agent_orchestration": "Antigravity native + AIRIS tooling",
+    "workspace_management": "airis-workspace (manifest sync, repo indexing)"
+  },
+  "antigravity_integration": {
+    "mcp_config_path": "~/.antigravity/mcp_config.json",
+    "connection_type": "SSE (Server-Sent Events)",
+    "endpoint": "http://api.gateway.localhost:9400/api/v1/mcp/sse",
+    "auth": "none (localhost only)",
+    "models_supported": [
+      "Gemini 3 Pro (primary)",
+      "Claude Sonnet 4.5 (alternative)",
+      "GPT-OSS (open-source)"
+    ]
+  },
+  "resource_usage": {
+    "memory": "~300MB (Gateway proxy + PostgreSQL)",
+    "cpu": "低 (schema caching)",
+    "disk": "~1GB (encrypted secrets)"
+  },
+  "use_cases": [
+    "Antigravity multi-agent workflows with token efficiency",
+    "Pre-implementation confidence checks (prevent wrong-direction execution)",
+    "Official documentation verification before coding",
+    "Claude/GPT-OSS model usage with token constraints",
+    "Self-hosted MCP gateway for data sovereignty"
+  ],
+  "setup_steps": [
+    "1. Start AIRIS MCP Gateway: `just up`",
+    "2. Verify health: `curl http://api.gateway.localhost:9400/health`",
+    "3. Copy mcp_config.json template: `cp config/antigravity-mcp.json ~/.antigravity/mcp_config.json`",
+    "4. Restart Antigravity IDE",
+    "5. Verify tools: Look for 'airis-agent', 'context7', 'sequential-thinking' in tool list"
+  ]
+}
