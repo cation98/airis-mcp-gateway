@@ -14,8 +14,6 @@ docker compose logs -f    # Stream all logs
 docker compose ps         # Check service status
 ```
 
-> **Note**: If you have [airis-workspace](https://github.com/agiletec-inc/airis-workspace) installed, you can use `airis up`, `airis down`, etc. as shortcuts.
-
 ## Project Overview
 
 AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates token explosion at IDE startup through OpenMCP lazy loading pattern.
