@@ -92,6 +92,55 @@ docker compose up -d
 claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
 ```
 
+#### Auto-start on macOS Login (Recommended)
+
+Create a LaunchAgent to start the Gateway automatically:
+
+```bash
+# Create LaunchAgent plist
+cat > ~/Library/LaunchAgents/com.agiletec.airis-mcp-gateway.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.agiletec.airis-mcp-gateway</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/docker</string>
+        <string>compose</string>
+        <string>-f</string>
+        <string>/Users/YOUR_USERNAME/github/airis-mcp-gateway/docker-compose.yml</string>
+        <string>up</string>
+        <string>-d</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>/tmp/airis-mcp-gateway.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/airis-mcp-gateway.error.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>
+EOF
+
+# Edit the path to match your installation
+# Replace YOUR_USERNAME with your actual username
+nano ~/Library/LaunchAgents/com.agiletec.airis-mcp-gateway.plist
+
+# Load the agent (starts immediately and on every login)
+launchctl load ~/Library/LaunchAgents/com.agiletec.airis-mcp-gateway.plist
+```
+
+**Note**: The Gateway requires Docker to be running. If using Docker Desktop, ensure "Start Docker Desktop when you log in" is enabled in Docker Desktop settings.
+
 ---
 
 ### For Other MCP-Compatible IDEs (Cursor, Windsurf, Zed)

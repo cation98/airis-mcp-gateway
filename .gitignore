@@ -34,6 +34,7 @@ package-lock.json
 apps/*/out/
 apps/*/dist/
 apps/*/build/
+packages/*/dist/
 *.tsbuildinfo
 
 # Python cache

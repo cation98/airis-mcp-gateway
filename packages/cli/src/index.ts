@@ -93,36 +93,34 @@ program
     // Step 2: Update to latest version
     spinner.start('Updating to latest version...');
     try {
-      execSync('git pull origin master', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+      execSync('git pull origin main', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Updated to latest version');
     } catch (error) {
       spinner.warn('Could not update (continuing with current version)');
     }
 
-    const installCmd = options.claudeOnly ? 'just install-editors' : 'just init';
-
-    // Step 3: Run unified install (Docker + editors)
+    // Step 3: Start Docker containers
     if (options.docker !== false) {
-      spinner.start('Running unified install (Docker + editor configs)...');
+      spinner.start('Starting Docker containers...');
       try {
-        execSync(installCmd, { cwd: GATEWAY_DIR, stdio: 'inherit' });
-        spinner.succeed('Gateway ready and editors configured');
+        execSync('docker compose up -d', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+        spinner.succeed('Docker containers started');
       } catch (error) {
-        spinner.fail('Unified install failed');
+        spinner.fail('Failed to start Docker containers');
         console.error(chalk.red('Please ensure Docker is running and try again'));
         process.exit(1);
       }
-    } else {
-      // Step 4: Configure editors only (no Docker restart)
-      spinner.start('Configuring editors only...');
-      try {
-        execSync(installCmd, { cwd: GATEWAY_DIR, stdio: 'inherit' });
-        spinner.succeed('Editors configured');
-      } catch (error) {
-        spinner.fail('Failed to configure editors');
-        console.error(chalk.red(`Error: ${error}`));
-        process.exit(1);
-      }
+    }
+
+    // Step 4: Configure editors
+    spinner.start('Configuring editors...');
+    try {
+      execSync('python scripts/install_all_editors.py', { cwd: GATEWAY_DIR, stdio: 'inherit' });
+      spinner.succeed('Editors configured');
+    } catch (error) {
+      spinner.fail('Failed to configure editors');
+      console.error(chalk.red(`Error: ${error}`));
+      process.exit(1);
     }
 
     // Success message
@@ -146,13 +144,21 @@ program
       process.exit(0);
     }
 
-    const spinner = ora('Uninstalling Gateway...').start();
+    const spinner = ora('Stopping Docker containers...').start();
 
     try {
-      execSync('just uninstall', { cwd: GATEWAY_DIR, stdio: 'inherit' });
-      spinner.succeed('Gateway uninstalled');
+      execSync('docker compose down', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+      spinner.succeed('Docker containers stopped');
     } catch (error) {
-      spinner.fail('Failed to uninstall');
+      spinner.warn('Could not stop containers (may not be running)');
+    }
+
+    spinner.start('Restoring editor configs...');
+    try {
+      execSync('python scripts/install_all_editors.py uninstall', { cwd: GATEWAY_DIR, stdio: 'inherit' });
+      spinner.succeed('Editor configs restored');
+    } catch (error) {
+      spinner.fail('Failed to restore editor configs');
       console.error(chalk.red(`Error: ${error}`));
       process.exit(1);
     }
@@ -171,7 +177,7 @@ program
 
     const spinner = ora('Starting Gateway...').start();
     try {
-      execSync('just up', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+      execSync('docker compose up -d', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Gateway started');
       console.log(chalk.cyan('\n🔗 Gateway (public): ' + GATEWAY_PUBLIC_URL));
       console.log(chalk.cyan('🎨 Settings UI: ' + UI_PUBLIC_URL));
@@ -194,7 +200,7 @@ program
 
     const spinner = ora('Stopping Gateway...').start();
     try {
-      execSync('just down', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+      execSync('docker compose down', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Gateway stopped');
     } catch (error) {
       spinner.fail('Failed to stop');
@@ -214,7 +220,7 @@ program
 
     try {
       console.log(chalk.blue.bold('\n📊 AIRIS Gateway Status\n'));
-      execSync('just ps', { cwd: GATEWAY_DIR, stdio: 'inherit' });
+      execSync('docker compose ps', { cwd: GATEWAY_DIR, stdio: 'inherit' });
     } catch (error) {
       console.error(chalk.red(`Error: ${error}`));
       process.exit(1);
@@ -232,7 +238,7 @@ program
     }
 
     try {
-      const cmd = options.follow ? 'just logs' : 'docker compose logs';
+      const cmd = options.follow ? 'docker compose logs -f' : 'docker compose logs';
       execSync(cmd, { cwd: GATEWAY_DIR, stdio: 'inherit' });
     } catch (error) {
       console.error(chalk.red(`Error: ${error}`));
@@ -253,7 +259,7 @@ program
 
     const spinner = ora('Pulling latest changes...').start();
     try {
-      execSync('git pull origin master', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+      execSync('git pull origin main', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Updated to latest version');
     } catch (error) {
       spinner.fail('Failed to update');
@@ -263,7 +269,7 @@ program
 
     spinner.start('Restarting Gateway...');
     try {
-      execSync('just restart', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+      execSync('docker compose down && docker compose up -d', { cwd: GATEWAY_DIR, stdio: 'pipe', shell: '/bin/bash' });
       spinner.succeed('Gateway restarted with new version');
     } catch (error) {
       spinner.fail('Failed to restart');
