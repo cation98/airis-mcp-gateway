@@ -459,18 +459,3 @@ brew upgrade airis-mcp-gateway
 brew --prefix airis-mcp-gateway
 # → /opt/homebrew/Cellar/airis-mcp-gateway/<version>
 ```
-
-## Optional: airis-workspace CLI
-
-If you have [airis-workspace](https://github.com/agiletec-inc/airis-workspace) installed, you can use shorter commands:
-
-| docker compose | airis CLI |
-|---------------|-----------|
-| `docker compose up -d` | `airis up` |
-| `docker compose down` | `airis down` |
-| `docker compose logs -f` | `airis logs` |
-| `docker compose exec workspace pnpm install` | `airis install` |
-| `docker compose exec workspace pnpm build` | `airis build` |
-| `docker compose run --rm tests pytest` | `airis test` |
-
-These are convenience shortcuts — the underlying docker compose commands work for everyone.
