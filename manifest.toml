@@ -21,12 +21,7 @@ apps = []
 libs = []
 
 [dev]
-apps = [
-    "settings",
-    "airis-mcp-gateway-control",
-    "mindbase",
-]
-autostart = []
+# apps_pattern = "apps/*/compose.yml"  # default
 
 [apps.settings]
 path = "apps/settings"
