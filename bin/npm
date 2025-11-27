@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-exec docker compose run --rm \
-  --profile cli \
-  -e UID="${UID:-$(id -u)}" \
-  -e GID="${GID:-$(id -g)}" \
-  node npm "$@"
