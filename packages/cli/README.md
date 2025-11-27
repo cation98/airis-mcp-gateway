@@ -166,7 +166,7 @@ If AIRIS Gateway helps your workflow:
 
 - ☕ [Ko-fi](https://ko-fi.com/kazukinakai)
 - 🎯 [Patreon](https://www.patreon.com/kazukinakai)
-- 💜 [GitHub Sponsors](https://github.com/sponsors/kazukinakai)
+- 💜 [GitHub Sponsors](https://github.com/sponsors/kazukinakad)
 
 ## License
 
