@@ -85,6 +85,14 @@
       },
       "enabled": true
     },
+    "airis-commands": {
+      "command": "node",
+      "args": [
+        "/workspace/host/airis-mcp-gateway/servers/airis-commands/dist/index.js"
+      ],
+      "env": {},
+      "enabled": true
+    },
     "sequential-thinking": {
       "command": "npx",
       "args": [
