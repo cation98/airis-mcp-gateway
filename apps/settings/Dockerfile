@@ -7,8 +7,8 @@
 # ------------------------------
 FROM node:24-alpine AS builder
 
-# pnpm installation
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# pnpm installation via corepack
+RUN npm install -g --force corepack@latest && corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /monorepo
 
@@ -18,10 +18,9 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 # Copy all packages
 COPY apps/settings ./apps/settings
 COPY servers/mindbase/package.json ./servers/mindbase/package.json
-COPY servers/self-management/package.json ./servers/self-management/package.json
 
 # Install all dependencies (workspace aware)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # Build settings only
 WORKDIR /monorepo/apps/settings

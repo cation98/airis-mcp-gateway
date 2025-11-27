@@ -23,7 +23,7 @@ const serverPort = Number(
 )
 const serverHost = process.env.VITE_DEV_SERVER_HOST ?? process.env.HOST ?? '0.0.0.0'
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     __BASE_PATH__: JSON.stringify(base),
     __IS_PREVIEW__: JSON.stringify(isPreview)
@@ -100,7 +100,7 @@ export default defineConfig({
     ],
     dedupe: ['react', 'react-dom']
   },
-  server: {
+  server: command === 'serve' ? {
     port: serverPort,
     host: serverHost,
     proxy: {
@@ -110,7 +110,7 @@ export default defineConfig({
         ws: true
       }
     }
-  },
+  } : undefined,
   test: {
     globals: true,
     environment: 'jsdom',
@@ -118,4 +118,4 @@ export default defineConfig({
     css: false,
     restoreMocks: true
   }
-})
+}))
