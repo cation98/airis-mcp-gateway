@@ -136,6 +136,12 @@ cat >> "$HOMEBREW_TAP_PATH/Formula/airis-mcp-gateway.rb" <<'FORMULA_EOF'
             echo "✅ Registered with Claude Code"
           fi
 
+          # Enable auto-start on login
+          if command -v brew >/dev/null 2>&1; then
+            brew services start airis-mcp-gateway 2>/dev/null || true
+            echo "✅ Auto-start enabled (brew services)"
+          fi
+
           echo ""
           echo "✅ Installation complete!"
           echo ""
