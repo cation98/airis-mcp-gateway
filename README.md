@@ -50,67 +50,80 @@ AIRIS MCP Gateway provides:
 
 ### Prerequisites
 
-- **Docker** (Docker Desktop or OrbStack) - auto-started by `airis-gateway start`
+- **Docker** (Docker Desktop or OrbStack) - auto-started by installer
 - **Git** (preinstalled on macOS/Linux)
 
-### Option 1: Homebrew (Recommended)
+### Step 1: Start Gateway
+
+Choose one of the following methods:
+
+<details open>
+<summary><strong>Option A: Homebrew (Recommended)</strong></summary>
 
 ```bash
-# Install
 brew tap agiletec/tap
 brew install airis-mcp-gateway
 
-# Setup (clones repo, starts Docker, registers IDEs)
+# Start Gateway (clones repo if needed, starts Docker)
 airis-gateway install
 
 # Auto-start on login (optional)
 brew services start airis-mcp-gateway
 ```
 
-**Or install the full suite:**
-```bash
-brew install agiletec/tap/airis-suite
-# Includes: airis-mcp-gateway, airis-workspace, mindbase
-```
+</details>
 
-### Option 2: One-Liner Install
+<details>
+<summary><strong>Option B: One-Liner</strong></summary>
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/agiletec-inc/airis-mcp-gateway/main/scripts/quick-install.sh)
 ```
 
-### Option 3: Manual Installation
+</details>
+
+<details>
+<summary><strong>Option C: Manual</strong></summary>
 
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git ~/.airis-mcp-gateway
 cd ~/.airis-mcp-gateway
-./scripts/install.sh
-claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
+docker compose up -d
 ```
 
-### Verify Installation
+</details>
+
+### Step 2: Verify Gateway
 
 ```bash
 curl http://api.gateway.localhost:9400/health
 # Expected: {"status":"ok"}
 ```
 
-### IDE-Specific Setup
+### Step 3: Register with Your IDE
 
-<details>
-<summary><strong>Claude Code</strong> (auto-configured by installer)</summary>
+<details open>
+<summary><strong>Claude Code</strong></summary>
 
 ```bash
-claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
+# Global install (available in ALL projects)
+claude mcp add --scope user --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
+
+# Restart Claude Code
 ```
 
-Restart Claude Code after registration.
+**Scope options:**
+- `--scope user` = Global (all projects) ← **Recommended**
+- `--scope project` = Shared via `.mcp.json` (team)
+- No flag = Local (current project only)
+
 </details>
 
 <details>
-<summary><strong>Cursor / Zed / Windsurf</strong></summary>
+<summary><strong>Cursor / Windsurf</strong></summary>
 
-Add to your IDE's MCP config (e.g., `~/.cursor/mcp.json`):
+Add to `~/.cursor/mcp.json` (or `~/.windsurf/mcp.json`):
+
 ```json
 {
   "mcpServers": {
@@ -120,6 +133,26 @@ Add to your IDE's MCP config (e.g., `~/.cursor/mcp.json`):
   }
 }
 ```
+
+</details>
+
+<details>
+<summary><strong>Zed</strong></summary>
+
+Add to `~/.config/zed/settings.json`:
+
+```json
+{
+  "context_servers": {
+    "airis-mcp-gateway": {
+      "settings": {
+        "url": "http://api.gateway.localhost:9400/api/v1/mcp/sse"
+      }
+    }
+  }
+}
+```
+
 </details>
 
 <details>
@@ -133,9 +166,23 @@ cp ~/.airis-mcp-gateway/config/antigravity-mcp.json \
 Edit the filesystem path in `mcp_config.json` to match your workspace.
 
 👉 **[Full Antigravity Integration Guide](docs/guides/antigravity-integration.md)**
+
 </details>
 
-That's it! Restart your IDE and all 25+ MCP tools are available.
+<details>
+<summary><strong>All Editors at Once</strong></summary>
+
+```bash
+# Auto-detect and register all installed editors
+python ~/.airis-mcp-gateway/scripts/install_all_editors.py
+
+# Uninstall (restores backups)
+python ~/.airis-mcp-gateway/scripts/install_all_editors.py uninstall
+```
+
+</details>
+
+**Done!** Restart your IDE and 25+ MCP tools are available.
 
 ---
 
