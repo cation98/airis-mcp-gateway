@@ -3,8 +3,8 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
-import { execSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
+import { execSync, spawnSync } from 'child_process';
+import { existsSync, readFileSync, copyFileSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -23,6 +23,16 @@ const program = new Command();
 const GATEWAY_DIR = join(homedir(), '.airis-mcp-gateway');
 const ENV_FILE_PATH = join(GATEWAY_DIR, '.env');
 const REPO_URL = 'https://github.com/agiletec-inc/airis-mcp-gateway.git';
+
+// Service directories that need .env files
+const SERVICE_ENV_DIRS = [
+  'tools/measurement',
+  'tests',
+  'apps/settings',
+  'apps/api',
+  'servers/mindbase',
+  'servers/airis-mcp-gateway-control',
+];
 
 const loadEnvFromFile = (filePath: string) => {
   if (!existsSync(filePath)) {
@@ -59,6 +69,7 @@ loadEnvFromFile(ENV_FILE_PATH);
 const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? 'http://gateway.localhost:9390';
 const UI_PUBLIC_URL = process.env.UI_PUBLIC_URL ?? 'http://ui.gateway.localhost:5273';
 const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://api.gateway.localhost:9400/api';
+const HEALTH_URL = 'http://api.gateway.localhost:9400/health';
 
 // Check if Docker is running
 const isDockerRunning = (): boolean => {
@@ -73,12 +84,13 @@ const isDockerRunning = (): boolean => {
 // Ensure Docker is running (auto-start on macOS)
 const ensureDockerRunning = async (spinner: ReturnType<typeof ora>): Promise<boolean> => {
   if (isDockerRunning()) {
+    spinner.succeed('Docker is running');
     return true;
   }
 
   // Try to start Docker Desktop on macOS
   if (process.platform === 'darwin') {
-    spinner.text = 'Starting Docker Desktop...';
+    spinner.text = 'Starting Docker...';
     try {
       // Try OrbStack first (faster startup)
       try {
@@ -121,6 +133,86 @@ const ensureDockerRunning = async (spinner: ReturnType<typeof ora>): Promise<boo
   return false;
 };
 
+// Create .env files for services
+const createServiceEnvFiles = (gatewayDir: string): void => {
+  // Root .env
+  const envPath = join(gatewayDir, '.env');
+  const envExamplePath = join(gatewayDir, '.env.example');
+  if (!existsSync(envPath) && existsSync(envExamplePath)) {
+    copyFileSync(envExamplePath, envPath);
+  }
+
+  // Service .env files
+  for (const dir of SERVICE_ENV_DIRS) {
+    const dirPath = join(gatewayDir, dir);
+    const serviceEnvPath = join(dirPath, '.env');
+    const serviceEnvExamplePath = join(dirPath, '.env.example');
+
+    if (existsSync(dirPath) && !existsSync(serviceEnvPath)) {
+      if (existsSync(serviceEnvExamplePath)) {
+        copyFileSync(serviceEnvExamplePath, serviceEnvPath);
+      } else {
+        writeFileSync(serviceEnvPath, '');
+      }
+    }
+  }
+};
+
+// Wait for health check
+const waitForHealth = async (spinner: ReturnType<typeof ora>, maxAttempts = 30): Promise<boolean> => {
+  spinner.start('Waiting for Gateway to be ready...');
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      execSync(`curl -sf ${HEALTH_URL}`, { stdio: 'pipe' });
+      spinner.succeed('Gateway is healthy');
+      return true;
+    } catch {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  spinner.warn('Gateway may still be starting up');
+  return false;
+};
+
+// Register with Claude Code
+const registerWithClaudeCode = (spinner: ReturnType<typeof ora>): void => {
+  try {
+    const result = spawnSync('which', ['claude'], { stdio: 'pipe' });
+    if (result.status !== 0) {
+      return;
+    }
+
+    spinner.start('Registering with Claude Code...');
+    execSync(
+      'claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp',
+      { stdio: 'pipe' }
+    );
+    spinner.succeed('Registered with Claude Code');
+  } catch {
+    // Already registered or Claude not available
+  }
+};
+
+// Enable brew services for auto-start
+const enableBrewServices = (spinner: ReturnType<typeof ora>): void => {
+  if (process.platform !== 'darwin') {
+    return;
+  }
+
+  try {
+    const result = spawnSync('which', ['brew'], { stdio: 'pipe' });
+    if (result.status !== 0) {
+      return;
+    }
+
+    spinner.start('Enabling auto-start on login...');
+    execSync('brew services start airis-mcp-gateway', { stdio: 'pipe' });
+    spinner.succeed('Auto-start enabled (brew services)');
+  } catch {
+    // brew services not available or already running
+  }
+};
+
 program
   .name('airis-gateway')
   .description('AIRIS MCP Gateway - Unified MCP server management')
@@ -128,15 +220,14 @@ program
 
 program
   .command('install')
-  .description('Install AIRIS Gateway to all supported editors')
-  .option('--claude-only', 'Install to Claude Code only')
-  .option('--no-docker', 'Skip Docker container startup')
+  .description('Install and start AIRIS Gateway (clones repo, starts Docker, registers IDEs)')
+  .option('--no-auto-start', 'Skip enabling auto-start on login')
   .action(async (options) => {
-    console.log(chalk.blue.bold('\n🌉 AIRIS MCP Gateway Installation\n'));
+    console.log(chalk.blue.bold('\n🚀 AIRIS MCP Gateway Installation\n'));
+
+    const spinner = ora('Checking installation...').start();
 
     // Step 1: Clone repository if not exists
-    const spinner = ora('Checking Gateway installation...').start();
-
     if (!existsSync(GATEWAY_DIR)) {
       spinner.text = 'Cloning AIRIS Gateway repository...';
       try {
@@ -149,36 +240,58 @@ program
       }
     } else {
       spinner.succeed('Gateway already installed');
+
+      // Update to latest
+      spinner.start('Updating to latest version...');
+      try {
+        execSync('git pull origin main', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+        spinner.succeed('Updated to latest version');
+      } catch {
+        spinner.warn('Could not update (continuing with current version)');
+      }
     }
 
-    // Step 2: Update to latest version
-    spinner.start('Updating to latest version...');
-    try {
-      execSync('git pull origin main', { cwd: GATEWAY_DIR, stdio: 'pipe' });
-      spinner.succeed('Updated to latest version');
-    } catch (error) {
-      spinner.warn('Could not update (continuing with current version)');
-    }
+    // Step 2: Create .env files
+    spinner.start('Creating .env files...');
+    createServiceEnvFiles(GATEWAY_DIR);
+    spinner.succeed('Service .env files created');
 
-    // Step 3: Run unified install script (handles .env setup, Docker, editors)
-    spinner.start('Running unified install...');
-    try {
-      execSync('bash scripts/install.sh', { cwd: GATEWAY_DIR, stdio: 'inherit' });
-      spinner.succeed('Installation complete');
-    } catch (error) {
-      spinner.fail('Installation failed');
-      console.error(chalk.red('Please ensure Docker is running and try again'));
+    // Step 3: Ensure Docker is running
+    spinner.start('Checking Docker...');
+    const dockerReady = await ensureDockerRunning(spinner);
+    if (!dockerReady) {
       process.exit(1);
+    }
+
+    // Step 4: Start containers
+    spinner.start('Starting Gateway containers...');
+    try {
+      execSync('docker compose up -d', { cwd: GATEWAY_DIR, stdio: 'pipe' });
+      spinner.succeed('Gateway containers started');
+    } catch (error) {
+      spinner.fail('Failed to start containers');
+      console.error(chalk.red(`Error: ${error}`));
+      process.exit(1);
+    }
+
+    // Step 5: Wait for health
+    await waitForHealth(spinner);
+
+    // Step 6: Register with Claude Code
+    registerWithClaudeCode(spinner);
+
+    // Step 7: Enable auto-start (unless --no-auto-start)
+    if (options.autoStart !== false) {
+      enableBrewServices(spinner);
     }
 
     // Success message
     console.log(chalk.green.bold('\n✅ Installation complete!\n'));
-    console.log(chalk.blue('Next steps:'));
-    console.log('  1. ' + chalk.yellow('Restart all editors') + ' (Claude Code, Cursor, Zed, etc.)');
-    console.log('  2. Test MCP tools in any editor');
-    console.log('  3. Access Settings UI: ' + chalk.cyan(UI_PUBLIC_URL));
-    console.log('     ' + chalk.gray('Need internal-only mode? See docs to disable host ports.'));
-    console.log('\n');
+    console.log(chalk.cyan('🔗 Gateway: ' + GATEWAY_PUBLIC_URL));
+    console.log(chalk.cyan('🎨 Settings UI: ' + UI_PUBLIC_URL));
+    console.log(chalk.cyan('📡 API: ' + GATEWAY_API_URL));
+    console.log(chalk.gray('\n💡 Restart your IDE to start using MCP tools'));
+    console.log('');
   });
 
 program
@@ -192,23 +305,32 @@ program
       process.exit(0);
     }
 
-    const spinner = ora('Stopping Docker containers...').start();
+    const spinner = ora('Stopping brew services...').start();
 
+    // Stop brew services first
+    if (process.platform === 'darwin') {
+      try {
+        execSync('brew services stop airis-mcp-gateway', { stdio: 'pipe' });
+        spinner.succeed('Brew services stopped');
+      } catch {
+        spinner.warn('Brew services not running');
+      }
+    }
+
+    spinner.start('Stopping Docker containers...');
     try {
       execSync('docker compose down', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Docker containers stopped');
-    } catch (error) {
+    } catch {
       spinner.warn('Could not stop containers (may not be running)');
     }
 
     spinner.start('Restoring editor configs...');
     try {
-      execSync('python scripts/install_all_editors.py uninstall', { cwd: GATEWAY_DIR, stdio: 'inherit' });
+      execSync('python3 scripts/install_all_editors.py uninstall', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Editor configs restored');
-    } catch (error) {
-      spinner.fail('Failed to restore editor configs');
-      console.error(chalk.red(`Error: ${error}`));
-      process.exit(1);
+    } catch {
+      spinner.warn('Could not restore editor configs');
     }
 
     console.log(chalk.green('\n✅ Uninstallation complete\n'));
@@ -225,43 +347,33 @@ program
 
     const spinner = ora('Checking Docker...').start();
 
-    // Ensure Docker is running (auto-start on macOS)
+    // Ensure Docker is running
     const dockerReady = await ensureDockerRunning(spinner);
     if (!dockerReady) {
       process.exit(1);
     }
 
+    // Ensure .env files exist
+    createServiceEnvFiles(GATEWAY_DIR);
+
     spinner.start('Starting Gateway containers...');
     try {
       execSync('docker compose up -d', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Gateway started');
-
-      // Health check
-      spinner.start('Waiting for Gateway to be ready...');
-      const maxAttempts = 30;
-      for (let i = 0; i < maxAttempts; i++) {
-        try {
-          execSync(`curl -sf ${GATEWAY_API_URL.replace('/api', '')}/health`, { stdio: 'pipe' });
-          spinner.succeed('Gateway is healthy');
-          break;
-        } catch {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          if (i === maxAttempts - 1) {
-            spinner.warn('Gateway may still be starting up');
-          }
-        }
-      }
-
-      console.log(chalk.green.bold('\n✅ AIRIS Gateway is running\n'));
-      console.log(chalk.cyan('🔗 Gateway: ' + GATEWAY_PUBLIC_URL));
-      console.log(chalk.cyan('🎨 Settings UI: ' + UI_PUBLIC_URL));
-      console.log(chalk.cyan('📡 API: ' + GATEWAY_API_URL));
-      console.log(chalk.gray('\n💡 Run `airis-gateway logs -f` to view logs'));
     } catch (error) {
       spinner.fail('Failed to start');
       console.error(chalk.red(`Error: ${error}`));
       process.exit(1);
     }
+
+    // Health check
+    await waitForHealth(spinner);
+
+    console.log(chalk.green.bold('\n✅ AIRIS Gateway is running\n'));
+    console.log(chalk.cyan('🔗 Gateway: ' + GATEWAY_PUBLIC_URL));
+    console.log(chalk.cyan('🎨 Settings UI: ' + UI_PUBLIC_URL));
+    console.log(chalk.cyan('📡 API: ' + GATEWAY_API_URL));
+    console.log(chalk.gray('\n💡 Run `airis-gateway logs -f` to view logs'));
   });
 
 program
@@ -296,6 +408,16 @@ program
     try {
       console.log(chalk.blue.bold('\n📊 AIRIS Gateway Status\n'));
       execSync('docker compose ps', { cwd: GATEWAY_DIR, stdio: 'inherit' });
+
+      // Check brew services status on macOS
+      if (process.platform === 'darwin') {
+        try {
+          console.log('');
+          execSync('brew services info airis-mcp-gateway', { stdio: 'inherit' });
+        } catch {
+          // brew services not available
+        }
+      }
     } catch (error) {
       console.error(chalk.red(`Error: ${error}`));
       process.exit(1);
@@ -342,15 +464,24 @@ program
       process.exit(1);
     }
 
-    spinner.start('Restarting Gateway...');
+    // Ensure Docker is running
+    spinner.start('Checking Docker...');
+    const dockerReady = await ensureDockerRunning(spinner);
+    if (!dockerReady) {
+      process.exit(1);
+    }
+
+    spinner.start('Rebuilding and restarting Gateway...');
     try {
-      execSync('docker compose down && docker compose up -d', { cwd: GATEWAY_DIR, stdio: 'pipe', shell: '/bin/bash' });
+      execSync('docker compose up -d --build', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Gateway restarted with new version');
     } catch (error) {
       spinner.fail('Failed to restart');
       console.error(chalk.red(`Error: ${error}`));
       process.exit(1);
     }
+
+    await waitForHealth(spinner);
 
     console.log(chalk.green('\n✅ Update complete\n'));
   });
