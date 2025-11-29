@@ -63,23 +63,6 @@ if [ ! -f "$GATEWAY_DIR/apps/settings/.env" ]; then
     fi
 fi
 
-# tools/measurement/.env (if directory exists)
-if [ -d "$GATEWAY_DIR/tools/measurement" ] && [ ! -f "$GATEWAY_DIR/tools/measurement/.env" ]; then
-    if [ -f "$GATEWAY_DIR/tools/measurement/.env.example" ]; then
-        cp "$GATEWAY_DIR/tools/measurement/.env.example" "$GATEWAY_DIR/tools/measurement/.env"
-    else
-        touch "$GATEWAY_DIR/tools/measurement/.env"
-    fi
-fi
-
-# tests/.env (if directory exists)
-if [ -d "$GATEWAY_DIR/tests" ] && [ ! -f "$GATEWAY_DIR/tests/.env" ]; then
-    if [ -f "$GATEWAY_DIR/tests/.env.example" ]; then
-        cp "$GATEWAY_DIR/tests/.env.example" "$GATEWAY_DIR/tests/.env"
-    else
-        touch "$GATEWAY_DIR/tests/.env"
-    fi
-fi
 
 # servers/mindbase/.env (if directory exists)
 if [ -d "$GATEWAY_DIR/servers/mindbase" ] && [ ! -f "$GATEWAY_DIR/servers/mindbase/.env" ]; then

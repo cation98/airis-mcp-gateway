@@ -26,8 +26,6 @@ const REPO_URL = 'https://github.com/agiletec-inc/airis-mcp-gateway.git';
 
 // Service directories that need .env files
 const SERVICE_ENV_DIRS = [
-  'tools/measurement',
-  'tests',
   'apps/settings',
   'apps/api',
   'servers/mindbase',

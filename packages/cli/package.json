@@ -1,6 +1,6 @@
 {
   "name": "@agiletec/airis-mcp-gateway",
-  "version": "1.3.0",
+  "version": "1.5.1",
   "description": "AIRIS MCP Gateway - Unified MCP server management for Claude Code, Cursor, Zed, and more",
   "type": "module",
   "bin": {
