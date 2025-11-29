@@ -33,7 +33,8 @@ WORKDIR /monorepo
 COPY package.json pnpm-workspace.yaml ./
 COPY apps/settings ./apps/settings
 COPY servers/mindbase/package.json ./servers/mindbase/package.json
-COPY servers/self-management/package.json ./servers/self-management/package.json
+COPY servers/airis-commands/package.json ./servers/airis-commands/package.json
+COPY servers/airis-mcp-gateway-control/package.json ./servers/airis-mcp-gateway-control/package.json
 
 RUN pnpm install
 WORKDIR /monorepo/apps/settings
@@ -89,9 +90,9 @@ CMD ["sh", "-c", "pnpm install && pnpm build && sleep infinity"]
 
 
 ###########################################
-# Self-Management MCP Server Builder
+# Gateway Control MCP Server Builder
 ###########################################
-FROM node:24-alpine AS self-management-builder
+FROM node:24-alpine AS gateway-control-builder
 
 WORKDIR /app
 CMD ["sh", "-c", "npm install && npm run build && sleep infinity"]

@@ -26,8 +26,9 @@ airis-mcp-gateway/
 │           ├── i18n/          # Internationalization (en/ja)
 │           └── validation/    # Zod schemas
 ├── servers/
-│   ├── mindbase/              # Custom MCP: AI conversation memory
-│   └── self-management/       # Custom MCP: Dynamic server control
+│   ├── mindbase/                    # Custom MCP: AI conversation memory
+│   ├── airis-mcp-gateway-control/   # Custom MCP: Dynamic server control
+│   └── airis-commands/              # Custom MCP: Slash commands
 ├── packages/
 │   ├── cli/                   # CLI tools (@airis/cli)
 │   └── augmentor-runtime/     # Augmentor runtime support
@@ -68,7 +69,7 @@ airis-mcp-gateway/
 ### TypeScript Entry Points
 - **Settings UI**: `apps/settings/src/main.tsx` (React app)
 - **MindBase Server**: `servers/mindbase/src/index.ts` (MCP server)
-- **Self-Management**: `servers/self-management/src/index.ts` (MCP server)
+- **Gateway Control**: `servers/airis-mcp-gateway-control/src/index.ts` (MCP server)
 
 ---
 
@@ -124,7 +125,7 @@ airis-mcp-gateway/
 ### Profiles
 - **`config/profiles/recommended.json`** - Default profile (filesystem, context7, serena, mindbase)
 - **`config/profiles/minimal.json`** - Minimal profile (filesystem, context7 only)
-- **`config/profiles/dynamic.json`** - LLM-controlled profile (self-management enabled)
+- **`config/profiles/dynamic.json`** - LLM-controlled profile (gateway-control enabled)
 
 ### Build Configuration
 - **`apps/api/pyproject.toml`** - Python dependencies (FastAPI, SQLAlchemy, Alembic)

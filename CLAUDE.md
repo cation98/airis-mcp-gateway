@@ -37,7 +37,7 @@ AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates to
 **Supporting Services**:
 - **PostgreSQL**: Encrypted secrets (Fernet), server states
 - **Settings UI** (`apps/settings/`): React dashboard for server management
-- **Custom Servers**: `servers/mindbase/` (memory), `servers/self-management/` (orchestration)
+- **Custom Servers**: `servers/mindbase/` (memory), `servers/airis-mcp-gateway-control/` (dynamic server control)
 
 **Key Insight**: Proxy intercepts MCP protocol to partition schemas (トップレベルのみ) ＋ ツール説明も lazy-load。`tools/list` ではサマリだけ返し、必要なときに `expandSchema(mode="schema"|"docs")` を呼び出して詳細/ドキュメントを取得。
 
@@ -138,7 +138,8 @@ apps/
 
 servers/
   mindbase/     TypeScript MCP server (memory, in workspace)
-  self-management/  Task orchestration (in workspace)
+  airis-mcp-gateway-control/  Dynamic server control (in workspace)
+  airis-commands/    Custom slash commands (in workspace)
 ```
 
 **Database** (`apps/api/src/app/models/`):
@@ -191,10 +192,10 @@ Edit `apps/settings/src/` → auto-reloads with dev server → build with `docke
 
 ### Using Dynamic Profile
 ```bash
-# Switch to Dynamic profile (enables self-management server)
+# Switch to Dynamic profile (enables gateway-control server)
 docker compose down && docker compose up -d
 
-# LLM can now control servers via self-management tools:
+# LLM can now control servers via gateway-control tools:
 # - list_mcp_servers() - Show all available servers
 # - enable_mcp_server(server_name='tavily') - Enable web search
 # - disable_mcp_server(server_name='tavily') - Disable after task
