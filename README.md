@@ -61,7 +61,7 @@ Choose one of the following methods:
 <summary><strong>Option A: Homebrew (Recommended)</strong></summary>
 
 ```bash
-brew tap agiletec/tap
+brew tap agiletec-inc/tap
 brew install airis-mcp-gateway
 
 # Start Gateway (clones repo if needed, starts Docker)
@@ -551,7 +551,7 @@ Explore other tools in the AIRIS ecosystem:
 - **[airis-mcp-supabase-selfhost](https://github.com/agiletec-inc/airis-mcp-supabase-selfhost)** - Self-hosted Supabase MCP with RLS support
 - **[cmd-ime](https://github.com/agiletec-inc/cmd-ime)** - macOS IME switcher (Cmd key toggle for Japanese input)
 - **[neural](https://github.com/agiletec-inc/neural)** - Local LLM translation tool (DeepL alternative with Ollama)
-- **[airiscode](https://github.com/agiletec-inc/airiscode)** - Terminal-first autonomous coding agent
+- **[airis-code](https://github.com/agiletec-inc/airis-code)** - Terminal-first autonomous coding agent
 
 **External Tools**:
 - **[Context7](https://github.com/upstash/context7-mcp)** - Official library/framework documentation (15,000+)
