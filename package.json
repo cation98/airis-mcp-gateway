@@ -12,7 +12,9 @@
   "name": "airis-mcp-gateway",
   "packageManager": "pnpm@10.22.0",
   "private": true,
-  "scripts": {},
+  "scripts": {
+    "build": "pnpm --filter @agiletec/airis-mcp-gateway build"
+  },
   "type": "module",
   "version": "0.0.0",
   "workspaces": [
