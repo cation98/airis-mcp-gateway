@@ -50,21 +50,32 @@ AIRIS MCP Gateway provides:
 
 ### Installation Options
 
-**Option A: Homebrew (Recommended for macOS)**
+**Option A: AIRIS Suite (Recommended - Full Stack)**
+```bash
+curl -fsSL https://raw.githubusercontent.com/agiletec-inc/airis-mcp-gateway/main/scripts/install-suite.sh | bash -s -- --up
+```
+
+This installs all AIRIS OSS tools:
+- `airis-mcp-gateway` - MCP unified gateway (25+ servers)
+- `airiscode` - Terminal coding agent (local Ollama)
+- `airis-workspace` - Monorepo management tools
+- `airis-agent` - MCP custom agent
+
+**Option B: Homebrew (macOS, Gateway only)**
 ```bash
 brew tap agiletec-inc/tap
 brew install airis-mcp-gateway
 airis-gateway install
 ```
 
-**Option B: Git Clone (All platforms)**
+**Option C: Git Clone (Gateway only)**
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git ~/.airis-mcp-gateway
 cd ~/.airis-mcp-gateway
 ./scripts/install.sh
 ```
 
-Both methods will:
+All methods will:
 1. Create `.env` with your system paths
 2. Start Docker containers
 3. Configure your editors (Claude Code, Cursor, Zed, etc.)
