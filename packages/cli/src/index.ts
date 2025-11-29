@@ -60,6 +60,67 @@ const GATEWAY_PUBLIC_URL = process.env.GATEWAY_PUBLIC_URL ?? 'http://gateway.loc
 const UI_PUBLIC_URL = process.env.UI_PUBLIC_URL ?? 'http://ui.gateway.localhost:5273';
 const GATEWAY_API_URL = process.env.GATEWAY_API_URL ?? 'http://api.gateway.localhost:9400/api';
 
+// Check if Docker is running
+const isDockerRunning = (): boolean => {
+  try {
+    execSync('docker info', { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Ensure Docker is running (auto-start on macOS)
+const ensureDockerRunning = async (spinner: ReturnType<typeof ora>): Promise<boolean> => {
+  if (isDockerRunning()) {
+    return true;
+  }
+
+  // Try to start Docker Desktop on macOS
+  if (process.platform === 'darwin') {
+    spinner.text = 'Starting Docker Desktop...';
+    try {
+      // Try OrbStack first (faster startup)
+      try {
+        execSync('open -a OrbStack', { stdio: 'pipe' });
+        spinner.text = 'Starting OrbStack...';
+      } catch {
+        // Fall back to Docker Desktop
+        execSync('open -a Docker', { stdio: 'pipe' });
+        spinner.text = 'Starting Docker Desktop...';
+      }
+
+      // Wait for Docker to be ready (max 60 seconds)
+      const maxWait = 60;
+      for (let i = 0; i < maxWait; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        spinner.text = `Waiting for Docker to start... (${i + 1}s)`;
+        if (isDockerRunning()) {
+          spinner.succeed('Docker is running');
+          return true;
+        }
+      }
+      spinner.fail('Docker failed to start within 60 seconds');
+      return false;
+    } catch {
+      spinner.fail('Could not start Docker Desktop');
+      console.log(chalk.yellow('Please start Docker manually and try again'));
+      return false;
+    }
+  }
+
+  // On Linux, Docker should be managed by systemd
+  if (process.platform === 'linux') {
+    spinner.fail('Docker is not running');
+    console.log(chalk.yellow('Start Docker with: sudo systemctl start docker'));
+    return false;
+  }
+
+  spinner.fail('Docker is not running');
+  console.log(chalk.yellow('Please start Docker and try again'));
+  return false;
+};
+
 program
   .name('airis-gateway')
   .description('AIRIS MCP Gateway - Unified MCP server management')
@@ -155,20 +216,47 @@ program
 
 program
   .command('start')
-  .description('Start AIRIS Gateway containers')
-  .action(() => {
+  .description('Start AIRIS Gateway containers (auto-starts Docker if needed)')
+  .action(async () => {
     if (!existsSync(GATEWAY_DIR)) {
       console.log(chalk.red('Gateway not installed. Run: airis-gateway install'));
       process.exit(1);
     }
 
-    const spinner = ora('Starting Gateway...').start();
+    const spinner = ora('Checking Docker...').start();
+
+    // Ensure Docker is running (auto-start on macOS)
+    const dockerReady = await ensureDockerRunning(spinner);
+    if (!dockerReady) {
+      process.exit(1);
+    }
+
+    spinner.start('Starting Gateway containers...');
     try {
       execSync('docker compose up -d', { cwd: GATEWAY_DIR, stdio: 'pipe' });
       spinner.succeed('Gateway started');
-      console.log(chalk.cyan('\n🔗 Gateway (public): ' + GATEWAY_PUBLIC_URL));
+
+      // Health check
+      spinner.start('Waiting for Gateway to be ready...');
+      const maxAttempts = 30;
+      for (let i = 0; i < maxAttempts; i++) {
+        try {
+          execSync(`curl -sf ${GATEWAY_API_URL.replace('/api', '')}/health`, { stdio: 'pipe' });
+          spinner.succeed('Gateway is healthy');
+          break;
+        } catch {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          if (i === maxAttempts - 1) {
+            spinner.warn('Gateway may still be starting up');
+          }
+        }
+      }
+
+      console.log(chalk.green.bold('\n✅ AIRIS Gateway is running\n'));
+      console.log(chalk.cyan('🔗 Gateway: ' + GATEWAY_PUBLIC_URL));
       console.log(chalk.cyan('🎨 Settings UI: ' + UI_PUBLIC_URL));
-      console.log(chalk.gray('💡 Need internal-only networking? Remove host port bindings first.'));
+      console.log(chalk.cyan('📡 API: ' + GATEWAY_API_URL));
+      console.log(chalk.gray('\n💡 Run `airis-gateway logs -f` to view logs'));
     } catch (error) {
       spinner.fail('Failed to start');
       console.error(chalk.red(`Error: ${error}`));

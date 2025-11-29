@@ -48,156 +48,94 @@ AIRIS MCP Gateway provides:
 
 ## 🚀 Quick Start
 
-### Installation Options
+### Prerequisites
 
-**Option A: AIRIS Suite (Recommended - Full Stack)**
+- **Docker** (Docker Desktop or OrbStack) - auto-started by `airis-gateway start`
+- **Git** (preinstalled on macOS/Linux)
+
+### Option 1: Homebrew (Recommended)
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/agiletec-inc/airis-mcp-gateway/main/scripts/install-suite.sh | bash -s -- --up
-```
-
-This installs all AIRIS OSS tools:
-- `airis-mcp-gateway` - MCP unified gateway (25+ servers)
-- `airiscode` - Terminal coding agent (local Ollama)
-- `airis-workspace` - Monorepo management tools
-- `airis-agent` - MCP custom agent
-
-**Option B: Homebrew (macOS, Gateway only)**
-```bash
-brew tap agiletec-inc/tap
+# Install
+brew tap agiletec/tap
 brew install airis-mcp-gateway
+
+# Setup (clones repo, starts Docker, registers IDEs)
 airis-gateway install
+
+# Auto-start on login (optional)
+brew services start airis-mcp-gateway
 ```
 
-**Option C: Git Clone (Gateway only)**
+**Or install the full suite:**
+```bash
+brew install agiletec/tap/airis-suite
+# Includes: airis-mcp-gateway, airis-workspace, mindbase
+```
+
+### Option 2: One-Liner Install
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/agiletec-inc/airis-mcp-gateway/main/scripts/quick-install.sh)
+```
+
+### Option 3: Manual Installation
+
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git ~/.airis-mcp-gateway
 cd ~/.airis-mcp-gateway
 ./scripts/install.sh
-```
-
-All methods will:
-1. Create `.env` with your system paths
-2. Start Docker containers
-3. Configure your editors (Claude Code, Cursor, Zed, etc.)
-
----
-
-### For Google Antigravity Users
-
-```bash
-# 1. Start AIRIS MCP Gateway (if not already running)
-cd ~/.airis-mcp-gateway
-docker compose up -d
-
-# 2. Verify health
-curl http://api.gateway.localhost:9400/health
-# Expected: {"status":"ok"}
-
-# 3. Configure Antigravity
-cp config/antigravity-mcp.json ~/Library/Application\ Support/Antigravity/User/globalStorage/mcp_config.json
-
-# 4. Edit filesystem path in mcp_config.json
-# Replace /Users/YOUR_USERNAME/projects with your workspace
-
-# 5. Restart Antigravity IDE
-```
-
-**That's it!** All AIRIS tools now available in Antigravity:
-- ✅ `confidence_check` - Pre-implementation verification
-- ✅ `deep_research` - Multi-wave research with official sources
-- ✅ `context7` - 15,000+ library docs
-- ✅ `sequential-thinking` - Multi-step reasoning
-- ✅ `filesystem`, `git`, `memory` - Standard MCP tools
-
-👉 **[Full Antigravity Integration Guide](docs/guides/antigravity-integration.md)**
-
----
-
-### For Claude Code Users
-
-```bash
-# If using Homebrew installation
-airis-gateway install   # Auto-configures Claude Code
-
-# If using git clone installation
-./scripts/install.sh    # Auto-configures Claude Code
-
-# Or manually connect:
 claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
 ```
 
-#### Auto-start on macOS Login (Recommended)
-
-Create a LaunchAgent to start the Gateway automatically:
+### Verify Installation
 
 ```bash
-# Create LaunchAgent plist
-cat > ~/Library/LaunchAgents/com.agiletec.airis-mcp-gateway.plist << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.agiletec.airis-mcp-gateway</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/usr/local/bin/docker</string>
-        <string>compose</string>
-        <string>-f</string>
-        <string>/Users/YOUR_USERNAME/.airis-mcp-gateway/docker-compose.yml</string>
-        <string>up</string>
-        <string>-d</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <false/>
-    <key>StandardOutPath</key>
-    <string>/tmp/airis-mcp-gateway.log</string>
-    <key>StandardErrorPath</key>
-    <string>/tmp/airis-mcp-gateway.error.log</string>
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>PATH</key>
-        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
-    </dict>
-</dict>
-</plist>
-EOF
-
-# Edit the path to match your installation
-# Replace YOUR_USERNAME with your actual username
-nano ~/Library/LaunchAgents/com.agiletec.airis-mcp-gateway.plist
-
-# Load the agent (starts immediately and on every login)
-launchctl load ~/Library/LaunchAgents/com.agiletec.airis-mcp-gateway.plist
+curl http://api.gateway.localhost:9400/health
+# Expected: {"status":"ok"}
 ```
 
-**Note**: The Gateway requires Docker to be running. If using Docker Desktop, ensure "Start Docker Desktop when you log in" is enabled in Docker Desktop settings.
+### IDE-Specific Setup
 
----
-
-### For Other MCP-Compatible IDEs (Cursor, Windsurf, Zed)
+<details>
+<summary><strong>Claude Code</strong> (auto-configured by installer)</summary>
 
 ```bash
-# 1. Start Gateway
-docker compose up -d
+claude mcp add --transport http airis-mcp-gateway http://api.gateway.localhost:9400/api/v1/mcp
+```
 
-# 2. Add to IDE's mcp.json (typically ~/.cursor/mcp.json, ~/.zed/mcp.json, etc.)
+Restart Claude Code after registration.
+</details>
+
+<details>
+<summary><strong>Cursor / Zed / Windsurf</strong></summary>
+
+Add to your IDE's MCP config (e.g., `~/.cursor/mcp.json`):
+```json
 {
   "mcpServers": {
-    "airis-gateway": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-everything"],
-      "env": {
-        "MCP_SERVER_URL": "http://api.gateway.localhost:9400/api/v1/mcp/sse"
-      }
+    "airis-mcp-gateway": {
+      "url": "http://api.gateway.localhost:9400/api/v1/mcp/sse"
     }
   }
 }
-
-# 3. Restart IDE
 ```
+</details>
+
+<details>
+<summary><strong>Google Antigravity / Fire</strong></summary>
+
+```bash
+cp ~/.airis-mcp-gateway/config/antigravity-mcp.json \
+   ~/Library/Application\ Support/Antigravity/User/globalStorage/mcp_config.json
+```
+
+Edit the filesystem path in `mcp_config.json` to match your workspace.
+
+👉 **[Full Antigravity Integration Guide](docs/guides/antigravity-integration.md)**
+</details>
+
+That's it! Restart your IDE and all 25+ MCP tools are available.
 
 ---
 
