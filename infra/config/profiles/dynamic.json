@@ -1,6 +1,6 @@
 {
   "name": "Dynamic",
-  "description": "最小構成 + Self-Management（LLMが必要に応じて動的にサーバーをON/OFF）",
+  "description": "最小構成 + Gateway Control（LLMが必要に応じて動的にサーバーをON/OFF）",
   "builtin_servers": [
     "time",
     "fetch",
@@ -10,7 +10,7 @@
   "gateway_servers": [
     "context7",
     "mindbase",
-    "self-management",
+    "gateway-control",
     "serena",
     "airis-agent",
     "filesystem",
@@ -28,7 +28,7 @@
     "morphllm-fast-apply"
   ],
   "features": {
-    "dynamic_server_management": "self-management（LLMが必要に応じてサーバー有効化）",
+    "dynamic_server_management": "gateway-control（LLMが必要に応じてサーバー有効化）",
     "long_term_memory": "mindbase（会話履歴 + 失敗学習）",
     "code_understanding": "serena（LSPベースのシンボル検索）",
     "latest_docs": "context7（15,000+ライブラリ）",
@@ -61,12 +61,12 @@
     "cons": [
       "初回サーバー有効化時に数秒の遅延",
       "LLMが適切なサーバーを選択できない場合がある",
-      "Self-Management APIへの依存"
+      "Gateway Control APIへの依存"
     ]
   },
   "workflow": {
     "startup": [
-      "self-managementサーバーのみ常時有効",
+      "gateway-controlサーバーのみ常時有効",
       "LLMがlist_mcp_servers で利用可能サーバー一覧を確認",
       "必要に応じてenable_mcp_serverで有効化"
     ],

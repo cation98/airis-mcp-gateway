@@ -483,14 +483,14 @@ export default function MCPDashboard() {
 
   // Section categorization (Figma design-based)
   const alwaysActiveServers = servers.filter((server) =>
-    server.id === 'filesystem' || server.id === 'self-management'
+    server.id === 'filesystem' || server.id === 'airis-mcp-gateway-control'
   );
 
   const activeServers = servers.filter((server) =>
     server.enabled &&
     !server.apiKeyRequired &&
     server.id !== 'filesystem' &&
-    server.id !== 'self-management'
+    server.id !== 'airis-mcp-gateway-control'
   );
 
   const needsApiKeyServers = servers.filter((server) =>
@@ -501,7 +501,7 @@ export default function MCPDashboard() {
     !server.enabled &&
     !server.apiKeyRequired &&
     server.id !== 'filesystem' &&
-    server.id !== 'self-management'
+    server.id !== 'airis-mcp-gateway-control'
   );
 
   // Legacy categories for stats
@@ -632,7 +632,7 @@ export default function MCPDashboard() {
             <div className="size-2 rounded-full bg-gray-500" />
             <h2 className="text-lg font-medium text-foreground">Idle ({idleServers.length})</h2>
             <Badge variant="outline">{idleServers.length}</Badge>
-            <span className="ml-auto text-xs text-muted-foreground">LLM can activate via self-management</span>
+            <span className="ml-auto text-xs text-muted-foreground">LLM can activate via gateway-control</span>
           </div>
           {renderServerList(idleServers, 'dashboard.sections.empty')}
         </section>

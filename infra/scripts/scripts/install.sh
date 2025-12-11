@@ -64,21 +64,21 @@ if [ ! -f "$GATEWAY_DIR/apps/settings/.env" ]; then
 fi
 
 
-# servers/mindbase/.env (if directory exists)
-if [ -d "$GATEWAY_DIR/servers/mindbase" ] && [ ! -f "$GATEWAY_DIR/servers/mindbase/.env" ]; then
-    if [ -f "$GATEWAY_DIR/servers/mindbase/.env.example" ]; then
-        cp "$GATEWAY_DIR/servers/mindbase/.env.example" "$GATEWAY_DIR/servers/mindbase/.env"
+# apps/mindbase/.env (if directory exists)
+if [ -d "$GATEWAY_DIR/apps/mindbase" ] && [ ! -f "$GATEWAY_DIR/apps/mindbase/.env" ]; then
+    if [ -f "$GATEWAY_DIR/apps/mindbase/.env.example" ]; then
+        cp "$GATEWAY_DIR/apps/mindbase/.env.example" "$GATEWAY_DIR/apps/mindbase/.env"
     else
-        touch "$GATEWAY_DIR/servers/mindbase/.env"
+        touch "$GATEWAY_DIR/apps/mindbase/.env"
     fi
 fi
 
-# servers/airis-mcp-gateway-control/.env (if directory exists)
-if [ -d "$GATEWAY_DIR/servers/airis-mcp-gateway-control" ] && [ ! -f "$GATEWAY_DIR/servers/airis-mcp-gateway-control/.env" ]; then
-    if [ -f "$GATEWAY_DIR/servers/airis-mcp-gateway-control/.env.example" ]; then
-        cp "$GATEWAY_DIR/servers/airis-mcp-gateway-control/.env.example" "$GATEWAY_DIR/servers/airis-mcp-gateway-control/.env"
+# apps/gateway-control/.env (if directory exists)
+if [ -d "$GATEWAY_DIR/apps/gateway-control" ] && [ ! -f "$GATEWAY_DIR/apps/gateway-control/.env" ]; then
+    if [ -f "$GATEWAY_DIR/apps/gateway-control/.env.example" ]; then
+        cp "$GATEWAY_DIR/apps/gateway-control/.env.example" "$GATEWAY_DIR/apps/gateway-control/.env"
     else
-        touch "$GATEWAY_DIR/servers/airis-mcp-gateway-control/.env"
+        touch "$GATEWAY_DIR/apps/gateway-control/.env"
     fi
 fi
 

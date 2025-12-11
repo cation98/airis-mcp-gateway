@@ -105,9 +105,9 @@ SERVER_METADATA = {
         "recommended": True,
         "builtin": False
     },
-    "self-management": {
-        "name": "Self Management",
-        "description": "Self-management and profile orchestration",
+    "airis-mcp-gateway-control": {
+        "name": "Gateway Control",
+        "description": "Dynamic MCP server enable/disable orchestration",
         "category": "gateway",
         "apiKeyRequired": False,
         "recommended": True,

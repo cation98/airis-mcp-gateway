@@ -130,7 +130,7 @@ export function MCPServerCard({
         return <FolderTree className={iconClass} />;
       case 'context7':
         return <FileText className={iconClass} />;
-      case 'self-management':
+      case 'airis-mcp-gateway-control':
         return <Sliders className={iconClass} />;
       case 'serena':
         return <Lightbulb className={iconClass} />;

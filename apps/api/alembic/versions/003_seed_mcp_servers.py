@@ -86,7 +86,7 @@ def upgrade() -> None:
                 '-c',
                 'docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} '
                 '-e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} '
-                '-v ${HOST_REPO_DIR}/servers/mindbase:/app:ro '
+                '-v ${HOST_REPO_DIR}/apps/mindbase:/app:ro '
                 '-w /app node:24-alpine node dist/index.js'
             ],
             'env': None,
@@ -142,7 +142,7 @@ def upgrade() -> None:
             'name': 'airis-mcp-gateway-control',
             'enabled': True,
             'command': 'node',
-            'args': ['/workspace/host/airis-mcp-gateway/servers/airis-mcp-gateway-control/dist/index.js'],
+            'args': ['/workspace/host/airis-mcp-gateway/apps/gateway-control/dist/index.js'],
             'env': {'API_URL': 'http://api:9900'},
             'description': 'Gateway control (LLM-controlled enable/disable)',
             'category': 'Custom Server'

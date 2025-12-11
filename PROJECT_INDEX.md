@@ -68,8 +68,8 @@ airis-mcp-gateway/
 
 ### TypeScript Entry Points
 - **Settings UI**: `apps/settings/src/main.tsx` (React app)
-- **MindBase Server**: `servers/mindbase/src/index.ts` (MCP server)
-- **Gateway Control**: `servers/airis-mcp-gateway-control/src/index.ts` (MCP server)
+- **MindBase Server**: `apps/mindbase/src/index.ts` (MCP server)
+- **Gateway Control**: `apps/gateway-control/src/index.ts` (MCP server)
 
 ---
 
@@ -130,7 +130,7 @@ airis-mcp-gateway/
 ### Build Configuration
 - **`apps/api/pyproject.toml`** - Python dependencies (FastAPI, SQLAlchemy, Alembic)
 - **`apps/settings/package.json`** - React UI dependencies
-- **`servers/mindbase/package.json`** - MindBase server dependencies
+- **`apps/mindbase/package.json`** - MindBase server dependencies
 - **`package.json`** - Workspace root (pnpm 10.20.0)
 - **`pnpm-workspace.yaml`** - pnpm monorepo configuration
 

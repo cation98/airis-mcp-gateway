@@ -37,7 +37,7 @@ AIRIS MCP Gateway is a unified entrypoint for 25+ MCP servers that eliminates to
 **Supporting Services**:
 - **PostgreSQL**: Encrypted secrets (Fernet), server states
 - **Settings UI** (`apps/settings/`): React dashboard for server management
-- **Custom Servers**: `servers/mindbase/` (memory), `servers/airis-mcp-gateway-control/` (dynamic server control)
+- **Custom Servers**: `apps/mindbase/` (memory), `apps/gateway-control/` (dynamic server control)
 
 **Key Insight**: Proxy intercepts MCP protocol to partition schemas (トップレベルのみ) ＋ ツール説明も lazy-load。`tools/list` ではサマリだけ返し、必要なときに `expandSchema(mode="schema"|"docs")` を呼び出して詳細/ドキュメントを取得。
 

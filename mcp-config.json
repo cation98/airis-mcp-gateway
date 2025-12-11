@@ -70,7 +70,7 @@
       "command": "sh",
       "args": [
         "-c",
-        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOST_REPO_DIR}/servers/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOST_REPO_DIR}/apps/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
       ],
       "env": {},
       "enabled": true
@@ -78,7 +78,7 @@
     "airis-mcp-gateway-control": {
       "command": "node",
       "args": [
-        "/workspace/host/airis-mcp-gateway/servers/airis-mcp-gateway-control/dist/index.js"
+        "/workspace/host/airis-mcp-gateway/apps/gateway-control/dist/index.js"
       ],
       "env": {
         "API_URL": "http://api:9900"
@@ -88,7 +88,7 @@
     "airis-commands": {
       "command": "node",
       "args": [
-        "/workspace/host/airis-mcp-gateway/servers/airis-commands/dist/index.js"
+        "/workspace/host/airis-mcp-gateway/apps/airis-commands/dist/index.js"
       ],
       "env": {},
       "enabled": true

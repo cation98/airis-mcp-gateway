@@ -15,7 +15,7 @@ workspaces:
   servers:
   - name: mindbase
     type: node
-  - name: self-management
+  - name: gateway-control
     type: node
   libs: []
 apps: {}

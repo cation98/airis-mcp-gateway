@@ -28,8 +28,8 @@ const REPO_URL = 'https://github.com/agiletec-inc/airis-mcp-gateway.git';
 const SERVICE_ENV_DIRS = [
   'apps/settings',
   'apps/api',
-  'servers/mindbase',
-  'servers/airis-mcp-gateway-control',
+  'apps/mindbase',
+  'apps/gateway-control',
 ];
 
 const loadEnvFromFile = (filePath: string) => {

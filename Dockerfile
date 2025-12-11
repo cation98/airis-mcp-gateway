@@ -32,9 +32,9 @@ WORKDIR /monorepo
 
 COPY package.json pnpm-workspace.yaml ./
 COPY apps/settings ./apps/settings
-COPY servers/mindbase/package.json ./servers/mindbase/package.json
-COPY servers/airis-commands/package.json ./servers/airis-commands/package.json
-COPY servers/airis-mcp-gateway-control/package.json ./servers/airis-mcp-gateway-control/package.json
+COPY apps/mindbase/package.json ./apps/mindbase/package.json
+COPY apps/airis-commands/package.json ./apps/airis-commands/package.json
+COPY apps/gateway-control/package.json ./apps/gateway-control/package.json
 
 RUN pnpm install
 WORKDIR /monorepo/apps/settings

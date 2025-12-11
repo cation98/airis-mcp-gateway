@@ -10,7 +10,7 @@ AIRIS MCP Gatewayで使用できるプロファイル定義です。
 
 **含まれるサーバー**:
 - Built-in: time, fetch, git, memory
-- Gateway (常時): filesystem, context7, serena, **mindbase**, **self-management**
+- Gateway (常時): filesystem, context7, serena, **mindbase**, **gateway-control**
 - Optional (LLMが動的に有効化): playwright, puppeteer, tavily, github, 他
 
 **特徴**:

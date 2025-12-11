@@ -194,6 +194,25 @@ IDE (Claude Code, Cursor, Zed)
 | Port conflict | Edit `.env`, change `API_LISTEN_PORT` |
 | IDE not seeing tools | Verify: `curl http://localhost:9400/health` |
 | High token usage | Enable `DEBUG=true` in `.env`, check logs |
+| Out of memory (8GB RAM) | See "Low Memory" section below |
+
+### Low Memory Systems (8GB RAM)
+
+If `pnpm install` freezes or causes memory issues on 8GB machines:
+
+```bash
+# Option 1: Use Docker (recommended)
+# All builds happen in containers, no host-side memory pressure
+airis-gateway up
+
+# Option 2: Limit Node.js memory
+NODE_OPTIONS="--max-old-space-size=2048" pnpm install
+
+# Option 3: Install with fewer parallel jobs
+pnpm install --child-concurrency=1
+```
+
+The recommended approach is using Docker (`airis-gateway up`), which runs all builds inside containers and doesn't require pnpm on your host machine.
 
 ---
 

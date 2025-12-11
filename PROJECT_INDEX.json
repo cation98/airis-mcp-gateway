@@ -30,7 +30,7 @@
         "entry_point": "src/index.ts",
         "description": "AI conversation memory with vector search"
       },
-      "self-management": {
+      "gateway-control": {
         "type": "mcp-server",
         "language": "typescript",
         "entry_point": "src/index.ts",
@@ -114,12 +114,12 @@
         "description": "React Settings UI entry point"
       },
       {
-        "file": "servers/mindbase/src/index.ts",
+        "file": "apps/mindbase/src/index.ts",
         "description": "MindBase MCP server entry point"
       },
       {
-        "file": "servers/self-management/src/index.ts",
-        "description": "Self-Management MCP server entry point"
+        "file": "apps/gateway-control/src/index.ts",
+        "description": "Gateway Control MCP server entry point"
       }
     ]
   },
@@ -263,7 +263,7 @@
       },
       {
         "file": "config/profiles/dynamic.json",
-        "servers": ["self-management", "serena", "context7"],
+        "servers": ["gateway-control", "serena", "context7"],
         "memory": "~300MB",
         "purpose": "LLM-controlled dynamic server management"
       }
@@ -476,7 +476,7 @@
     },
     "custom_servers": {
       "make mindbase-build": "Build MindBase MCP server",
-      "make self-management-build": "Build Self-Management server",
+      "make gateway-control-build": "Build Gateway Control server",
       "make build-custom-servers": "Build both"
     }
   },

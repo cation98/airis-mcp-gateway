@@ -119,9 +119,9 @@ def _extract_server_name_from_tool(tool_name: str) -> Optional[str]:
     if tool_name in ["think", "sequential_think", "reasoning"]:
         return "sequential-thinking"
 
-    # self-managementツール
+    # gateway-controlツール
     if tool_name in ["list_mcp_servers", "enable_mcp_server", "disable_mcp_server", "get_mcp_server_status"]:
-        return "self-management"
+        return "airis-mcp-gateway-control"
 
     # playwright/puppeteerツール
     if any(keyword in tool_name for keyword in ["browser", "page", "click", "navigate", "screenshot"]):
