@@ -124,7 +124,7 @@ export function normalizePackage(pkg: AugmentorPackage): Required<AugmentorPacka
     commands: pkg.commands ?? [],
     agents: pkg.agents ?? [],
     tools: pkg.tools ?? [],
-    shutdown: pkg.shutdown,
+    shutdown: pkg.shutdown ?? (() => {}),
   };
 }
 
