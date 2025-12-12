@@ -33,16 +33,6 @@ Done! You now have access to 34+ tools.
 | **memory** | 9 | Knowledge graph for conversation context |
 | **time** | 2 | Current time and timezone conversion |
 
-## Available Catalog Servers
-
-The custom catalog includes additional servers you can enable:
-
-| Server | Description | Requires |
-|--------|-------------|----------|
-| supabase | Supabase backend operations | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
-| stripe | Payment processing | `STRIPE_SECRET_KEY` |
-| twilio | SMS/Voice messaging | `TWILIO_ACCOUNT_SID`, `TWILIO_API_KEY`, `TWILIO_API_SECRET` |
-
 ## Configuration
 
 ### Enable/Disable Servers
