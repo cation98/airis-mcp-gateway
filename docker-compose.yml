@@ -1,6 +1,7 @@
 name: airis-mcp-gateway
 
 services:
+  # MCP Gateway - the only required service
   gateway:
     container_name: airis-mcp-gateway
     image: docker/mcp-gateway:latest

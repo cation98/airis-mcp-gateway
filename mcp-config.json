@@ -1,0 +1,138 @@
+{
+  "mcpServers": {
+    "airis-agent": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/agiletec-inc/airis-agent",
+        "airis-agent-mcp"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "airis-workspace": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/agiletec-inc/airis-agent",
+        "airis-workspace-mcp"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "fetch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/workspace/host"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "mindbase": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOST_REPO_DIR}/apps/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "airis-mcp-gateway-control": {
+      "command": "node",
+      "args": [
+        "/workspace/host/airis-mcp-gateway/apps/gateway-control/dist/index.js"
+      ],
+      "env": {
+        "API_URL": "http://api:9400"
+      },
+      "enabled": true
+    },
+    "airis-commands": {
+      "command": "node",
+      "args": [
+        "/workspace/host/airis-mcp-gateway/apps/airis-commands/dist/index.js"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "serena": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -v ${HOST_WORKSPACE_DIR}:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "time": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-time"
+      ],
+      "env": {},
+      "enabled": true
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "${SUPABASE_ACCESS_TOKEN}"
+      ],
+      "env": {},
+      "enabled": false
+    }
+  },
+  "log": {
+    "level": "info"
+  }
+}
