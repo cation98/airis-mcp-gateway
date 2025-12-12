@@ -1,285 +1,130 @@
 # AIRIS MCP Gateway
 
-Unified MCP server hub for Claude Code, Cursor, Zed, and all MCP-compatible IDEs.
-
-**One endpoint, 25+ MCP servers, 90% token reduction.**
-
----
-
-## Why?
-
-Loading 25+ MCP servers at IDE startup consumes **12,500+ tokens** before you start coding.
-
-AIRIS MCP Gateway:
-- **Single endpoint** for all MCP servers
-- **Schema partitioning** reduces startup tokens by 90% (12.5K → 1.25K)
-- **On-demand expansion** via `expandSchema` tool
-- **Dynamic enable/disable** servers as needed
-
----
+Docker MCP Gateway with pre-configured AIRIS servers for Claude Code and other MCP-compatible IDEs.
 
 ## Quick Start
 
 ### Prerequisites
 
-- **Docker** (Docker Desktop or OrbStack)
+- Docker (Docker Desktop or OrbStack)
 
-### 1-Line Install (Recommended)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/agiletec-inc/airis-mcp-gateway/main/scripts/quick-install.sh | bash
-```
-
-This will:
-- Clone repo to `~/.local/share/airis-mcp-gateway`
-- Setup config at `~/.config/airis-mcp-gateway/mcp-config.json`
-- Run `docker compose up -d`
-- Verify health on ports 9390/9400
-
-### Manual Setup (Transparent)
+### Install
 
 ```bash
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
-cp -n .env.example .env
-mkdir -p ~/.config/airis-mcp-gateway
-cp -n mcp-config.json ~/.config/airis-mcp-gateway/mcp-config.json
 docker compose up -d
-
-# Verify
-curl -fsS http://localhost:9400/health && echo "API OK"
-curl -fsS http://localhost:9390/health && echo "Gateway OK"
 ```
 
-### Homebrew (Optional CLI Wrapper)
-
-```bash
-brew tap agiletec-inc/tap
-brew install airis-mcp-gateway
-airis-gateway up          # git pull + docker compose up -d
-airis-gateway logs
-airis-gateway restart
-```
-
-Config is the same `~/.config/airis-mcp-gateway/mcp-config.json`.
-
-### Uninstall
-
-```bash
-~/.local/share/airis-mcp-gateway/scripts/quick-install.sh --uninstall
-```
-
----
-
-## Register with IDE
-
-### Claude Code
-
-Auto-registered globally during install. Manual command if needed:
+### Register with Claude Code
 
 ```bash
 claude mcp add --scope user --transport sse airis-mcp-gateway http://localhost:9400/sse
 ```
 
-### Cursor / Windsurf
+Done! You now have access to 34+ tools.
 
-Add to `~/.cursor/mcp.json`:
+## Default Servers
 
-```json
-{
-  "mcpServers": {
-    "airis-mcp-gateway": {
-      "url": "http://localhost:9400/api/v1/mcp/sse"
-    }
-  }
-}
-```
+| Server | Tools | Description |
+|--------|-------|-------------|
+| **airis-agent** | 10 | Confidence check, deep research, repo indexing |
+| **mindbase** | 13 | Semantic memory with pgvector embeddings |
+| **memory** | 9 | Knowledge graph for conversation context |
+| **time** | 2 | Current time and timezone conversion |
 
-### Zed
+## Available Catalog Servers
 
-Add to `~/.config/zed/settings.json`:
+The custom catalog includes additional servers you can enable:
 
-```json
-{
-  "context_servers": {
-    "airis-mcp-gateway": {
-      "settings": {
-        "url": "http://localhost:9400/api/v1/mcp/sse"
-      }
-    }
-  }
-}
-```
-
----
-
-## Commands
-
-### Docker Compose (Direct)
-
-```bash
-docker compose up -d              # Start
-docker compose down               # Stop
-docker compose pull && docker compose up -d  # Update
-docker compose restart gateway    # Apply config changes
-docker compose logs -f gateway api  # View logs
-```
-
-### CLI Wrapper (via Homebrew)
-
-```bash
-airis-gateway up         # Start (pulls latest)
-airis-gateway down       # Stop
-airis-gateway restart    # Restart
-airis-gateway logs -f    # View logs
-airis-gateway status     # Show status
-airis-gateway config     # Edit mcp-config.json
-airis-gateway servers    # List MCP servers
-airis-gateway enable <server>   # Enable server
-airis-gateway disable <server>  # Disable server
-```
-
----
+| Server | Description | Requires |
+|--------|-------------|----------|
+| supabase | Supabase backend operations | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
+| stripe | Payment processing | `STRIPE_SECRET_KEY` |
+| twilio | SMS/Voice messaging | `TWILIO_ACCOUNT_SID`, `TWILIO_API_KEY`, `TWILIO_API_SECRET` |
 
 ## Configuration
 
-### Paths
-
-| Type | Path |
-|------|------|
-| **MCP servers** | `~/.config/airis-mcp-gateway/mcp-config.json` |
-| **Environment** | `.env` (in repo root) |
-| **Profiles** | `config/profiles/*.json` |
-
-Override with `AIRIS_CONFIG_DIR` environment variable.
-
-### Profiles
-
-```bash
-# Recommended (default): airis-agent, context7, filesystem, git, memory, etc.
-cp config/profiles/recommended.json ~/.config/airis-mcp-gateway/mcp-config.json
-
-# Minimal: filesystem + context7 only
-cp config/profiles/minimal.json ~/.config/airis-mcp-gateway/mcp-config.json
-
-docker compose restart gateway
-```
-
 ### Enable/Disable Servers
 
-Edit `~/.config/airis-mcp-gateway/mcp-config.json`:
+Edit `docker-compose.yml`:
 
-```json
-{
-  "mcpServers": {
-    "github": { "enabled": true, ... },
-    "slack": { "enabled": false, ... }
-  }
-}
+```yaml
+command:
+  - --servers=time
+  - --servers=memory
+  - --servers=airis-agent
+  - --servers=mindbase
+  # Add more servers:
+  # - --servers=stripe
 ```
 
-Or use CLI:
+Then restart:
 
 ```bash
-airis-gateway enable puppeteer
-airis-gateway disable serena
-airis-gateway restart
+docker compose restart
 ```
 
----
+### Add Custom Catalog
 
-## Included MCP Servers
+Create your own catalog file and mount it:
 
-| Server | Description |
-|--------|-------------|
-| **airis-agent** | Confidence checks, deep research, docs optimization |
-| **context7** | Official library docs (15,000+ libraries) |
-| **filesystem** | File read/write/search |
-| **git** | Git operations |
-| **memory** | Conversation memory |
-| **sequential-thinking** | Multi-step reasoning |
-| **serena** | Code navigation and refactoring |
-| **time** | Current time |
-| **fetch** | HTTP requests |
+```yaml
+command:
+  - --additional-catalog=/workspace/my-catalog.yaml
+```
 
-See `mcp-config.json` for full list. Add servers by editing config.
+## Commands
 
----
-
-## Ports
-
-| Service | Port | URL |
-|---------|------|-----|
-| API (FastAPI) | 9400 | http://localhost:9400 |
-| Gateway (MCP) | 9390 | http://localhost:9390 |
-| Settings UI | 5273 | http://localhost:5273 (with `--profile ui`) |
-
----
+```bash
+docker compose up -d          # Start
+docker compose down           # Stop
+docker compose restart        # Restart
+docker compose logs -f        # View logs
+docker compose pull && docker compose up -d  # Update
+```
 
 ## Architecture
 
 ```
-IDE (Claude Code, Cursor, Zed)
+Claude Code / Cursor / Zed
     │
-    ▼ HTTP/SSE
-┌─────────────────────────────┐
-│   FastAPI Proxy (port 9400) │
-│   - Schema partitioning     │
-│   - expandSchema injection  │
-└─────────────────────────────┘
-    │
-    ▼ JSON-RPC
-┌─────────────────────────────┐
-│   MCP Gateway (port 9390)   │
-│   - 25+ MCP servers         │
-│   - npx/uvx/docker spawning │
-└─────────────────────────────┘
+    ▼ SSE (http://localhost:9400/sse)
+┌─────────────────────────────────┐
+│  Docker MCP Gateway             │
+│  (docker/mcp-gateway:latest)    │
+├─────────────────────────────────┤
+│  ├─ airis-agent (ghcr.io)       │
+│  ├─ mindbase (ghcr.io)          │
+│  ├─ memory (mcp/memory)         │
+│  └─ time (mcp/time)             │
+└─────────────────────────────────┘
 ```
-
-**Schema Partitioning**: Gateway intercepts `tools/list`, removes nested properties, caches full schemas. IDEs receive minimal schemas at startup. `expandSchema` tool retrieves details on-demand.
-
----
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Gateway won't start | `docker compose logs -f` |
-| 9390/9400 unreachable | `docker compose ps` to check status |
-| Port conflict | Change in `.env` or use different port mapping |
-| Config not read | Check `AIRIS_CONFIG_DIR` path, permissions 0644 |
-| IDE not seeing tools | Verify: `curl http://localhost:9400/health` |
-
-### Health Check
-
-```bash
-curl -fsS localhost:9400/health  # API
-curl -fsS localhost:9390/health  # Gateway
-```
-
-### Full Reset
-
-```bash
-docker compose down -v
-rm -rf ~/.config/airis-mcp-gateway
-~/.local/share/airis-mcp-gateway/scripts/quick-install.sh
-```
-
----
 
 ## Related Projects
 
-- **[airis-agent](https://github.com/agiletec-inc/airis-agent)** - Intelligence layer (confidence checks, research)
-- **[airis-workspace](https://github.com/agiletec-inc/airis-workspace)** - Docker-first monorepo manager
-- **[airis-code](https://github.com/agiletec-inc/airis-code)** - Terminal-first autonomous coding
-- **[mindbase](https://github.com/agiletec-inc/mindbase)** - Cross-session memory with semantic search
+| Project | Description |
+|---------|-------------|
+| [airis-agent](https://github.com/agiletec-inc/airis-agent) | Intelligence layer - confidence checks, deep research |
+| [mindbase](https://github.com/agiletec-inc/mindbase) | Cross-session semantic memory |
 
----
+## Troubleshooting
+
+### Check Status
+
+```bash
+docker compose ps
+docker compose logs --tail 50
+curl http://localhost:9400/health
+```
+
+### Reset
+
+```bash
+docker compose down -v
+docker compose up -d
+```
 
 ## License
 
 MIT
-
----
-
-**Built by [Agiletec](https://github.com/agiletec-inc)**
