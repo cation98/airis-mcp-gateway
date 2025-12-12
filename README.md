@@ -5,23 +5,19 @@ Unified MCP server hub powered by `docker/mcp-gateway`.
 ## Quick Start
 
 ```bash
-# Start gateway
-docker compose up -d
+# Install globally (all projects)
+claude mcp add airis-gateway -s user -- docker mcp gateway run
 
-# Copy config to your IDE
-cp mcp.json ~/.claude/mcp.json      # Claude Code
-# or ~/.cursor/mcp.json              # Cursor
-# or ~/.config/zed/mcp.json          # Zed
+# Restart Claude Code
 ```
 
-## Usage
-
-Gateway provides dynamic tools:
+Done. Gateway provides dynamic tools:
 - `mcp-find` - Search MCP servers in Docker catalog
 - `mcp-add` - Add servers to your session
 - `mcp-remove` - Remove servers
 
-Example in Claude:
+## Example
+
 ```
 "Find filesystem MCP server"
 → mcp-find("filesystem")
@@ -30,16 +26,9 @@ Example in Claude:
 → mcp-add("filesystem")
 ```
 
-## Ports
-
-| Service | Port |
-|---------|------|
-| Gateway | 9390 |
-
 ## Archive
 
 API layer (Schema Partitioning) archived to `feature/schema-partitioning` branch.
-Tag: `archive-api-YYYYMMDD`
 
 Restore if needed:
 ```bash
