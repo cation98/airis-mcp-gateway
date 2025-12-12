@@ -34,6 +34,7 @@ package-lock.json
 apps/*/out/
 apps/*/dist/
 apps/*/build/
+libs/*/dist/
 packages/*/dist/
 servers/*/dist/
 *.tsbuildinfo
