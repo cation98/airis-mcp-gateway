@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "airis-mcp-gateway": {
-      "url": "${GATEWAY_API_URL}/v1/mcp/sse",
-      "description": "All MCP servers via unified Gateway (25 servers, 75-90% token reduction via OpenMCP schema partitioning)"
-    }
-  }
-}
