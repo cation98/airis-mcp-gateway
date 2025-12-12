@@ -1,21 +1,27 @@
 name: airis-mcp-gateway
 
 services:
-  # MCP Gateway - the only required service
   gateway:
     container_name: airis-mcp-gateway
     image: docker/mcp-gateway:latest
     command:
       - --transport=sse
-      - --port=9390
+      - --port=9400
       - --watch
+      # Custom catalog with Airis servers
+      - --additional-catalog=/workspace/airis-mcp-gateway/catalogs/airis-catalog.yaml
+      # Default enabled servers (AIRIS core + built-in)
+      - --servers=time
+      - --servers=memory
+      - --servers=airis-agent
+      - --servers=mindbase
     ports:
-      - "9390:9390"
+      - "9400:9400"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_WORKSPACE_DIR:-${HOME}/github}:/workspace:rw
     healthcheck:
-      test: ["CMD-SHELL", "wget -qS --spider http://localhost:9390/health 2>&1 | grep -q '200'"]
+      test: ["CMD-SHELL", "wget -qS --spider http://localhost:9400/health 2>&1 | grep -q '200'"]
       interval: 10s
       timeout: 3s
       retries: 5

@@ -1,0 +1,150 @@
+version: 2
+name: airis-custom
+displayName: Airis Custom MCP Catalog
+registry:
+  # === AIRIS CORE SERVERS ===
+
+  airis-agent:
+    title: Airis Agent
+    description: Confidence check, deep research, repo indexing - prevents wrong-direction work
+    type: server
+    image: ghcr.io/agiletec-inc/airis-agent:latest
+    command: ["airis-agent-mcp"]
+    category: AIRIS Core
+    readme: https://github.com/agiletec-inc/airis-agent
+    tools:
+      - name: execute_task
+      - name: plan_task
+    volumes:
+      - '/workspace:/workspace'
+    allowHosts:
+      - "*"
+
+  airis-workspace:
+    title: Airis Workspace
+    description: Workspace management (init, validate, sync)
+    type: server
+    image: ghcr.io/agiletec-inc/airis-agent:latest
+    command: ["airis-workspace-mcp"]
+    category: AIRIS Core
+    readme: https://github.com/agiletec-inc/airis-agent
+    tools:
+      - name: workspace_init
+      - name: workspace_validate
+      - name: workspace_sync
+    volumes:
+      - '/workspace:/workspace'
+
+  mindbase:
+    title: MindBase MCP Server
+    description: Mindbase knowledge graph operations with vector search
+    type: server
+    image: ghcr.io/kazuph/mindbase-mcp:latest
+    command: ["node", "dist/index.js"]
+    category: AIRIS Core
+    readme: https://github.com/kazuph/mindbase
+    tools:
+      - name: store_memory
+      - name: search_memories
+      - name: list_memories
+      - name: delete_memory
+    config:
+      - name: mindbase_settings
+        type: object
+        properties:
+          database_url:
+            type: string
+            description: PostgreSQL connection string with pgvector
+          ollama_url:
+            type: string
+            description: Ollama server URL for embeddings
+          embedding_model:
+            type: string
+            description: Embedding model name
+    env:
+      - name: DATABASE_URL
+        value: '{{mindbase_settings.database_url|default:"postgresql://mindbase:mindbase@mindbase-postgres-dev:5432/mindbase"}}'
+      - name: OLLAMA_URL
+        value: '{{mindbase_settings.ollama_url|default:"http://host.docker.internal:11434"}}'
+      - name: EMBEDDING_MODEL
+        value: '{{mindbase_settings.embedding_model|default:"nomic-embed-text"}}'
+    allowHosts:
+      - "*"
+
+  # === DATABASE & BACKEND ===
+
+  supabase:
+    title: Supabase Official
+    description: Supabase backend operations (official MCP server)
+    type: server
+    image: mcp/supabase
+    category: Database & Backend
+    secrets:
+      - name: SUPABASE_URL
+        required: true
+        description: Supabase project URL
+      - name: SUPABASE_SERVICE_ROLE_KEY
+        required: true
+        description: Supabase service role key
+    allowHosts:
+      - "*"
+
+  supabase-selfhost:
+    title: Supabase Self-hosted
+    description: Self-hosted Supabase (PostgREST + PostgreSQL)
+    type: server
+    image: supabase-mcp-selfhost:latest
+    command: ["node", "dist/server.js"]
+    category: Database & Backend
+    readme: https://github.com/kazuph/airis-mcp-supabase-selfhost
+    tools:
+      - name: query
+      - name: execute
+    secrets:
+      - name: PG_DSN
+        required: true
+      - name: POSTGREST_URL
+        required: false
+      - name: POSTGREST_JWT
+        required: false
+    env:
+      - name: READ_ONLY
+        default: "false"
+      - name: FEATURES
+        default: "all"
+    allowHosts:
+      - "*"
+
+  # === PAYMENT & API ===
+
+  stripe:
+    title: Stripe
+    description: Stripe payment processing
+    type: server
+    image: mcp/stripe
+    category: Payment & API
+    secrets:
+      - name: STRIPE_SECRET_KEY
+        required: true
+        description: Stripe secret API key
+    allowHosts:
+      - "api.stripe.com"
+
+  twilio:
+    title: Twilio
+    description: Twilio messaging and voice
+    type: server
+    image: mcp/twilio
+    category: Payment & API
+    secrets:
+      - name: TWILIO_ACCOUNT_SID
+        required: true
+        description: Twilio account SID
+      - name: TWILIO_API_KEY
+        required: true
+        description: Twilio API key
+      - name: TWILIO_API_SECRET
+        required: true
+        description: Twilio API secret
+    allowHosts:
+      - "api.twilio.com"
