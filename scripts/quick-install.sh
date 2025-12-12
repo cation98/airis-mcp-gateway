@@ -118,6 +118,34 @@ install() {
         sleep 2
     done
 
+    # Step 5: Register with Claude Code globally (if available)
+    local claude_registered=false
+    if command -v claude >/dev/null 2>&1; then
+        log_step "5/5 Registering with Claude Code (global)..."
+
+        # Clean up ALL project-level MCP configs (gateway should be global only)
+        if [ -f "$HOME/.claude.json" ] && command -v jq >/dev/null 2>&1; then
+            log_info "Cleaning project-level MCP configs..."
+            jq '.projects |= with_entries(.value.mcpServers = {})' "$HOME/.claude.json" > /tmp/claude.json.tmp && \
+                mv /tmp/claude.json.tmp "$HOME/.claude.json"
+        fi
+
+        # Remove old registrations
+        claude mcp remove airis 2>/dev/null || true
+        claude mcp remove airis --scope user 2>/dev/null || true
+        claude mcp remove airis-mcp-gateway 2>/dev/null || true
+        claude mcp remove airis-mcp-gateway --scope user 2>/dev/null || true
+
+        # Register globally (user scope only)
+        if claude mcp add --scope user --transport sse airis-mcp-gateway http://localhost:9400/sse 2>/dev/null; then
+            claude_registered=true
+            log_info "Registered globally with Claude Code"
+        elif claude mcp add --scope user --transport sse airis-mcp-gateway http://localhost:9400/sse 2>&1 | grep -q "already exists"; then
+            claude_registered=true
+            log_info "Already registered globally with Claude Code"
+        fi
+    fi
+
     echo ""
     if $api_ok && $gateway_ok; then
         echo -e "${GREEN}╔══════════════════════════════════════════╗${NC}"
@@ -137,8 +165,12 @@ install() {
     echo "  Config:    $CONFIG_DIR/mcp-config.json"
     echo "  Repo:      $DIR"
     echo ""
-    echo "  Register with Claude Code:"
-    echo "    claude mcp add --transport http airis-mcp-gateway http://localhost:9400/api/v1/mcp/sse"
+    if $claude_registered; then
+        echo -e "  Claude Code: ${GREEN}Registered (global)${NC}"
+    else
+        echo "  Register with Claude Code (global):"
+        echo "    claude mcp add --scope user --transport sse airis-mcp-gateway http://localhost:9400/sse"
+    fi
     echo ""
     echo "  Commands:"
     echo "    cd $DIR && docker compose logs -f    # View logs"
@@ -156,6 +188,15 @@ uninstall() {
     echo -e "${YELLOW}║    AIRIS MCP Gateway - Uninstalling      ║${NC}"
     echo -e "${YELLOW}╚══════════════════════════════════════════╝${NC}"
     echo ""
+
+    # Unregister from Claude Code (both local and global)
+    if command -v claude >/dev/null 2>&1; then
+        log_step "Unregistering from Claude Code..."
+        claude mcp remove airis 2>/dev/null || true
+        claude mcp remove airis --scope user 2>/dev/null || true
+        claude mcp remove airis-mcp-gateway 2>/dev/null || true
+        claude mcp remove airis-mcp-gateway --scope user 2>/dev/null || true
+    fi
 
     # Stop containers
     if [ -d "$DIR" ]; then

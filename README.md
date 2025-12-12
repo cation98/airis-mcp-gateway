@@ -75,8 +75,10 @@ Config is the same `~/.config/airis-mcp-gateway/mcp-config.json`.
 
 ### Claude Code
 
+Auto-registered globally during install. Manual command if needed:
+
 ```bash
-claude mcp add --transport http airis-mcp-gateway http://localhost:9400/api/v1/mcp/sse
+claude mcp add --scope user --transport sse airis-mcp-gateway http://localhost:9400/sse
 ```
 
 ### Cursor / Windsurf

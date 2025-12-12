@@ -10,7 +10,7 @@ services:
       - --watch
       # Custom catalog with Airis servers
       - --additional-catalog=/workspace/airis-mcp-gateway/catalogs/airis-catalog.yaml
-      # Default enabled servers (AIRIS core + built-in)
+      # Default enabled servers
       - --servers=time
       - --servers=memory
       - --servers=airis-agent
