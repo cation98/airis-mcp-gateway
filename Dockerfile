@@ -42,7 +42,7 @@ RUN pnpm build
 
 FROM nginx:1.27-alpine AS settings
 ENV UI_PORT=5273 \
-    API_PROXY_URL=http://api:9900
+    API_PROXY_URL=http://api:9400
 
 COPY --from=settings-builder /monorepo/apps/settings/out /usr/share/nginx/html
 COPY apps/settings/nginx/default.conf.template /etc/nginx/templates/default.conf.template
@@ -58,25 +58,9 @@ FROM docker/mcp-gateway:latest AS gateway
 
 LABEL maintainer="AIRIS MCP Gateway Team"
 LABEL description="AIRIS MCP Gateway - Centralized MCP Server routing with docker/mcp-gateway"
-LABEL version="1.3.0"
-
-ENV AIRIS_VERSION="1.3.0" \
-    AIRIS_MCP_GATEWAY="true"
-
-# Install jq for JSON processing (Alpine)
-RUN apk add --no-cache jq
-
-COPY gateway/inject-secrets.sh /usr/local/bin/inject-secrets.sh
-RUN chmod +x /usr/local/bin/inject-secrets.sh
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
-  CMD wget --no-verbose --tries=1 --spider "http://127.0.0.1:${GATEWAY_LISTEN_PORT:-9390}/" || exit 1
-
-ENTRYPOINT ["/usr/local/bin/inject-secrets.sh"]
-CMD ["/docker-mcp", "gateway", "run", \
-     "--transport=sse", \
-     "--port=9390", \
-     "--config=/etc/docker-mcp/config.json"]
+  CMD wget --no-verbose --tries=1 --spider "http://127.0.0.1:9390/health" || exit 1
 
 
 ###########################################

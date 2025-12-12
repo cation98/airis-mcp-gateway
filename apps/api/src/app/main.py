@@ -1,112 +1,113 @@
+"""
+AIRIS MCP Gateway API - Lite mode (stateless, no DB).
+
+Minimal proxy to docker/mcp-gateway with health endpoints.
+"""
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from .core.config import settings
-from .core.database import AsyncSessionLocal
-from .api.routes import api_router
-from .api.endpoints.mcp_proxy import (
-    mcp_sse_proxy as api_mcp_sse_proxy,
-    mcp_sse_proxy_post as api_mcp_sse_proxy_post,
-    mcp_jsonrpc_proxy as api_mcp_jsonrpc_proxy,
-    mcp_jsonrpc_proxy_root as api_mcp_jsonrpc_proxy_root,
-    mcp_http_health_check as api_mcp_http_health_check,
-    mcp_http_health_check_head as api_mcp_http_health_check_head,
-    proxy_root_well_known,
-)
-from .crud import mcp_server_state
+import httpx
+import os
+
+# Config from env (all optional with sensible defaults)
+MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway:9390")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize default server states on startup"""
-    async with AsyncSessionLocal() as db:
-        # Get all existing server states
-        existing_states = await mcp_server_state.get_all_server_states(db)
-        existing_ids = {state.server_id for state in existing_states}
-
-        # Default server list (minimal set - others managed via DB)
-        default_servers = [
-            "filesystem", "context7", "time", "memory",
-            "airis-mcp-gateway-control"
-        ]
-
-        # Initialize missing servers (all ON for default set)
-        for server_id in default_servers:
-            if server_id not in existing_ids:
-                await mcp_server_state.create_server_state(db, server_id, enabled=True)
-
+    """Lite mode: no initialization needed"""
+    print("🚀 AIRIS MCP Gateway API starting (lite mode)")
     yield
+    print("👋 Shutting down")
 
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    debug=settings.DEBUG,
+    title="AIRIS MCP Gateway API",
+    description="Lite proxy to docker/mcp-gateway",
     lifespan=lifespan,
 )
 
-# CORS middleware
+# CORS - allow all for local dev
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API routes
-app.include_router(api_router, prefix=settings.API_V1_PREFIX)
-
-
-@app.get("/sse", include_in_schema=False)
-async def public_mcp_sse_proxy(request: Request):
-    """Compatibility SSE endpoint for editors that pin to the domain root."""
-    return await api_mcp_sse_proxy(request)
-
-
-@app.post("/sse", include_in_schema=False)
-async def public_mcp_jsonrpc_proxy(request: Request):
-    """Allow transports that POST to /sse (Codex streamable_http) to function."""
-    return await api_mcp_sse_proxy_post(request)
-
-
-@app.get("/mcp", include_in_schema=False)
-@app.get("/mcp/", include_in_schema=False)
-async def public_mcp_health_proxy():
-    """Expose /mcp for clients that skip the API prefix."""
-    return await api_mcp_http_health_check()
-
-
-@app.head("/mcp", include_in_schema=False)
-@app.head("/mcp/", include_in_schema=False)
-async def public_mcp_health_head_proxy():
-    """Expose HEAD /mcp for health checks."""
-    return await api_mcp_http_health_check_head()
-
-
-@app.post("/mcp", include_in_schema=False)
-@app.post("/mcp/", include_in_schema=False)
-async def public_mcp_jsonrpc_root_proxy(request: Request):
-    """Expose POST /mcp for editors expecting the transport at the domain root."""
-    return await api_mcp_jsonrpc_proxy_root(request)
-
-
-@app.api_route("/.well-known/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
-async def public_well_known_proxy(request: Request, path: str):
-    """Forward /.well-known discovery requests to the streaming gateway."""
-    return await proxy_root_well_known(request, path)
-
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
+async def health():
+    """Health check - always healthy if running"""
+    return {"status": "healthy", "mode": "lite"}
+
+
+@app.get("/ready")
+async def ready():
+    """Readiness check - verify gateway is reachable"""
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get(f"{MCP_GATEWAY_URL}/health")
+            gateway_ok = resp.status_code == 200
+    except Exception:
+        gateway_ok = False
+
+    return {
+        "ready": gateway_ok,
+        "gateway": "ok" if gateway_ok else "unreachable",
+        "mode": "lite",
+    }
 
 
 @app.get("/")
 async def root():
     """Root endpoint"""
     return {
-        "message": "AIRIS MCP Gateway API",
-        "version": "0.1.0",
-        "docs": "/docs",
+        "service": "airis-mcp-gateway-api",
+        "mode": "lite",
+        "gateway_url": MCP_GATEWAY_URL,
     }
+
+
+# ============================================================
+# SSE/MCP Proxy endpoints (forward to gateway)
+# ============================================================
+
+@app.get("/sse")
+@app.get("/mcp/sse")
+async def proxy_sse(request: Request):
+    """Proxy SSE requests to gateway"""
+    from starlette.responses import StreamingResponse
+
+    async def stream():
+        async with httpx.AsyncClient(timeout=None) as client:
+            async with client.stream("GET", f"{MCP_GATEWAY_URL}/sse") as resp:
+                async for chunk in resp.aiter_bytes():
+                    yield chunk
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@app.post("/sse")
+@app.post("/mcp/sse")
+@app.post("/mcp")
+async def proxy_mcp_post(request: Request):
+    """Proxy MCP JSON-RPC requests to gateway"""
+    body = await request.body()
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            f"{MCP_GATEWAY_URL}/sse",
+            content=body,
+            headers={"Content-Type": "application/json"},
+        )
+        return resp.json()
+
+
+@app.get("/mcp")
+async def proxy_mcp_health():
+    """Gateway MCP health"""
+    async with httpx.AsyncClient(timeout=2.0) as client:
+        resp = await client.get(f"{MCP_GATEWAY_URL}/health")
+        return resp.json() if resp.status_code == 200 else {"status": "error"}

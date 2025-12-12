@@ -24,23 +24,49 @@ AIRIS MCP Gateway:
 
 - **Docker** (Docker Desktop or OrbStack)
 
-### Install
+### 1-Line Install (Recommended)
 
 ```bash
-# Homebrew (recommended)
-brew tap agiletec-inc/tap
-brew install airis-mcp-gateway
-airis-gateway up
-
-# Or one-liner
-bash <(curl -fsSL https://raw.githubusercontent.com/agiletec-inc/airis-mcp-gateway/main/scripts/quick-install.sh)
+curl -fsSL https://raw.githubusercontent.com/agiletec-inc/airis-mcp-gateway/main/scripts/quick-install.sh | bash
 ```
 
-### Verify
+This will:
+- Clone repo to `~/.local/share/airis-mcp-gateway`
+- Setup config at `~/.config/airis-mcp-gateway/mcp-config.json`
+- Run `docker compose up -d`
+- Verify health on ports 9390/9400
+
+### Manual Setup (Transparent)
 
 ```bash
-curl http://localhost:9400/health
-# {"status":"ok"}
+git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
+cd airis-mcp-gateway
+cp -n .env.example .env
+mkdir -p ~/.config/airis-mcp-gateway
+cp -n mcp-config.json ~/.config/airis-mcp-gateway/mcp-config.json
+docker compose up -d
+
+# Verify
+curl -fsS http://localhost:9400/health && echo "API OK"
+curl -fsS http://localhost:9390/health && echo "Gateway OK"
+```
+
+### Homebrew (Optional CLI Wrapper)
+
+```bash
+brew tap agiletec-inc/tap
+brew install airis-mcp-gateway
+airis-gateway up          # git pull + docker compose up -d
+airis-gateway logs
+airis-gateway restart
+```
+
+Config is the same `~/.config/airis-mcp-gateway/mcp-config.json`.
+
+### Uninstall
+
+```bash
+~/.local/share/airis-mcp-gateway/scripts/quick-install.sh --uninstall
 ```
 
 ---
@@ -50,7 +76,7 @@ curl http://localhost:9400/health
 ### Claude Code
 
 ```bash
-claude mcp add airis-mcp-gateway --transport http http://localhost:9400/api/v1/mcp
+claude mcp add --transport http airis-mcp-gateway http://localhost:9400/api/v1/mcp/sse
 ```
 
 ### Cursor / Windsurf
@@ -85,6 +111,81 @@ Add to `~/.config/zed/settings.json`:
 
 ---
 
+## Commands
+
+### Docker Compose (Direct)
+
+```bash
+docker compose up -d              # Start
+docker compose down               # Stop
+docker compose pull && docker compose up -d  # Update
+docker compose restart gateway    # Apply config changes
+docker compose logs -f gateway api  # View logs
+```
+
+### CLI Wrapper (via Homebrew)
+
+```bash
+airis-gateway up         # Start (pulls latest)
+airis-gateway down       # Stop
+airis-gateway restart    # Restart
+airis-gateway logs -f    # View logs
+airis-gateway status     # Show status
+airis-gateway config     # Edit mcp-config.json
+airis-gateway servers    # List MCP servers
+airis-gateway enable <server>   # Enable server
+airis-gateway disable <server>  # Disable server
+```
+
+---
+
+## Configuration
+
+### Paths
+
+| Type | Path |
+|------|------|
+| **MCP servers** | `~/.config/airis-mcp-gateway/mcp-config.json` |
+| **Environment** | `.env` (in repo root) |
+| **Profiles** | `config/profiles/*.json` |
+
+Override with `AIRIS_CONFIG_DIR` environment variable.
+
+### Profiles
+
+```bash
+# Recommended (default): airis-agent, context7, filesystem, git, memory, etc.
+cp config/profiles/recommended.json ~/.config/airis-mcp-gateway/mcp-config.json
+
+# Minimal: filesystem + context7 only
+cp config/profiles/minimal.json ~/.config/airis-mcp-gateway/mcp-config.json
+
+docker compose restart gateway
+```
+
+### Enable/Disable Servers
+
+Edit `~/.config/airis-mcp-gateway/mcp-config.json`:
+
+```json
+{
+  "mcpServers": {
+    "github": { "enabled": true, ... },
+    "slack": { "enabled": false, ... }
+  }
+}
+```
+
+Or use CLI:
+
+```bash
+airis-gateway enable puppeteer
+airis-gateway disable serena
+airis-gateway restart
+```
+
+---
+
 ## Included MCP Servers
 
 | Server | Description |
@@ -94,71 +195,22 @@ Add to `~/.config/zed/settings.json`:
 | **filesystem** | File read/write/search |
 | **git** | Git operations |
 | **memory** | Conversation memory |
-| **mindbase** | Cross-session semantic memory |
 | **sequential-thinking** | Multi-step reasoning |
+| **serena** | Code navigation and refactoring |
+| **time** | Current time |
+| **fetch** | HTTP requests |
 
-See `mcp-config.json` for full list.
-
-### Dynamic Control
-
-```bash
-# Enable server
-enable_mcp_server(server_name="puppeteer")
-
-# Disable server
-disable_mcp_server(server_name="puppeteer")
-
-# List servers
-list_mcp_servers()
-```
+See `mcp-config.json` for full list. Add servers by editing config.
 
 ---
 
-## Commands
+## Ports
 
-```bash
-airis-gateway up       # Start gateway
-airis-gateway down     # Stop gateway
-airis-gateway logs     # View logs
-airis-gateway status   # Check status
-airis-gateway install  # Register with IDEs
-```
-
----
-
-## Configuration
-
-### Environment Variables
-
-```bash
-cp .env.example .env
-# Edit ports, database credentials, etc.
-```
-
-### Server Profiles
-
-```bash
-# Recommended (default)
-cp config/profiles/recommended.json mcp-config.json
-
-# Minimal (filesystem + context7 only)
-cp config/profiles/minimal.json mcp-config.json
-
-docker compose restart mcp-gateway
-```
-
-### Enable/Disable Servers
-
-Edit `mcp-config.json`:
-
-```json
-{
-  "mcpServers": {
-    "github": { ... },           // enabled
-    "__disabled_slack": { ... }  // disabled (prefix with __disabled_)
-  }
-}
-```
+| Service | Port | URL |
+|---------|------|-----|
+| API (FastAPI) | 9400 | http://localhost:9400 |
+| Gateway (MCP) | 9390 | http://localhost:9390 |
+| Settings UI | 5273 | http://localhost:5273 (with `--profile ui`) |
 
 ---
 
@@ -190,29 +242,26 @@ IDE (Claude Code, Cursor, Zed)
 
 | Issue | Solution |
 |-------|----------|
-| Gateway won't start | `docker compose logs` |
-| Port conflict | Edit `.env`, change `API_LISTEN_PORT` |
+| Gateway won't start | `docker compose logs -f` |
+| 9390/9400 unreachable | `docker compose ps` to check status |
+| Port conflict | Change in `.env` or use different port mapping |
+| Config not read | Check `AIRIS_CONFIG_DIR` path, permissions 0644 |
 | IDE not seeing tools | Verify: `curl http://localhost:9400/health` |
-| High token usage | Enable `DEBUG=true` in `.env`, check logs |
-| Out of memory (8GB RAM) | See "Low Memory" section below |
 
-### Low Memory Systems (8GB RAM)
-
-If `pnpm install` freezes or causes memory issues on 8GB machines:
+### Health Check
 
 ```bash
-# Option 1: Use Docker (recommended)
-# All builds happen in containers, no host-side memory pressure
-airis-gateway up
-
-# Option 2: Limit Node.js memory
-NODE_OPTIONS="--max-old-space-size=2048" pnpm install
-
-# Option 3: Install with fewer parallel jobs
-pnpm install --child-concurrency=1
+curl -fsS localhost:9400/health  # API
+curl -fsS localhost:9390/health  # Gateway
 ```
 
-The recommended approach is using Docker (`airis-gateway up`), which runs all builds inside containers and doesn't require pnpm on your host machine.
+### Full Reset
+
+```bash
+docker compose down -v
+rm -rf ~/.config/airis-mcp-gateway
+~/.local/share/airis-mcp-gateway/scripts/quick-install.sh
+```
 
 ---
 

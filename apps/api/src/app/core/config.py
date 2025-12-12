@@ -16,8 +16,19 @@ DEFAULT_MCP_CONFIG = Path(
 class Settings(BaseSettings):
     """Application settings"""
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@postgres:5432/mcp_gateway"
+    # Mode: lite (no DB) or full (with DB)
+    GATEWAY_MODE: str = os.getenv("GATEWAY_MODE", "lite")
+
+    # Database (optional - only used in "full" mode)
+    DATABASE_URL: str | None = os.getenv("DATABASE_URL", None)
+
+    # Simple auth for single-user mode
+    AIRIS_API_KEY: str | None = os.getenv("AIRIS_API_KEY", None)
+
+    @property
+    def is_lite_mode(self) -> bool:
+        """Check if running in lite (stateless) mode"""
+        return self.GATEWAY_MODE == "lite" or not self.DATABASE_URL
 
     # MCP Gateway
     PROJECT_ROOT: Path = DEFAULT_PROJECT_ROOT

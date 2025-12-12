@@ -1,0 +1,300 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# AIRIS MCP Gateway - Thin CLI Wrapper
+# Just pulls latest and runs docker compose
+
+REPO="${AIRIS_MCP_REPO:-https://github.com/agiletec-inc/airis-mcp-gateway}"
+DIR="${AIRIS_MCP_DIR:-$HOME/.local/share/airis-mcp-gateway}"
+CONFIG_DIR="${AIRIS_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/airis-mcp-gateway}"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+ensure_repo() {
+    mkdir -p "$DIR"
+    if [ -d "$DIR/.git" ]; then
+        log_info "Updating repository..."
+        git -C "$DIR" fetch --tags -q 2>/dev/null || true
+        local latest_tag=$(git -C "$DIR" describe --tags --abbrev=0 2>/dev/null || echo "main")
+        git -C "$DIR" checkout -q "$latest_tag" 2>/dev/null || true
+        git -C "$DIR" pull -q 2>/dev/null || true
+    else
+        log_info "Cloning repository..."
+        git clone -q "$REPO" "$DIR"
+        local latest_tag=$(git -C "$DIR" describe --tags --abbrev=0 2>/dev/null || echo "main")
+        git -C "$DIR" checkout -q "$latest_tag" 2>/dev/null || true
+    fi
+}
+
+ensure_config() {
+    mkdir -p "$CONFIG_DIR"
+    if [ ! -f "$CONFIG_DIR/mcp-config.json" ]; then
+        if [ -f "$DIR/mcp-config.json" ]; then
+            log_info "Copying default config to $CONFIG_DIR/"
+            cp "$DIR/mcp-config.json" "$CONFIG_DIR/"
+        else
+            log_error "No mcp-config.json found!"
+            exit 1
+        fi
+    fi
+}
+
+cmd_up() {
+    ensure_repo
+    ensure_config
+    log_info "Starting AIRIS MCP Gateway..."
+    cd "$DIR"
+    export AIRIS_CONFIG_DIR="$CONFIG_DIR"
+    docker compose up -d "$@"
+    log_info "Gateway started!"
+    echo ""
+    echo "  API:     http://localhost:9400"
+    echo "  Gateway: http://localhost:9390"
+    echo ""
+    echo "Register with Claude Code:"
+    echo "  claude mcp add --transport http airis-mcp-gateway http://localhost:9400/api/v1/mcp/sse"
+}
+
+cmd_down() {
+    if [ -d "$DIR" ]; then
+        cd "$DIR"
+        docker compose down "$@"
+        log_info "Gateway stopped."
+    else
+        log_warn "Gateway not installed. Run 'airis-gateway up' first."
+    fi
+}
+
+cmd_logs() {
+    if [ -d "$DIR" ]; then
+        cd "$DIR"
+        docker compose logs "$@"
+    else
+        log_error "Gateway not installed."
+        exit 1
+    fi
+}
+
+cmd_status() {
+    if [ -d "$DIR" ]; then
+        cd "$DIR"
+        docker compose ps
+    else
+        log_warn "Gateway not installed."
+    fi
+    echo ""
+    echo "Config: $CONFIG_DIR/mcp-config.json"
+    echo "Repo:   $DIR"
+}
+
+cmd_restart() {
+    cmd_down
+    cmd_up "$@"
+}
+
+cmd_config() {
+    echo "$CONFIG_DIR/mcp-config.json"
+    if [ -f "$CONFIG_DIR/mcp-config.json" ]; then
+        ${EDITOR:-vim} "$CONFIG_DIR/mcp-config.json"
+    else
+        log_error "Config not found. Run 'airis-gateway up' first."
+        exit 1
+    fi
+}
+
+cmd_servers() {
+    if [ ! -f "$CONFIG_DIR/mcp-config.json" ]; then
+        log_error "Config not found. Run 'airis-gateway up' first."
+        exit 1
+    fi
+
+    echo "MCP Servers ($CONFIG_DIR/mcp-config.json):"
+    echo ""
+
+    # Parse JSON and list servers with status
+    python3 -c "
+import json
+import sys
+
+try:
+    with open('$CONFIG_DIR/mcp-config.json') as f:
+        config = json.load(f)
+
+    servers = config.get('mcpServers', {})
+    enabled = []
+    disabled = []
+
+    for name, conf in servers.items():
+        if name.startswith('__disabled_'):
+            disabled.append(name.replace('__disabled_', ''))
+        elif conf.get('enabled', True):
+            enabled.append(name)
+        else:
+            disabled.append(name)
+
+    print('  Enabled:')
+    for s in sorted(enabled):
+        print(f'    - {s}')
+
+    if disabled:
+        print('')
+        print('  Disabled:')
+        for s in sorted(disabled):
+            print(f'    - {s}')
+except Exception as e:
+    print(f'Error: {e}', file=sys.stderr)
+    sys.exit(1)
+"
+}
+
+cmd_enable() {
+    local server="$1"
+    if [ -z "$server" ]; then
+        log_error "Usage: airis-gateway enable <server_name>"
+        exit 1
+    fi
+
+    if [ ! -f "$CONFIG_DIR/mcp-config.json" ]; then
+        log_error "Config not found. Run 'airis-gateway up' first."
+        exit 1
+    fi
+
+    python3 -c "
+import json
+import sys
+
+server = '$server'
+config_path = '$CONFIG_DIR/mcp-config.json'
+
+with open(config_path) as f:
+    config = json.load(f)
+
+servers = config.get('mcpServers', {})
+
+# Check if server exists as disabled
+disabled_key = f'__disabled_{server}'
+if disabled_key in servers:
+    servers[server] = servers.pop(disabled_key)
+    servers[server]['enabled'] = True
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2)
+    print(f'Enabled: {server}')
+elif server in servers:
+    servers[server]['enabled'] = True
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2)
+    print(f'Enabled: {server}')
+else:
+    print(f'Server not found: {server}', file=sys.stderr)
+    print('Available servers:', file=sys.stderr)
+    for name in servers:
+        clean_name = name.replace('__disabled_', '')
+        print(f'  - {clean_name}', file=sys.stderr)
+    sys.exit(1)
+"
+    log_info "Restart gateway to apply: airis-gateway restart"
+}
+
+cmd_disable() {
+    local server="$1"
+    if [ -z "$server" ]; then
+        log_error "Usage: airis-gateway disable <server_name>"
+        exit 1
+    fi
+
+    if [ ! -f "$CONFIG_DIR/mcp-config.json" ]; then
+        log_error "Config not found. Run 'airis-gateway up' first."
+        exit 1
+    fi
+
+    python3 -c "
+import json
+import sys
+
+server = '$server'
+config_path = '$CONFIG_DIR/mcp-config.json'
+
+with open(config_path) as f:
+    config = json.load(f)
+
+servers = config.get('mcpServers', {})
+
+if server in servers:
+    servers[server]['enabled'] = False
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2)
+    print(f'Disabled: {server}')
+else:
+    print(f'Server not found: {server}', file=sys.stderr)
+    sys.exit(1)
+"
+    log_info "Restart gateway to apply: airis-gateway restart"
+}
+
+cmd_help() {
+    cat <<EOF
+AIRIS MCP Gateway - Unified MCP server management
+
+Usage: airis-gateway <command> [options]
+
+Commands:
+  up [--profile ui]   Start gateway (pulls latest version)
+  down                Stop gateway
+  restart             Restart gateway
+  logs [-f]           View logs
+  status              Show docker compose status
+  config              Edit mcp-config.json
+
+Server Management:
+  servers             List MCP servers and their status
+  enable <server>     Enable an MCP server
+  disable <server>    Disable an MCP server
+
+Configuration:
+  Config dir: $CONFIG_DIR
+  Repo dir:   $DIR
+
+Environment variables:
+  AIRIS_CONFIG_DIR    Config directory (default: ~/.config/airis-mcp-gateway)
+  AIRIS_MCP_DIR       Repository directory (default: ~/.local/share/airis-mcp-gateway)
+  AIRIS_MCP_REPO      Git repository URL
+
+Ports:
+  9400  API (REST + MCP SSE)
+  9390  MCP Gateway
+  5273  Settings UI (with --profile ui)
+
+Examples:
+  airis-gateway up                    # Start gateway
+  airis-gateway up --profile ui       # Start with Settings UI
+  airis-gateway servers               # List MCP servers
+  airis-gateway enable puppeteer      # Enable puppeteer server
+  airis-gateway disable serena        # Disable serena server
+  airis-gateway restart               # Apply changes
+EOF
+}
+
+case "${1:-help}" in
+    up)      shift; cmd_up "$@" ;;
+    down)    shift; cmd_down "$@" ;;
+    restart) shift; cmd_restart "$@" ;;
+    logs)    shift; cmd_logs "$@" ;;
+    status)  cmd_status ;;
+    config)  cmd_config ;;
+    servers) cmd_servers ;;
+    enable)  shift; cmd_enable "${1:-}" ;;
+    disable) shift; cmd_disable "${1:-}" ;;
+    help|--help|-h) cmd_help ;;
+    *)
+        log_error "Unknown command: $1"
+        cmd_help
+        exit 1
+        ;;
+esac

@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Ensure we run from /app
 cd /app
 
-echo "🚀 Running database migrations..."
-alembic upgrade head
-echo "✅ Database is up to date."
+# Check if we're in lite mode (no DB)
+if [[ "${GATEWAY_MODE:-lite}" == "lite" ]] || [[ -z "${DATABASE_URL:-}" ]]; then
+    echo "🚀 Starting in LITE mode (no database)"
+else
+    echo "🚀 Running database migrations..."
+    alembic upgrade head
+    echo "✅ Database is up to date."
+fi
 
-exec uvicorn src.app.main:app --host 0.0.0.0 --port "${API_LISTEN_PORT:-9900}"
+exec uvicorn app.main:app --host 0.0.0.0 --port 9400

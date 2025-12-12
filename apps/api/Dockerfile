@@ -30,11 +30,11 @@ COPY apps/api/entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
 # Expose port
-EXPOSE 9000
+EXPOSE 9400
 
-# Health check (respects API_LISTEN_PORT env if provided)
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD python -c "import os, urllib.request; port=os.environ.get('API_LISTEN_PORT', '9000'); urllib.request.urlopen(f'http://localhost:{port}/health')"
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:9400/health')"
 
 # Run migrations then start FastAPI
 ENTRYPOINT ["./entrypoint.sh"]

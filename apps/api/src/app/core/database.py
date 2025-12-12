@@ -1,38 +1,26 @@
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
-from .config import settings
+"""
+Database module - Lite mode only (no DB dependency).
+
+To restore DB support, check out the 'full-mode' branch.
+"""
+from typing import AsyncGenerator, Optional
 
 
-# Create async engine
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    future=True,
-)
-
-# Create async session factory
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
-)
+def is_db_available() -> bool:
+    """DB is disabled in lite mode"""
+    return False
 
 
-class Base(DeclarativeBase):
-    """Base class for all database models"""
+async def get_db() -> AsyncGenerator[Optional[object], None]:
+    """Returns None - no DB in lite mode"""
+    yield None
+
+
+# Stub for imports that expect these
+class Base:
+    """Stub base class"""
     pass
 
 
-async def get_db() -> AsyncSession:
-    """Dependency for getting database session"""
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+engine = None
+AsyncSessionLocal = None
