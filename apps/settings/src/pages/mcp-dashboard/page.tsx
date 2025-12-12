@@ -53,11 +53,6 @@ interface ServerStateEntry {
   enabled: boolean;
 }
 
-interface ValidationResponse {
-  valid: boolean;
-  message?: string;
-}
-
 interface ApiErrorResponse {
   detail?: string;
 }
@@ -165,14 +160,6 @@ const parseServerStates = (value: unknown): ServerStateEntry[] => {
   }
   return value.filter(isServerStateEntry);
 };
-
-const isValidationResponse = (value: unknown): value is ValidationResponse =>
-  isRecord(value) &&
-  typeof value.valid === 'boolean' &&
-  (value.message === undefined || typeof value.message === 'string');
-
-const parseValidationResponse = (value: unknown): ValidationResponse | null =>
-  isValidationResponse(value) ? value : null;
 
 const isApiErrorResponse = (value: unknown): value is ApiErrorResponse =>
   isRecord(value) && (value.detail === undefined || typeof value.detail === 'string');
@@ -508,9 +495,6 @@ export default function MCPDashboard() {
   const builtinServers = servers.filter((server) => server.builtin);
   const managedServers = servers.filter((server) => !server.builtin);
   const configuredManagedServers = managedServers.filter((server) => server.apiKey === 'configured');
-  const needsAttentionServers = managedServers.filter(
-    (server) => server.apiKeyRequired && server.apiKey !== 'configured',
-  );
 
   const renderServerList = (items: MCPServer[], emptyLabelKey: string) => (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">

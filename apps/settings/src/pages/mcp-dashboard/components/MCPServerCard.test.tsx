@@ -17,6 +17,7 @@ describe('MCPServerCard', () => {
     status: 'disconnected' as const,
     category: 'search',
     recommended: false,
+    builtin: false,
   };
 
   test('loads previously saved API key when opening editor', async () => {
@@ -37,13 +38,13 @@ describe('MCPServerCard', () => {
     expect(onRequestSecretValue).toHaveBeenCalledWith('tavily');
 
     await waitFor(() => {
-      const input = screen.getByPlaceholderText('serverCard.inputs.apiKeyPlaceholder') as HTMLInputElement;
+      const input = screen.getByPlaceholderText<HTMLInputElement>('serverCard.inputs.apiKeyPlaceholder');
       expect(input.value).toBe('tvly_saved_key');
     });
 
     const toggleVisibility = screen.getByRole('button', { name: /serverCard\.inputs\.showSecret/i });
     await user.click(toggleVisibility);
-    const visibleInput = screen.getByDisplayValue('tvly_saved_key') as HTMLInputElement;
+    const visibleInput = screen.getByDisplayValue<HTMLInputElement>('tvly_saved_key');
     expect(visibleInput.type).toBe('text');
   });
 
