@@ -17,7 +17,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 
 # Copy all packages
 COPY apps/settings ./apps/settings
-COPY servers/mindbase/package.json ./servers/mindbase/package.json
+COPY apps/mindbase/package.json ./apps/mindbase/package.json
 
 # Install all dependencies (workspace aware)
 RUN pnpm install

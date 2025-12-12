@@ -1,6 +1,9 @@
 version = 1
 mode = "docker-first"
-project = []
+
+[project]
+id = "airis-mcp-gateway"
+description = "MCP サーバー統合ゲートウェイ - 複数の MCP サーバーを一元管理"
 
 [workspace]
 name = "airis-mcp-gateway"
@@ -8,7 +11,29 @@ package_manager = "pnpm@10.22.0"
 service = "workspace"
 image = "node:22-alpine"
 workdir = "/app"
-volumes = ["workspace-node-modules:/app/node_modules"]
+volumes = [
+    "node_modules:/app/node_modules",
+    "next_build:/app/.next",
+    "dist_build:/app/dist",
+    "build_output:/app/build",
+    "out_export:/app/out",
+    "turbo_cache:/app/.turbo",
+    "swc_cache:/app/.swc",
+    "cache_dir:/app/.cache",
+]
+
+[workspace.clean]
+dirs = [
+    ".next",
+    "dist",
+    "build",
+    "out",
+    ".swc",
+    ".cache",
+    ".pnpm-store",
+    "target",
+]
+recursive = ["node_modules"]
 
 [catalog]
 vite = "lts"
@@ -21,55 +46,101 @@ apps = []
 libs = []
 
 [dev]
-# apps_pattern = "apps/*/compose.yml"  # default
+docker = "infra/docker/docker-compose.yml"
+
+[[dev.urls.infra]]
+name = "Settings UI"
+url = "http://settings.mcp-gateway.localhost"
+
+[[dev.urls.apps]]
+name = "API"
+url = "http://api.mcp-gateway.localhost"
+
+[[dev.urls.apps]]
+name = "Gateway Control"
+url = "http://control.mcp-gateway.localhost"
+
+[[dev.urls.apps]]
+name = "Mindbase"
+url = "http://mindbase.mcp-gateway.localhost"
+
+# ============================================================
+# Apps - デプロイ可能なアプリケーション
+# ============================================================
+[apps.api]
+path = "apps/api"
+type = "python"
 
 [apps.settings]
 path = "apps/settings"
+type = "vite"
 
-[apps.airis-mcp-gateway-control]
-path = "servers/airis-mcp-gateway-control"
+[apps.cli]
+path = "apps/cli"
+type = "node"
+
+[apps.gateway-control]
+path = "apps/gateway-control"
+type = "node"
 
 [apps.mindbase]
-path = "servers/mindbase"
+path = "apps/mindbase"
+type = "node"
 
+[apps.airis-commands]
+path = "apps/airis-commands"
+type = "node"
+
+[apps.menubar]
+path = "apps/menubar"
+type = "swift"
+
+# ============================================================
+# Libs - 共有ライブラリ
+# ============================================================
 [libs.augmentor-runtime]
-path = "packages/augmentor-runtime"
+path = "libs/augmentor-runtime"
 
-[libs.cli]
-path = "packages/cli"
-
+# ============================================================
+# Docker
+# ============================================================
 [docker]
-baseImage = ""
-workdir = ""
+baseImage = "node:22-alpine"
+workdir = "/app"
 
 [service]
 
+# ============================================================
+# Rules
+# ============================================================
 [rule.verify]
 commands = [
-    "airis run lint",
-    "airis run test-all",
+    "airis lint",
+    "airis test",
 ]
 
 [rule.ci]
 commands = [
-    "airis run lint",
-    "airis run test-all",
-    "airis run typecheck",
+    "airis lint",
+    "airis test",
+    "airis typecheck",
 ]
 
+# ============================================================
+# Packages (pnpm workspace)
+# ============================================================
 [packages]
 workspaces = [
     "apps/*",
-    "packages/*",
-    "servers/*",
+    "libs/*",
     "tools/*",
 ]
 
 [packages.catalog]
-next = "16.0.3"
-react = "19.2.0"
-typescript = "5.9.3"
-vitest = "4.0.9"
+typescript = "5.6.2"
+vite = "6.0.0"
+react = "19.0.0"
+vitest = "2.1.0"
 
 [packages.root.dependencies]
 
@@ -80,8 +151,16 @@ typescript = "5.6.2"
 [packages.root.optionalDependencies]
 
 [packages.root.scripts]
+build = "pnpm -r build"
+dev = "pnpm -r dev"
+lint = "biome check ."
+"lint:fix" = "biome check --write ."
+test = "pnpm -r test"
+typecheck = "pnpm -r typecheck"
 
 [packages.root.engines]
+node = ">=22.0.0"
+pnpm = ">=10.0.0"
 
 [packages.root.pnpm]
 onlyBuiltDependencies = []
@@ -104,32 +183,48 @@ pattern = "apps/*"
 
 [packages.app.scripts]
 
+# ============================================================
+# Guards - 禁止コマンド
+# ============================================================
 [guards]
-deny = []
+deny = [
+    "npm",
+    "yarn",
+    "npx",
+]
 forbid = []
 danger = []
 
 [guards.wrap]
+pnpm = "docker compose -f infra/docker/docker-compose.yml exec workspace pnpm"
 
 [guards.deny_with_message]
+"docker run" = "Use 'airis up' instead."
+docker-compose = "Use 'docker compose' (with space) or 'airis up' instead."
 
 [orchestration]
 
+[orchestration.networks]
+proxy = "coolify"
+default_external = false
+
+# ============================================================
+# Commands - airis CLI
+# ============================================================
 [commands]
-up = "docker compose up -d"
-down = "docker compose down --remove-orphans"
-shell = "docker compose exec -it workspace sh"
-install = "docker compose exec workspace pnpm install"
-dev = "docker compose exec workspace pnpm dev"
-build = "docker compose exec workspace pnpm build"
-test = "docker compose exec workspace pnpm test"
-lint = "docker compose exec workspace pnpm biome check ."
-format = "docker compose exec workspace pnpm biome format --write ."
-typecheck = "docker compose exec workspace pnpm typecheck"
-test-all = "docker compose exec workspace pnpm test"
+up = "docker compose -f infra/docker/docker-compose.yml up -d"
+down = "docker compose -f infra/docker/docker-compose.yml down --remove-orphans"
+shell = "docker compose -f infra/docker/docker-compose.yml exec workspace sh"
+install = "docker compose -f infra/docker/docker-compose.yml exec workspace pnpm install"
+dev = "docker compose -f infra/docker/docker-compose.yml exec workspace pnpm dev"
+build = "docker compose -f infra/docker/docker-compose.yml exec workspace pnpm build"
+test = "docker compose -f infra/docker/docker-compose.yml exec workspace pnpm test"
+lint = "docker compose -f infra/docker/docker-compose.yml exec workspace pnpm lint"
+format = "docker compose -f infra/docker/docker-compose.yml exec workspace pnpm format"
+typecheck = "docker compose -f infra/docker/docker-compose.yml exec workspace pnpm typecheck"
 clean = "rm -rf ./node_modules ./dist ./.next ./build ./target"
-logs = "docker compose logs -f"
-ps = "docker compose ps"
+logs = "docker compose -f infra/docker/docker-compose.yml logs -f"
+ps = "docker compose -f infra/docker/docker-compose.yml ps"
 
 [remap]
 

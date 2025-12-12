@@ -12,6 +12,9 @@ RUN apt-get update && \
       tini && \
     rm -rf /var/lib/apt/lists/*
 
+# Enable pnpm via corepack
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Ensure dedicated app user exists
 RUN set -eux; \
     if ! id -u app >/dev/null 2>&1; then \
@@ -19,12 +22,11 @@ RUN set -eux; \
     fi; \
     chown -R app:app /home/app
 
-# Pre-create common build directories to prevent root-owned creation by Docker volumes
-RUN mkdir -p /app/{node_modules,.next,dist,build,out,.swc,.cache,.turbo} && \
-    chown -R app:app /app
+# Pre-create common build directories
+RUN mkdir -p /app/{node_modules,.next,dist,build,out,.swc,.cache,.turbo}
 
 WORKDIR /app
-USER app
+# Note: Running as root for dev environment (named volumes require root)
 
 ENTRYPOINT ["tini","--"]
 CMD ["sleep","infinity"]
