@@ -18,7 +18,7 @@
         "airis-workspace-mcp"
       ],
       "env": {},
-      "enabled": true
+      "enabled": false
     },
     "context7": {
       "command": "npx",
@@ -30,10 +30,9 @@
       "enabled": true
     },
     "fetch": {
-      "command": "npx",
+      "command": "uvx",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-fetch"
+        "mcp-server-fetch"
       ],
       "env": {},
       "enabled": true
@@ -46,7 +45,7 @@
         "/workspace/host"
       ],
       "env": {},
-      "enabled": true
+      "enabled": false
     },
     "git": {
       "command": "npx",
@@ -55,7 +54,7 @@
         "@modelcontextprotocol/server-git"
       ],
       "env": {},
-      "enabled": true
+      "enabled": false
     },
     "memory": {
       "command": "npx",
@@ -73,7 +72,7 @@
         "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOST_REPO_DIR}/apps/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
       ],
       "env": {},
-      "enabled": true
+      "enabled": false
     },
     "airis-mcp-gateway-control": {
       "command": "node",
@@ -83,7 +82,7 @@
       "env": {
         "API_URL": "http://api:9400"
       },
-      "enabled": true
+      "enabled": false
     },
     "airis-commands": {
       "command": "node",
@@ -91,7 +90,7 @@
         "/workspace/host/airis-mcp-gateway/apps/airis-commands/dist/index.js"
       ],
       "env": {},
-      "enabled": true
+      "enabled": false
     },
     "sequential-thinking": {
       "command": "npx",
@@ -111,6 +110,18 @@
       "env": {},
       "enabled": true
     },
+    "tavily": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.tavily.com/mcp/?tavilyApiKey=${TAVILY_API_KEY}"
+      ],
+      "env": {
+        "TAVILY_API_KEY": "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"
+      },
+      "enabled": true
+    },
     "time": {
       "command": "npx",
       "args": [
@@ -118,7 +129,7 @@
         "@modelcontextprotocol/server-time"
       ],
       "env": {},
-      "enabled": true
+      "enabled": false
     },
     "supabase": {
       "command": "npx",

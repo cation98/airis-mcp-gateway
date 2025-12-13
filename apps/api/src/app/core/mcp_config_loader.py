@@ -1,0 +1,190 @@
+"""
+MCP Config Loader - Parse mcp-config.json and classify servers.
+
+Determines:
+- process type: uvx, npx, node, python, deno (direct subprocess)
+- docker type: servers that run via Docker MCP Gateway
+"""
+
+import json
+import os
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Optional
+
+from .process_runner import ProcessConfig
+
+
+class ServerType(Enum):
+    PROCESS = "process"  # uvx, npx, node, python, deno
+    DOCKER = "docker"    # Docker MCP Gateway
+
+
+# Commands that indicate a process-based MCP server
+PROCESS_COMMANDS = {
+    "uvx",
+    "npx",
+    "node",
+    "python",
+    "python3",
+    "deno",
+    "bun",
+}
+
+
+@dataclass
+class McpServerConfig:
+    """Parsed MCP server configuration."""
+    name: str
+    server_type: ServerType
+    command: str
+    args: list[str]
+    env: dict[str, str]
+    enabled: bool
+    cwd: Optional[str] = None
+
+    def to_process_config(self, idle_timeout: int = 120) -> ProcessConfig:
+        """Convert to ProcessConfig for ProcessRunner."""
+        return ProcessConfig(
+            name=self.name,
+            command=self.command,
+            args=self.args,
+            env=self.env,
+            cwd=self.cwd,
+            idle_timeout=idle_timeout,
+        )
+
+
+def classify_server_type(command: str) -> ServerType:
+    """
+    Determine if a server is process-based or docker-based.
+
+    Process commands: uvx, npx, node, python, deno, bun
+    Docker commands: everything else (handled by Docker MCP Gateway)
+    """
+    # Extract base command (handle paths like /usr/bin/node)
+    base_cmd = Path(command).name if "/" in command else command
+
+    if base_cmd in PROCESS_COMMANDS:
+        return ServerType.PROCESS
+
+    # Special case: "sh -c" wrapping docker run
+    if base_cmd == "sh":
+        return ServerType.DOCKER
+
+    return ServerType.DOCKER
+
+
+def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerConfig]:
+    """
+    Load and parse mcp-config.json.
+
+    Args:
+        config_path: Path to mcp-config.json. Defaults to:
+            1. MCP_CONFIG_PATH env var
+            2. /app/mcp-config.json (in container)
+            3. ./mcp-config.json (development)
+
+    Returns:
+        Dict mapping server name to McpServerConfig
+    """
+    if config_path is None:
+        config_path = os.getenv("MCP_CONFIG_PATH")
+
+    if config_path is None:
+        # Try common locations
+        candidates = [
+            "/app/mcp-config.json",
+            "./mcp-config.json",
+            "../mcp-config.json",
+            "../../mcp-config.json",
+        ]
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                config_path = candidate
+                break
+
+    if config_path is None or not os.path.exists(config_path):
+        print("[McpConfigLoader] No mcp-config.json found, using empty config")
+        return {}
+
+    print(f"[McpConfigLoader] Loading config from: {config_path}")
+
+    with open(config_path) as f:
+        raw_config = json.load(f)
+
+    servers: dict[str, McpServerConfig] = {}
+    mcp_servers = raw_config.get("mcpServers", {})
+
+    for name, server_def in mcp_servers.items():
+        command = server_def.get("command", "")
+        args = server_def.get("args", [])
+        env = server_def.get("env", {})
+        enabled = server_def.get("enabled", False)
+
+        # Expand environment variables in args
+        expanded_args = [_expand_env_vars(arg) for arg in args]
+
+        # Expand environment variables in env values
+        expanded_env = {k: _expand_env_vars(v) for k, v in env.items()}
+
+        server_type = classify_server_type(command)
+
+        servers[name] = McpServerConfig(
+            name=name,
+            server_type=server_type,
+            command=command,
+            args=expanded_args,
+            env=expanded_env,
+            enabled=enabled,
+        )
+
+        print(f"[McpConfigLoader] {name}: type={server_type.value}, enabled={enabled}")
+
+    return servers
+
+
+def _expand_env_vars(value: str) -> str:
+    """Expand ${VAR} style environment variables."""
+    if not isinstance(value, str):
+        return value
+
+    result = value
+    # Handle ${VAR} and ${VAR:-default} patterns
+    import re
+    pattern = r'\$\{([^}:]+)(?::-([^}]*))?\}'
+
+    def replacer(match):
+        var_name = match.group(1)
+        default = match.group(2) or ""
+        return os.getenv(var_name, default)
+
+    return re.sub(pattern, replacer, result)
+
+
+def get_process_servers(config: dict[str, McpServerConfig]) -> dict[str, McpServerConfig]:
+    """Filter to only process-type servers."""
+    return {
+        name: server
+        for name, server in config.items()
+        if server.server_type == ServerType.PROCESS
+    }
+
+
+def get_docker_servers(config: dict[str, McpServerConfig]) -> dict[str, McpServerConfig]:
+    """Filter to only docker-type servers."""
+    return {
+        name: server
+        for name, server in config.items()
+        if server.server_type == ServerType.DOCKER
+    }
+
+
+def get_enabled_servers(config: dict[str, McpServerConfig]) -> dict[str, McpServerConfig]:
+    """Filter to only enabled servers."""
+    return {
+        name: server
+        for name, server in config.items()
+        if server.enabled
+    }

@@ -704,10 +704,32 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
     if rpc_request.get("method") == "tools/call":
         params = rpc_request.get("params", {})
         tool_name = params.get("name", "")
+        arguments = params.get("arguments", {})
 
         if tool_name == "expandSchema":
             # expandSchema は Gateway にproxyしない（ローカル処理）
             return await handle_expand_schema(rpc_request)
+
+        # Process MCP サーバーのツールかチェック
+        try:
+            process_manager = get_process_manager()
+            # ツール名がProcessManagerに登録されているか確認
+            if tool_name in process_manager._tool_to_server:
+                print(f"[MCP Proxy] Routing {tool_name} to ProcessManager")
+                result = await process_manager.call_tool(tool_name, arguments)
+                # JSON-RPC レスポンス形式で返す
+                response_data = {
+                    "jsonrpc": "2.0",
+                    "id": rpc_request.get("id"),
+                    **result
+                }
+                return Response(
+                    content=json.dumps(response_data),
+                    status_code=200,
+                    media_type="application/json"
+                )
+        except Exception as e:
+            print(f"[MCP Proxy] ProcessManager routing check failed: {e}")
 
     # その他のツールコールはGatewayにproxy
     if not session_id:

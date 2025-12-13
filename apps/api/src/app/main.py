@@ -13,6 +13,7 @@ import os
 
 from .api.endpoints import mcp_proxy
 from .api.endpoints import process_mcp
+from .api.endpoints import sse_tools
 from .core.process_manager import initialize_process_manager, get_process_manager
 
 MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway:9390")
@@ -64,6 +65,9 @@ app.include_router(mcp_proxy.router, prefix="/mcp", tags=["mcp"])
 
 # Mount Process MCP router (direct uvx/npx process management)
 app.include_router(process_mcp.router, prefix="/process", tags=["process-mcp"])
+
+# Mount SSE tools router (real-time tool discovery)
+app.include_router(sse_tools.router, prefix="/api", tags=["sse-tools"])
 
 
 # Root-level SSE endpoint for Claude Code compatibility
@@ -127,3 +131,35 @@ async def root():
         "service": "airis-mcp-gateway-api",
         "gateway_url": MCP_GATEWAY_URL,
     }
+
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus-style metrics endpoint."""
+    from fastapi.responses import PlainTextResponse
+
+    manager = get_process_manager()
+    process_status = manager.get_all_status()
+
+    active = sum(1 for s in process_status if s.get("state") == "ready")
+    stopped = sum(1 for s in process_status if s.get("state") == "stopped")
+
+    lines = [
+        "# HELP mcp_active_processes Number of running MCP server processes",
+        "# TYPE mcp_active_processes gauge",
+        f"mcp_active_processes {active}",
+        "",
+        "# HELP mcp_stopped_processes Number of stopped MCP server processes",
+        "# TYPE mcp_stopped_processes gauge",
+        f"mcp_stopped_processes {stopped}",
+        "",
+    ]
+
+    for status in process_status:
+        name = status.get("name", "unknown")
+        enabled = 1 if status.get("enabled") else 0
+        tools = status.get("tools_count", 0)
+        lines.append(f'mcp_server_enabled{{server="{name}"}} {enabled}')
+        lines.append(f'mcp_server_tools{{server="{name}"}} {tools}')
+
+    return PlainTextResponse("\n".join(lines), media_type="text/plain")
