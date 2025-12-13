@@ -301,18 +301,48 @@ async def get_tools_combined():
 
 
 @router.get("/tools/status")
-async def get_tools_status():
+async def get_tools_status(metrics: bool = False):
     """
-    Get server status overview.
+    Get server status overview with optional SRE metrics.
+
+    Query params:
+        metrics: If true, include detailed metrics (uptime, latency, memory, etc.)
 
     Returns:
         {
+            "roster": {hot: [...], cold: [...], summary: {...}},
             "servers": [...],
+            "processes": [...],  # With metrics if requested
             "sse": {active_clients: int, ...}
         }
     """
     servers = await get_all_server_status()
+
+    # Get process server status with optional metrics
+    try:
+        manager = get_process_manager()
+        processes = manager.get_all_status(include_metrics=metrics)
+
+        # Build roster summary
+        hot_servers = manager.get_hot_servers()
+        cold_servers = manager.get_cold_servers()
+        roster = {
+            "hot": hot_servers,
+            "cold": cold_servers,
+            "summary": {
+                "hot_count": len(hot_servers),
+                "cold_count": len(cold_servers),
+                "total_enabled": len(hot_servers) + len(cold_servers),
+            }
+        }
+    except Exception as e:
+        print(f"[SSE] Failed to get process status with metrics: {e}")
+        processes = []
+        roster = {"hot": [], "cold": [], "summary": {}}
+
     return JSONResponse({
+        "roster": roster,
         "servers": servers,
+        "processes": processes,
         "sse": _publisher.get_stats(),
     })

@@ -12,9 +12,17 @@ import asyncio
 import json
 import os
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 from enum import Enum
+
+# For memory/CPU metrics
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
 
 
 class ProcessState(Enum):
@@ -71,6 +79,14 @@ class ProcessRunner:
         self._server_info: dict[str, Any] = {}
         self._tools: list[dict[str, Any]] = []
 
+        # Metrics tracking
+        self._started_at: Optional[float] = None
+        self._spawn_count = 0
+        self._idle_kill_count = 0
+        self._last_error: Optional[str] = None
+        self._call_latencies: deque[float] = deque(maxlen=100)  # Last 100 calls
+        self._total_calls = 0
+
     @property
     def state(self) -> ProcessState:
         return self._state
@@ -116,6 +132,7 @@ class ProcessRunner:
     async def _start_process(self):
         """Start the subprocess."""
         self._state = ProcessState.STARTING
+        self._spawn_count += 1
 
         # Build environment
         env = {**os.environ, **self.config.env}
@@ -140,6 +157,7 @@ class ProcessRunner:
 
             self._state = ProcessState.RUNNING
             self._last_used = time.time()
+            self._started_at = time.time()
 
             # Start background tasks
             self._reader_task = asyncio.create_task(self._stdout_reader())
@@ -151,6 +169,7 @@ class ProcessRunner:
         except Exception as e:
             print(f"[ProcessRunner] Failed to start {self.config.name}: {e}")
             self._state = ProcessState.STOPPED
+            self._last_error = str(e)
             raise
 
     async def _initialize(self):
@@ -179,8 +198,10 @@ class ProcessRunner:
             response = await self._send_request(init_request, timeout=10.0)
 
             if "error" in response:
-                print(f"[ProcessRunner] {self.config.name} initialize failed: {response['error']}")
+                error_msg = str(response['error'])
+                print(f"[ProcessRunner] {self.config.name} initialize failed: {error_msg}")
                 self._state = ProcessState.STOPPED
+                self._last_error = error_msg
                 return
 
             self._server_info = response.get("result", {})
@@ -201,6 +222,7 @@ class ProcessRunner:
         except Exception as e:
             print(f"[ProcessRunner] {self.config.name} initialize error: {e}")
             self._state = ProcessState.STOPPED
+            self._last_error = str(e)
 
     async def _fetch_tools(self):
         """Fetch available tools from the server."""
@@ -241,7 +263,14 @@ class ProcessRunner:
             }
         }
 
-        return await self._send_request(request, timeout=60.0)
+        # Track latency
+        start_time = time.time()
+        result = await self._send_request(request, timeout=60.0)
+        latency_ms = (time.time() - start_time) * 1000
+        self._call_latencies.append(latency_ms)
+        self._total_calls += 1
+
+        return result
 
     async def send_raw_request(self, request: dict[str, Any]) -> dict[str, Any]:
         """Send a raw JSON-RPC request."""
@@ -377,6 +406,7 @@ class ProcessRunner:
                 idle_time = time.time() - self._last_used
                 if idle_time > self.config.idle_timeout:
                     print(f"[ProcessRunner] {self.config.name} idle for {idle_time:.0f}s, stopping")
+                    self._idle_kill_count += 1
                     await self.stop()
                     return
 
@@ -420,3 +450,63 @@ class ProcessRunner:
         self._state = ProcessState.STOPPED
         self._tools = []
         self._server_info = {}
+        self._started_at = None
+
+    def get_metrics(self) -> dict[str, Any]:
+        """
+        Get SRE-grade metrics for this process.
+
+        Returns:
+            {
+                "uptime_ms": int or None,
+                "spawn_count": int,
+                "idle_kill_count": int,
+                "total_calls": int,
+                "latency_p50_ms": float or None,
+                "latency_p95_ms": float or None,
+                "latency_p99_ms": float or None,
+                "memory_rss_mb": float or None,
+                "cpu_percent": float or None,
+                "last_error": str or None,
+                "pid": int or None
+            }
+        """
+        metrics: dict[str, Any] = {
+            "uptime_ms": None,
+            "spawn_count": self._spawn_count,
+            "idle_kill_count": self._idle_kill_count,
+            "total_calls": self._total_calls,
+            "latency_p50_ms": None,
+            "latency_p95_ms": None,
+            "latency_p99_ms": None,
+            "memory_rss_mb": None,
+            "cpu_percent": None,
+            "last_error": self._last_error,
+            "pid": None,
+        }
+
+        # Calculate uptime
+        if self._started_at and self._state == ProcessState.READY:
+            metrics["uptime_ms"] = int((time.time() - self._started_at) * 1000)
+
+        # Calculate latency percentiles
+        if self._call_latencies:
+            sorted_latencies = sorted(self._call_latencies)
+            n = len(sorted_latencies)
+            metrics["latency_p50_ms"] = round(sorted_latencies[int(n * 0.50)], 2)
+            metrics["latency_p95_ms"] = round(sorted_latencies[int(n * 0.95)], 2)
+            metrics["latency_p99_ms"] = round(sorted_latencies[min(int(n * 0.99), n - 1)], 2)
+
+        # Get process metrics if psutil available and process running
+        if HAS_PSUTIL and self._proc and self._proc.pid:
+            try:
+                proc = psutil.Process(self._proc.pid)
+                metrics["pid"] = self._proc.pid
+                metrics["memory_rss_mb"] = round(proc.memory_info().rss / 1024 / 1024, 2)
+                metrics["cpu_percent"] = round(proc.cpu_percent(interval=0.1), 2)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        elif self._proc and self._proc.pid:
+            metrics["pid"] = self._proc.pid
+
+        return metrics

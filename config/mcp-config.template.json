@@ -1,0 +1,108 @@
+{
+  "$schema": "https://raw.githubusercontent.com/agiletec-inc/airis-mcp-gateway/main/config/mcp-config.schema.json",
+  "mcpServers": {
+    "airis-agent": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/agiletec-inc/airis-agent",
+        "airis-agent-mcp"
+      ],
+      "env": {},
+      "enabled": true,
+      "mode": "hot",
+      "description": "PDCA/CoT orchestrator with confidence checks and deep research"
+    },
+    "mindbase": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/agiletec-inc/mindbase#subdirectory=mcp",
+        "mindbase-mcp"
+      ],
+      "env": {
+        "MINDBASE_URL": "${MINDBASE_URL:-http://localhost:18003}"
+      },
+      "enabled": true,
+      "mode": "hot",
+      "description": "Long-term memory with semantic search"
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {},
+      "enabled": true,
+      "mode": "cold",
+      "description": "Official library documentation (15,000+ libraries)"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "env": {},
+      "enabled": true,
+      "mode": "cold",
+      "description": "Multi-step reasoning and complex analysis"
+    },
+    "serena": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://serena:8000/sse", "--allow-http"],
+      "env": {},
+      "enabled": true,
+      "mode": "cold",
+      "description": "Semantic code navigation and refactoring"
+    },
+    "tavily": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.tavily.com/mcp/?tavilyApiKey=${TAVILY_API_KEY}"],
+      "env": {
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+      },
+      "enabled": true,
+      "mode": "cold",
+      "description": "Web search for deep research"
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+      "env": {},
+      "enabled": true,
+      "mode": "cold",
+      "description": "HTTP requests"
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {},
+      "enabled": true,
+      "mode": "hot",
+      "description": "Session memory"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "env": {},
+      "enabled": false,
+      "mode": "cold",
+      "description": "File read/write/search"
+    },
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git"],
+      "env": {},
+      "enabled": false,
+      "mode": "cold",
+      "description": "Git operations"
+    },
+    "time": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-time"],
+      "env": {},
+      "enabled": false,
+      "mode": "cold",
+      "description": "Current time"
+    }
+  },
+  "log": {
+    "level": "info"
+  }
+}

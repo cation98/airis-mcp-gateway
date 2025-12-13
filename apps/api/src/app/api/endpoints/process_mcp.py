@@ -112,18 +112,22 @@ async def disable_server(server_name: str):
 
 
 @router.get("/tools")
-async def list_tools(server: Optional[str] = Query(None, description="Filter by server name")):
+async def list_tools(
+    server: Optional[str] = Query(None, description="Filter by server name"),
+    mode: Optional[str] = Query("all", description="Filter by mode: hot, cold, all (default: all)")
+):
     """
     List available tools from process MCP servers.
 
     Args:
         server: Optional server name filter
+        mode: Filter by server mode (hot, cold, all). Default: all
 
     Returns:
         List of tool definitions
     """
     manager = get_process_manager()
-    tools = await manager.list_tools(server_name=server)
+    tools = await manager.list_tools(server_name=server, mode=mode)
     return {"tools": tools}
 
 

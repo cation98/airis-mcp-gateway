@@ -1,0 +1,19 @@
+{
+  "name": "@airis/commands",
+  "version": "1.0.0",
+  "description": "AIRIS utility commands MCP server",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.27.1",
+    "typescript": "^5.7.0"
+  }
+}

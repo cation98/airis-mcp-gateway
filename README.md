@@ -18,7 +18,7 @@ docker compose up -d
 claude mcp add --scope user --transport sse airis-mcp-gateway http://localhost:9400/sse
 ```
 
-Done! You now have access to 27+ tools.
+Done! You now have access to 50 tools.
 
 ## Default Enabled Servers
 
@@ -29,6 +29,7 @@ Done! You now have access to 27+ tools.
 | **fetch** | uvx | 1 | Web page fetching as markdown |
 | **memory** | npx | 9 | Knowledge graph (entities, relations) |
 | **sequential-thinking** | npx | 1 | Step-by-step reasoning |
+| **serena** | mcp-remote | 23 | Semantic code retrieval and editing |
 | **tavily** | npx | 4 | Web search via Tavily API |
 
 ## Architecture
@@ -52,6 +53,7 @@ Claude Code / Cursor / Zed
 │  │  ├─ fetch (uvx)            1 tool               │    │
 │  │  ├─ memory (npx)           9 tools              │    │
 │  │  ├─ sequential-thinking    1 tool               │    │
+│  │  ├─ serena (mcp-remote)   23 tools              │    │
 │  │  └─ tavily (npx)           4 tools              │    │
 │  └─────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────┘

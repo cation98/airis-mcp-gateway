@@ -21,6 +21,11 @@ class ServerType(Enum):
     DOCKER = "docker"    # Docker MCP Gateway
 
 
+class ServerMode(Enum):
+    HOT = "hot"    # Always ready, descriptions included
+    COLD = "cold"  # Lazy loaded, descriptions on-demand
+
+
 # Commands that indicate a process-based MCP server
 PROCESS_COMMANDS = {
     "uvx",
@@ -43,6 +48,7 @@ class McpServerConfig:
     args: list[str]
     env: dict[str, str]
     enabled: bool
+    mode: ServerMode = ServerMode.COLD  # Default to cold
     cwd: Optional[str] = None
 
     def to_process_config(self, idle_timeout: int = 120) -> ProcessConfig:
@@ -119,6 +125,13 @@ def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerCon
         args = server_def.get("args", [])
         env = server_def.get("env", {})
         enabled = server_def.get("enabled", False)
+        mode_str = server_def.get("mode", "cold")
+
+        # Parse mode
+        try:
+            mode = ServerMode(mode_str)
+        except ValueError:
+            mode = ServerMode.COLD
 
         # Expand environment variables in args
         expanded_args = [_expand_env_vars(arg) for arg in args]
@@ -135,9 +148,10 @@ def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerCon
             args=expanded_args,
             env=expanded_env,
             enabled=enabled,
+            mode=mode,
         )
 
-        print(f"[McpConfigLoader] {name}: type={server_type.value}, enabled={enabled}")
+        print(f"[McpConfigLoader] {name}: type={server_type.value}, mode={mode.value}, enabled={enabled}")
 
     return servers
 
@@ -184,4 +198,22 @@ def get_enabled_servers(config: dict[str, McpServerConfig]) -> dict[str, McpServ
         name: server
         for name, server in config.items()
         if server.enabled
+    }
+
+
+def get_hot_servers(config: dict[str, McpServerConfig]) -> dict[str, McpServerConfig]:
+    """Filter to only HOT mode servers (enabled + hot)."""
+    return {
+        name: server
+        for name, server in config.items()
+        if server.enabled and server.mode == ServerMode.HOT
+    }
+
+
+def get_cold_servers(config: dict[str, McpServerConfig]) -> dict[str, McpServerConfig]:
+    """Filter to only COLD mode servers (enabled + cold)."""
+    return {
+        name: server
+        for name, server in config.items()
+        if server.enabled and server.mode == ServerMode.COLD
     }

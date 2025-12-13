@@ -8,7 +8,8 @@
         "airis-agent-mcp"
       ],
       "env": {},
-      "enabled": true
+      "enabled": true,
+      "mode": "hot"
     },
     "airis-workspace": {
       "command": "uvx",
@@ -18,7 +19,8 @@
         "airis-workspace-mcp"
       ],
       "env": {},
-      "enabled": false
+      "enabled": false,
+      "mode": "cold"
     },
     "context7": {
       "command": "npx",
@@ -27,7 +29,8 @@
         "@upstash/context7-mcp"
       ],
       "env": {},
-      "enabled": true
+      "enabled": true,
+      "mode": "cold"
     },
     "fetch": {
       "command": "uvx",
@@ -35,7 +38,8 @@
         "mcp-server-fetch"
       ],
       "env": {},
-      "enabled": true
+      "enabled": true,
+      "mode": "cold"
     },
     "filesystem": {
       "command": "npx",
@@ -45,7 +49,8 @@
         "/workspace/host"
       ],
       "env": {},
-      "enabled": false
+      "enabled": false,
+      "mode": "cold"
     },
     "git": {
       "command": "npx",
@@ -54,7 +59,8 @@
         "@modelcontextprotocol/server-git"
       ],
       "env": {},
-      "enabled": false
+      "enabled": false,
+      "mode": "cold"
     },
     "memory": {
       "command": "npx",
@@ -63,34 +69,44 @@
         "@modelcontextprotocol/server-memory"
       ],
       "env": {},
-      "enabled": true
+      "enabled": true,
+      "mode": "hot"
     },
     "mindbase": {
-      "command": "sh",
+      "command": "uvx",
       "args": [
-        "-c",
-        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -e MINDBASE_API_URL=${MINDBASE_API_URL:-http://mindbase-api:18002} -v ${HOST_REPO_DIR}/apps/mindbase:/app:ro -w /app node:24-alpine node dist/index.js"
+        "--from",
+        "git+https://github.com/agiletec-inc/mindbase#subdirectory=mcp",
+        "mindbase-mcp"
       ],
-      "env": {},
-      "enabled": false
+      "env": {
+        "MINDBASE_URL": "${MINDBASE_URL:-http://localhost:18003}"
+      },
+      "enabled": true,
+      "mode": "hot"
     },
     "airis-mcp-gateway-control": {
       "command": "node",
       "args": [
-        "/workspace/host/airis-mcp-gateway/apps/gateway-control/dist/index.js"
+        "/app/gateway-control/index.js"
       ],
       "env": {
-        "API_URL": "http://api:9400"
+        "API_URL": "http://localhost:8000"
       },
-      "enabled": false
+      "enabled": true,
+      "mode": "hot"
     },
     "airis-commands": {
       "command": "node",
       "args": [
-        "/workspace/host/airis-mcp-gateway/apps/airis-commands/dist/index.js"
+        "/app/airis-commands/index.js"
       ],
-      "env": {},
-      "enabled": false
+      "env": {
+        "MCP_CONFIG_PATH": "/app/mcp-config.json",
+        "PROFILES_DIR": "/app/profiles"
+      },
+      "enabled": true,
+      "mode": "hot"
     },
     "sequential-thinking": {
       "command": "npx",
@@ -99,16 +115,20 @@
         "@modelcontextprotocol/server-sequential-thinking"
       ],
       "env": {},
-      "enabled": true
+      "enabled": true,
+      "mode": "cold"
     },
     "serena": {
-      "command": "sh",
+      "command": "npx",
       "args": [
-        "-c",
-        "docker run --rm -i --network ${DOCKER_NETWORK:-airis-mcp-gateway_default} -v ${HOST_WORKSPACE_DIR}:/workspaces/projects:rw ghcr.io/oraios/serena:latest serena start-mcp-server --context ide-assistant --enable-web-dashboard false --enable-gui-log-window false"
+        "-y",
+        "mcp-remote",
+        "http://serena:8000/sse",
+        "--allow-http"
       ],
       "env": {},
-      "enabled": false
+      "enabled": true,
+      "mode": "cold"
     },
     "tavily": {
       "command": "npx",
@@ -120,7 +140,8 @@
       "env": {
         "TAVILY_API_KEY": "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"
       },
-      "enabled": true
+      "enabled": true,
+      "mode": "cold"
     },
     "time": {
       "command": "npx",
@@ -129,7 +150,8 @@
         "@modelcontextprotocol/server-time"
       ],
       "env": {},
-      "enabled": false
+      "enabled": false,
+      "mode": "cold"
     },
     "supabase": {
       "command": "npx",
@@ -140,7 +162,8 @@
         "${SUPABASE_ACCESS_TOKEN}"
       ],
       "env": {},
-      "enabled": false
+      "enabled": false,
+      "mode": "cold"
     }
   },
   "log": {

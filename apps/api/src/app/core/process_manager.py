@@ -18,6 +18,7 @@ from .mcp_config_loader import (
     get_process_servers,
     McpServerConfig,
     ServerType,
+    ServerMode,
 )
 
 
@@ -80,6 +81,20 @@ class ProcessManager:
             if config.enabled
         ]
 
+    def get_hot_servers(self) -> list[str]:
+        """Get HOT mode server names (enabled + hot)."""
+        return [
+            name for name, config in self._server_configs.items()
+            if config.enabled and config.mode == ServerMode.HOT
+        ]
+
+    def get_cold_servers(self) -> list[str]:
+        """Get COLD mode server names (enabled + cold)."""
+        return [
+            name for name, config in self._server_configs.items()
+            if config.enabled and config.mode == ServerMode.COLD
+        ]
+
     def is_process_server(self, name: str) -> bool:
         """Check if a server is managed by ProcessManager."""
         return name in self._runners
@@ -116,13 +131,20 @@ class ProcessManager:
         print(f"[ProcessManager] Disabled server: {name}")
         return True
 
-    async def list_tools(self, server_name: Optional[str] = None) -> list[dict[str, Any]]:
+    async def list_tools(
+        self,
+        server_name: Optional[str] = None,
+        mode: Optional[str] = None,  # "hot", "cold", "all", or None (default: "hot")
+    ) -> list[dict[str, Any]]:
         """
         Get aggregated tools list.
 
         Args:
             server_name: If specified, only list tools from that server.
-                        Otherwise, list tools from all enabled servers.
+            mode: Filter by server mode:
+                  - "hot": Only HOT servers (default)
+                  - "cold": Only COLD servers
+                  - "all": All enabled servers
 
         Returns:
             List of tool definitions
@@ -130,8 +152,16 @@ class ProcessManager:
         if server_name:
             return await self._list_tools_for_server(server_name)
 
+        # Determine which servers to query based on mode
+        if mode == "all":
+            servers = self.get_enabled_servers()
+        elif mode == "cold":
+            servers = self.get_cold_servers()
+        else:  # Default to "hot"
+            servers = self.get_hot_servers()
+
         all_tools = []
-        for name in self.get_enabled_servers():
+        for name in servers:
             tools = await self._list_tools_for_server(name)
             all_tools.extend(tools)
 
@@ -274,7 +304,7 @@ class ProcessManager:
 
         return await runner.send_raw_request(request)
 
-    def get_server_status(self, name: str) -> dict[str, Any]:
+    def get_server_status(self, name: str, include_metrics: bool = False) -> dict[str, Any]:
         """Get status of a specific server."""
         runner = self._runners.get(name)
         config = self._server_configs.get(name)
@@ -282,19 +312,25 @@ class ProcessManager:
         if not runner or not config:
             return {"error": f"Server not found: {name}"}
 
-        return {
+        status = {
             "name": name,
             "type": "process",
             "command": config.command,
             "enabled": config.enabled,
+            "mode": config.mode.value,  # "hot" or "cold"
             "state": runner.state.value,
             "tools_count": len(runner.tools),
         }
 
-    def get_all_status(self) -> list[dict[str, Any]]:
+        if include_metrics:
+            status["metrics"] = runner.get_metrics()
+
+        return status
+
+    def get_all_status(self, include_metrics: bool = False) -> list[dict[str, Any]]:
         """Get status of all servers."""
         return [
-            self.get_server_status(name)
+            self.get_server_status(name, include_metrics=include_metrics)
             for name in self._runners.keys()
         ]
 
