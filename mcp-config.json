@@ -73,16 +73,16 @@
       "mode": "hot"
     },
     "mindbase": {
-      "command": "uvx",
+      "command": "npx",
       "args": [
-        "--from",
-        "git+https://github.com/agiletec-inc/mindbase#subdirectory=mcp",
-        "mindbase-mcp"
+        "-y",
+        "tsx",
+        "https://raw.githubusercontent.com/agiletec-inc/mindbase/main/apps/mcp-server/index.ts"
       ],
       "env": {
         "MINDBASE_URL": "${MINDBASE_URL:-http://localhost:18003}"
       },
-      "enabled": true,
+      "enabled": false,
       "mode": "hot"
     },
     "airis-mcp-gateway-control": {
