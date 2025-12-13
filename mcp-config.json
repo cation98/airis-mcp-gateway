@@ -116,13 +116,13 @@
       ],
       "env": {},
       "enabled": true,
-      "mode": "cold"
+      "mode": "hot"
     },
     "serena": {
       "profile": "${SERENA_MODE:-serena-remote}",
       "env": {},
       "enabled": true,
-      "mode": "cold"
+      "mode": "hot"
     },
     "tavily": {
       "command": "npx",
