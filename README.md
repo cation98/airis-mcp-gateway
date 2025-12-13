@@ -4,79 +4,32 @@
   <img src="./assets/demo.gif" width="720" alt="AIRIS MCP Gateway Demo" />
 </p>
 
-One command to add 34+ AI tools to Claude Code. No config, no setup, just works.
+One command to add 27+ AI tools to Claude Code. No config, no setup, just works.
 
 ## Quick Start
 
-### Prerequisites
-
-- Docker (Docker Desktop or OrbStack)
-
-### Install
-
 ```bash
+# 1. Clone and start
 git clone https://github.com/agiletec-inc/airis-mcp-gateway.git
 cd airis-mcp-gateway
 docker compose up -d
-```
 
-### Register with Claude Code
-
-```bash
+# 2. Register with Claude Code
 claude mcp add --scope user --transport sse airis-mcp-gateway http://localhost:9400/sse
 ```
 
-Done! You now have access to 34+ tools.
+Done! You now have access to 27+ tools.
 
-## Default Servers
+## Default Enabled Servers
 
-| Server | Tools | Description |
-|--------|-------|-------------|
-| **airis-agent** | 10 | Confidence check, deep research, repo indexing |
-| **mindbase** | 13 | Semantic memory with pgvector embeddings |
-| **memory** | 9 | Knowledge graph for conversation context |
-| **time** | 2 | Current time and timezone conversion |
-
-## Configuration
-
-### Enable/Disable Servers
-
-Edit `docker-compose.yml`:
-
-```yaml
-command:
-  - --servers=time
-  - --servers=memory
-  - --servers=airis-agent
-  - --servers=mindbase
-  # Add more servers:
-  # - --servers=stripe
-```
-
-Then restart:
-
-```bash
-docker compose restart
-```
-
-### Add Custom Catalog
-
-Create your own catalog file and mount it:
-
-```yaml
-command:
-  - --additional-catalog=/workspace/my-catalog.yaml
-```
-
-## Commands
-
-```bash
-docker compose up -d          # Start
-docker compose down           # Stop
-docker compose restart        # Restart
-docker compose logs -f        # View logs
-docker compose pull && docker compose up -d  # Update
-```
+| Server | Runner | Tools | Description |
+|--------|--------|-------|-------------|
+| **airis-agent** | uvx | 10 | Confidence check, deep research, repo indexing |
+| **context7** | npx | 2 | Library documentation lookup |
+| **fetch** | uvx | 1 | Web page fetching as markdown |
+| **memory** | npx | 9 | Knowledge graph (entities, relations) |
+| **sequential-thinking** | npx | 1 | Step-by-step reasoning |
+| **tavily** | npx | 4 | Web search via Tavily API |
 
 ## Architecture
 
@@ -84,15 +37,113 @@ docker compose pull && docker compose up -d  # Update
 Claude Code / Cursor / Zed
     │
     ▼ SSE (http://localhost:9400/sse)
-┌─────────────────────────────────┐
-│  Docker MCP Gateway             │
-│  (docker/mcp-gateway:latest)    │
-├─────────────────────────────────┤
-│  ├─ airis-agent (ghcr.io)       │
-│  ├─ mindbase (ghcr.io)          │
-│  ├─ memory (mcp/memory)         │
-│  └─ time (mcp/time)             │
-└─────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  FastAPI Hybrid MCP Multiplexer (port 9400)             │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  Docker Gateway (9390)                          │    │
+│  │  └─ schema partitioning + initialized fix       │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  ProcessManager (Lazy start + idle-kill)        │    │
+│  │  ├─ airis-agent (uvx)     10 tools              │    │
+│  │  ├─ context7 (npx)         2 tools              │    │
+│  │  ├─ fetch (uvx)            1 tool               │    │
+│  │  ├─ memory (npx)           9 tools              │    │
+│  │  ├─ sequential-thinking    1 tool               │    │
+│  │  └─ tavily (npx)           4 tools              │    │
+│  └─────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Configuration
+
+### Enable/Disable Servers
+
+Edit `mcp-config.json`:
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "enabled": true
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+      "enabled": true
+    }
+  }
+}
+```
+
+Then restart:
+
+```bash
+docker compose restart api
+```
+
+### API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `/sse` | SSE endpoint for Claude Code |
+| `/health` | Health check |
+| `/api/tools/combined` | All tools from all sources |
+| `/api/tools/status` | Server status overview |
+| `/process/servers` | List process servers |
+| `/metrics` | Prometheus metrics |
+
+## Commands
+
+```bash
+docker compose up -d          # Start
+docker compose down           # Stop
+docker compose restart api    # Restart API
+docker compose logs -f api    # View API logs
+docker compose pull && docker compose up -d  # Update
+```
+
+## Verify Installation
+
+```bash
+# Check health
+curl http://localhost:9400/health
+
+# List all tools
+curl http://localhost:9400/api/tools/combined | jq '.tools_count'
+
+# Check server status
+curl http://localhost:9400/api/tools/status | jq '.servers[] | {name, status}'
+```
+
+## Adding New Servers
+
+### Python MCP Server (uvx)
+
+```json
+{
+  "my-server": {
+    "command": "uvx",
+    "args": ["my-mcp-server"],
+    "enabled": true
+  }
+}
+```
+
+### Node.js MCP Server (npx)
+
+```json
+{
+  "my-server": {
+    "command": "npx",
+    "args": ["-y", "@org/my-mcp-server"],
+    "enabled": true
+  }
+}
 ```
 
 ## Related Projects
@@ -108,8 +159,8 @@ Claude Code / Cursor / Zed
 
 ```bash
 docker compose ps
-docker compose logs --tail 50
-curl http://localhost:9400/health
+docker compose logs --tail 50 api
+curl http://localhost:9400/metrics
 ```
 
 ### Reset
@@ -117,6 +168,16 @@ curl http://localhost:9400/health
 ```bash
 docker compose down -v
 docker compose up -d
+```
+
+### Process Server Issues
+
+```bash
+# Check specific server status
+curl http://localhost:9400/process/servers/memory | jq
+
+# View server logs
+docker compose logs api | grep -i memory
 ```
 
 ## License

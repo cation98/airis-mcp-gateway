@@ -30,6 +30,7 @@ PROCESS_COMMANDS = {
     "python3",
     "deno",
     "bun",
+    "sh",  # sh -c "docker run..." still uses StdIO JSON-RPC
 }
 
 
@@ -60,7 +61,7 @@ def classify_server_type(command: str) -> ServerType:
     """
     Determine if a server is process-based or docker-based.
 
-    Process commands: uvx, npx, node, python, deno, bun
+    Process commands: uvx, npx, node, python, deno, bun, sh
     Docker commands: everything else (handled by Docker MCP Gateway)
     """
     # Extract base command (handle paths like /usr/bin/node)
@@ -68,10 +69,6 @@ def classify_server_type(command: str) -> ServerType:
 
     if base_cmd in PROCESS_COMMANDS:
         return ServerType.PROCESS
-
-    # Special case: "sh -c" wrapping docker run
-    if base_cmd == "sh":
-        return ServerType.DOCKER
 
     return ServerType.DOCKER
 
