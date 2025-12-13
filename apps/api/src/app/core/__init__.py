@@ -1,18 +1,11 @@
 """Core modules for AIRIS MCP Gateway API."""
-from .schema_partitioning import (
-    partition_schema,
-    partition_tool,
-    partition_tools_list,
-    inject_expand_schema_tool,
-    get_schema_at_path,
-    EXPAND_SCHEMA_TOOL,
-)
+from .schema_partitioning import SchemaPartitioner, schema_partitioner
+from .config import settings
+from .protocol_logger import protocol_logger
 
 __all__ = [
-    "partition_schema",
-    "partition_tool",
-    "partition_tools_list",
-    "inject_expand_schema_tool",
-    "get_schema_at_path",
-    "EXPAND_SCHEMA_TOOL",
+    "SchemaPartitioner",
+    "schema_partitioner",
+    "settings",
+    "protocol_logger",
 ]

@@ -1,27 +1,47 @@
 name: airis-mcp-gateway
 
 services:
+  # Docker MCP Gateway (internal, port 9390)
+  # Manages MCP servers from Docker catalog
   gateway:
-    container_name: airis-mcp-gateway
+    container_name: airis-mcp-gateway-core
     image: docker/mcp-gateway:latest
     command:
       - --transport=sse
-      - --port=9400
+      - --port=9390
       - --watch
-      # Custom catalog with Airis servers
-      - --additional-catalog=/workspace/airis-mcp-gateway/catalogs/airis-catalog.yaml
-      # Default enabled servers
       - --servers=time
-      - --servers=memory
-      - --servers=airis-agent
-      - --servers=mindbase
-    ports:
-      - "9400:9400"
+    expose:
+      - "9390"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_WORKSPACE_DIR:-${HOME}/github}:/workspace:rw
     healthcheck:
-      test: ["CMD-SHELL", "wget -qS --spider http://localhost:9400/health 2>&1 | grep -q '200'"]
+      test: ["CMD-SHELL", "wget -qS --spider http://localhost:9390/health 2>&1 | grep -q '200'"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # FastAPI Proxy (external, port 9400)
+  # Hybrid MCP Multiplexer: Docker Gateway + Process (uvx/npx)
+  api:
+    container_name: airis-mcp-gateway
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "9400:8000"
+    environment:
+      - MCP_GATEWAY_URL=http://gateway:9390
+      - MCP_CONFIG_PATH=/app/mcp-config.json
+    volumes:
+      - ./mcp-config.json:/app/mcp-config.json:ro
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5

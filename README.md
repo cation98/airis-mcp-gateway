@@ -1,6 +1,10 @@
 # AIRIS MCP Gateway
 
-Docker MCP Gateway with pre-configured AIRIS servers for Claude Code and other MCP-compatible IDEs.
+<p align="center">
+  <img src="./assets/demo.gif" width="720" alt="AIRIS MCP Gateway Demo" />
+</p>
+
+One command to add 34+ AI tools to Claude Code. No config, no setup, just works.
 
 ## Quick Start
 

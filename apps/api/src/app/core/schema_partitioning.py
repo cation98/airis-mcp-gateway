@@ -1,237 +1,222 @@
 """
-Schema Partitioning for MCP Tool Descriptions.
+OpenMCP Lazy Loading Pattern実装
 
-Reduces token usage by stripping nested schema properties from tools/list responses.
-Full schemas are cached in memory and served on-demand via expandSchema tool.
-
-Token Reduction:
-- Full schemas: ~500 tokens per tool
-- Partitioned: ~50 tokens per tool
-- Result: ~90% reduction
+トークン消費を75-90%削減するためのスキーマ分割ロジック。
 """
-from typing import Any
-from copy import deepcopy
+
+from typing import Any, Dict, List, Optional
+import copy
 
 
-def partition_schema(schema: dict[str, Any], max_depth: int = 1, current_depth: int = 0) -> dict[str, Any]:
+class SchemaPartitioner:
     """
-    Recursively partition a JSON schema, keeping only top-level structure.
+    JSON Schemaをトップレベルプロパティのみに分割。
 
-    Args:
-        schema: The JSON schema to partition
-        max_depth: Maximum depth to preserve (default 1 = top-level only)
-        current_depth: Current recursion depth
+    OpenMCP Pattern:
+    - tools/list: 軽量なスキーマ（トップレベルのみ）を返す
+    - expandSchema: 必要に応じて詳細を段階的に取得
+    """
 
-    Returns:
-        Partitioned schema with nested properties stripped
+    def __init__(self):
+        # フルスキーマをメモリにキャッシュ
+        self.full_schemas: Dict[str, Dict[str, Any]] = {}
+        self.tool_docs: Dict[str, str] = {}
 
-    Example:
-        Input (500 tokens):
-        {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Search query"},
-                "options": {
-                    "type": "object",
-                    "properties": {
-                        "limit": {"type": "integer"},
-                        "offset": {"type": "integer"},
-                        "filters": {
-                            "type": "object",
-                            "properties": {...}
+    def store_full_schema(self, tool_name: str, full_schema: Dict[str, Any]):
+        """
+        フルスキーマを保存（expandSchema用）
+
+        Args:
+            tool_name: ツール名
+            full_schema: 完全なinputSchema
+        """
+        self.full_schemas[tool_name] = copy.deepcopy(full_schema)
+        # ツール自体がmutateされる可能性もあるのでdocは別管理
+
+    def store_tool_description(self, tool_name: str, description: Optional[str]):
+        """
+        ツール説明文を保存（遅延読み出し用）
+        """
+        if description:
+            self.tool_docs[tool_name] = description.strip()
+
+    def get_tool_description(self, tool_name: str) -> Optional[str]:
+        """
+        保存済みツール説明文を取得
+        """
+        return self.tool_docs.get(tool_name)
+
+    def partition_schema(self, schema: Dict[str, Any], depth: int = 1) -> Dict[str, Any]:
+        """
+        スキーマをトップレベルプロパティのみに分割
+
+        Args:
+            schema: 元のJSON Schema
+            depth: 残す階層の深さ（デフォルト: 1 = トップレベルのみ）
+
+        Returns:
+            軽量化されたスキーマ
+
+        Example:
+            Input (1000 tokens):
+            {
+                "type": "object",
+                "properties": {
+                    "amount": {"type": "number"},
+                    "metadata": {
+                        "type": "object",
+                        "properties": {
+                            "shipping": {
+                                "type": "object",
+                                "properties": {
+                                    "address": {...}
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Output (50 tokens):
-        {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Search query"},
-                "options": {"type": "object", "_partitioned": true}
+            Output (50 tokens):
+            {
+                "type": "object",
+                "properties": {
+                    "amount": {"type": "number"},
+                    "metadata": {"type": "object"}  # ネスト削除
+                }
             }
-        }
-    """
-    if not isinstance(schema, dict):
-        return schema
+        """
+        if not isinstance(schema, dict):
+            return schema
 
-    result = {}
+        partitioned = copy.deepcopy(schema)
 
-    for key, value in schema.items():
-        if key == "properties" and isinstance(value, dict):
-            # Process each property
-            result[key] = {}
-            for prop_name, prop_schema in value.items():
-                if not isinstance(prop_schema, dict):
-                    result[key][prop_name] = prop_schema
-                elif _has_nested_complexity(prop_schema) and current_depth >= max_depth - 1:
-                    # This property has nested complexity, simplify it
-                    result[key][prop_name] = _simplify_property(prop_schema)
+        # propertiesが存在する場合
+        if "properties" in partitioned and depth > 0:
+            new_properties = {}
+
+            for key, value in partitioned["properties"].items():
+                if isinstance(value, dict):
+                    # トップレベルのtypeとdescriptionのみ残す
+                    new_prop = {}
+
+                    if "type" in value:
+                        new_prop["type"] = value["type"]
+
+                    if "description" in value:
+                        new_prop["description"] = value["description"]
+
+                    # enumやconstは残す（選択肢が必要）
+                    if "enum" in value:
+                        new_prop["enum"] = value["enum"]
+
+                    if "const" in value:
+                        new_prop["const"] = value["const"]
+
+                    # format, pattern等のバリデーションは残す
+                    if "format" in value:
+                        new_prop["format"] = value["format"]
+
+                    if "pattern" in value:
+                        new_prop["pattern"] = value["pattern"]
+
+                    # required, default も残す
+                    if "required" in value:
+                        new_prop["required"] = value["required"]
+
+                    if "default" in value:
+                        new_prop["default"] = value["default"]
+
+                    # 配列の場合は items を再帰的に軽量化
+                    if value.get("type") == "array" and isinstance(value.get("items"), dict):
+                        new_prop["items"] = self.partition_schema(value["items"], max(depth - 1, 0))
+
+                    # ネストしたpropertiesは削除（type情報のみ残る）
+                    # これによりトークン削減
+
+                    new_properties[key] = new_prop
                 else:
-                    # Simple property or not at max depth yet, recurse
-                    result[key][prop_name] = partition_schema(prop_schema, max_depth, current_depth + 1)
-        elif key == "items" and isinstance(value, dict):
-            # Array items - simplify if complex and at max depth
-            if _has_nested_complexity(value) and current_depth >= max_depth - 1:
-                result[key] = _simplify_property(value)
-            else:
-                result[key] = partition_schema(value, max_depth, current_depth + 1)
-        elif key in ("allOf", "anyOf", "oneOf") and isinstance(value, list):
-            # Schema composition - simplify at max depth
-            if current_depth >= max_depth:
-                result[key] = [{"_partitioned": True}]
-            else:
-                result[key] = [partition_schema(item, max_depth, current_depth + 1) for item in value]
-        else:
-            # Keep primitive values (type, description, enum, required, etc.)
-            result[key] = value
+                    new_properties[key] = value
 
-    return result
+            partitioned["properties"] = new_properties
 
+        # itemsが存在する場合（配列）
+        if "items" in partitioned and isinstance(partitioned["items"], dict):
+            partitioned["items"] = self.partition_schema(partitioned["items"], depth - 1)
 
-def _has_nested_complexity(schema: dict[str, Any]) -> bool:
-    """Check if schema has nested properties or complex items."""
-    if not isinstance(schema, dict):
-        return False
-    # Has nested object properties
-    if "properties" in schema:
-        return True
-    # Has complex array items
-    if schema.get("type") == "array" and isinstance(schema.get("items"), dict):
-        if "properties" in schema.get("items", {}):
-            return True
-    return False
+        return partitioned
 
+    def expand_schema(
+        self,
+        tool_name: str,
+        path: Optional[List[str]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        指定されたパスのスキーマ詳細を取得
 
-def _simplify_property(prop_schema: dict[str, Any]) -> dict[str, Any]:
-    """
-    Simplify a property schema to essential fields only.
+        Args:
+            tool_name: ツール名
+            path: スキーマパス（例: ["metadata", "shipping"]）
+                  Noneの場合は完全なスキーマを返す
 
-    Keeps: type, description, enum, format, pattern, default, required
-    Strips: nested properties, items details, complex schemas
-    """
-    if not isinstance(prop_schema, dict):
-        return prop_schema
+        Returns:
+            指定パスのスキーマ、またはNone（見つからない場合）
 
-    # Essential fields to preserve
-    essential_keys = {"type", "description", "enum", "format", "pattern", "default", "required", "const"}
-
-    result = {k: v for k, v in prop_schema.items() if k in essential_keys}
-
-    # Mark complex types as partitioned
-    if prop_schema.get("type") == "object" and "properties" in prop_schema:
-        result["_partitioned"] = True
-    elif prop_schema.get("type") == "array" and "items" in prop_schema:
-        result["_partitioned"] = True
-        # Keep basic item type info
-        items = prop_schema.get("items", {})
-        if isinstance(items, dict) and "type" in items:
-            result["items"] = {"type": items["type"]}
-
-    return result if result else {"type": "object", "_partitioned": True}
-
-
-def partition_tool(tool: dict[str, Any]) -> dict[str, Any]:
-    """
-    Partition a single MCP tool definition.
-
-    Args:
-        tool: MCP tool definition with name, description, inputSchema
-
-    Returns:
-        Tool with partitioned inputSchema
-    """
-    result = deepcopy(tool)
-
-    if "inputSchema" in result:
-        result["inputSchema"] = partition_schema(result["inputSchema"])
-
-    return result
-
-
-def partition_tools_list(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """
-    Partition all tools in a tools/list response.
-
-    Args:
-        tools: List of MCP tool definitions
-
-    Returns:
-        List of tools with partitioned schemas
-    """
-    return [partition_tool(tool) for tool in tools]
-
-
-# expandSchema tool definition to inject
-EXPAND_SCHEMA_TOOL = {
-    "name": "expandSchema",
-    "description": "Retrieve full schema details for a specific tool. Use when you need complete parameter information for a tool with partitioned schema (_partitioned: true).",
-    "inputSchema": {
-        "type": "object",
-        "properties": {
-            "toolName": {
-                "type": "string",
-                "description": "Name of the tool to get full schema for"
-            },
-            "path": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Optional JSON path to specific nested property (e.g., ['options', 'filters'])"
-            }
-        },
-        "required": ["toolName"]
-    }
-}
-
-
-def inject_expand_schema_tool(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """
-    Add expandSchema tool to the tools list.
-
-    Args:
-        tools: List of partitioned tools
-
-    Returns:
-        Tools list with expandSchema added
-    """
-    # Check if already present
-    if any(t.get("name") == "expandSchema" for t in tools):
-        return tools
-
-    return [EXPAND_SCHEMA_TOOL] + tools
-
-
-def get_schema_at_path(schema: dict[str, Any], path: list[str]) -> dict[str, Any] | None:
-    """
-    Navigate to a specific path within a schema.
-
-    Args:
-        schema: Full JSON schema
-        path: List of property names to navigate
-
-    Returns:
-        Schema at the specified path, or None if not found
-
-    Example:
-        get_schema_at_path(schema, ["options", "filters"])
-        -> Returns the schema for options.filters property
-    """
-    current = schema
-
-    for segment in path:
-        if not isinstance(current, dict):
+        Example:
+            expand_schema("stripe_create_payment", ["metadata", "shipping"])
+            → metadata.shipping 配下の完全なスキーマを返す
+        """
+        if tool_name not in self.full_schemas:
             return None
 
-        # Try to find in properties
-        props = current.get("properties", {})
-        if segment in props:
-            current = props[segment]
-        # Try items for arrays
-        elif current.get("type") == "array" and segment == "items":
-            current = current.get("items", {})
-        else:
-            return None
+        schema = self.full_schemas[tool_name]
 
-    return current
+        # パス指定なし = 完全なスキーマ
+        if not path:
+            return copy.deepcopy(schema)
+
+        # パスをたどる
+        current = schema
+        for key in path:
+            if isinstance(current, dict):
+                if key in current:
+                    current = current[key]
+                elif "properties" in current and key in current["properties"]:
+                    current = current["properties"][key]
+                else:
+                    return None
+            else:
+                return None
+
+        return copy.deepcopy(current)
+
+    def get_token_reduction_estimate(self, full_schema: Dict[str, Any]) -> Dict[str, int]:
+        """
+        トークン削減効果の推定
+
+        Args:
+            full_schema: 完全なスキーマ
+
+        Returns:
+            {"full": フルトークン数推定, "partitioned": 分割後トークン数推定, "reduction": 削減率%}
+        """
+        import json
+
+        full_json = json.dumps(full_schema)
+        partitioned_json = json.dumps(self.partition_schema(full_schema))
+
+        # JSON長をトークン数の近似値とする（実際は約4文字 = 1トークン）
+        full_tokens = len(full_json) // 4
+        partitioned_tokens = len(partitioned_json) // 4
+
+        reduction = int((1 - partitioned_tokens / full_tokens) * 100) if full_tokens > 0 else 0
+
+        return {
+            "full": full_tokens,
+            "partitioned": partitioned_tokens,
+            "reduction": reduction
+        }
+
+
+# グローバルインスタンス（FastAPIで共有）
+schema_partitioner = SchemaPartitioner()

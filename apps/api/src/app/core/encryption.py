@@ -1,0 +1,116 @@
+"""Encryption utilities for secret management"""
+import base64
+import os
+from pathlib import Path
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
+from .config import settings
+
+
+def _default_key_path() -> Path:
+    """Resolve the default file location for the persisted master key."""
+    configured_path = os.getenv("ENCRYPTION_MASTER_KEY_FILE")
+    if configured_path:
+        return Path(configured_path).expanduser().resolve()
+
+    project_root = settings.PROJECT_ROOT
+    return (project_root / "data" / "encryption_master.key").resolve()
+
+
+class EncryptionManager:
+    """Manages encryption and decryption of secrets"""
+
+    def __init__(self, master_key: str | None = None):
+        """
+        Initialize encryption manager with master key
+
+        Args:
+            master_key: Master encryption key. If None, generates or reads from env.
+        """
+        self._key_file_path = _default_key_path()
+
+        if master_key is None:
+            master_key = os.getenv("ENCRYPTION_MASTER_KEY")
+
+            if not master_key:
+                master_key = self._load_persisted_key()
+
+            if not master_key:
+                master_key = Fernet.generate_key().decode()
+                self._persist_key(master_key)
+                print(f"ℹ️  Generated new ENCRYPTION_MASTER_KEY and stored it at {self._key_file_path}")
+                print("   Set ENCRYPTION_MASTER_KEY in your environment to override the persisted key")
+
+        self.master_key = master_key
+        self._fernet = self._create_fernet(master_key)
+
+    def _create_fernet(self, master_key: str) -> Fernet:
+        """Create Fernet cipher from master key"""
+        # Use PBKDF2HMAC to derive a proper Fernet key
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=b"airis-mcp-gateway-salt",  # Fixed salt for consistent keys
+            iterations=100000,
+            backend=default_backend()
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(master_key.encode()))
+        return Fernet(key)
+
+    def encrypt(self, plaintext: str) -> bytes:
+        """
+        Encrypt plaintext string
+
+        Args:
+            plaintext: String to encrypt
+
+        Returns:
+            Encrypted bytes
+        """
+        return self._fernet.encrypt(plaintext.encode())
+
+    def decrypt(self, encrypted: bytes) -> str:
+        """
+        Decrypt encrypted bytes
+
+        Args:
+            encrypted: Encrypted bytes
+
+        Returns:
+            Decrypted plaintext string
+        """
+        return self._fernet.decrypt(encrypted).decode()
+
+    def _load_persisted_key(self) -> str | None:
+        """Read a previously generated master key from disk if present."""
+        try:
+            if self._key_file_path.is_file():
+                return self._key_file_path.read_text(encoding="utf-8").strip()
+        except OSError:
+            pass
+
+        return None
+
+    def _persist_key(self, key: str) -> None:
+        """Persist a generated master key so secrets survive restarts."""
+        try:
+            self._key_file_path.parent.mkdir(parents=True, exist_ok=True)
+            self._key_file_path.write_text(key, encoding="utf-8")
+            try:
+                os.chmod(self._key_file_path, 0o600)
+            except OSError:
+                # Permission adjustments may fail on some platforms (e.g. Windows)
+                pass
+        except OSError as exc:
+            print(f"⚠️  Failed to persist ENCRYPTION_MASTER_KEY to {self._key_file_path}: {exc}")
+
+    @staticmethod
+    def generate_master_key() -> str:
+        """Generate a new master encryption key"""
+        return Fernet.generate_key().decode()
+
+
+# Global encryption manager instance
+encryption_manager = EncryptionManager()
