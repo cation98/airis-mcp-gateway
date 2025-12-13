@@ -18,17 +18,48 @@ from ...core.process_manager import get_process_manager
 router = APIRouter()
 
 
-def _summarize_description(description: str, max_length: int = 160) -> str:
+class DescriptionMode:
+    """Description verbosity modes for tools/list responses."""
+    FULL = "full"      # Original description (no truncation)
+    SUMMARY = "summary"  # First sentence, max 160 chars (default)
+    BRIEF = "brief"    # Very short, max 60 chars
+    NONE = "none"      # No description (minimal tokens)
+
+
+def _summarize_description(
+    description: str,
+    mode: str = DescriptionMode.SUMMARY,
+    max_length: int | None = None
+) -> str:
     """
     Generate a compact summary for tools/list responses.
+
+    Args:
+        description: Original description text
+        mode: One of "full", "summary", "brief", "none"
+        max_length: Override max length (optional)
+
+    Returns:
+        Processed description or empty string
     """
     if not description:
+        return ""
+
+    if mode == DescriptionMode.NONE:
         return ""
 
     text = description.strip()
     if not text:
         return ""
 
+    if mode == DescriptionMode.FULL:
+        return text
+
+    # Determine max length based on mode
+    if max_length is None:
+        max_length = 160 if mode == DescriptionMode.SUMMARY else 60
+
+    # Extract first sentence
     for delimiter in [". ", "。", "！", "?", "？", "\n"]:
         idx = text.find(delimiter)
         if 0 < idx:
@@ -262,12 +293,16 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
 
     tools = list(data["result"]["tools"])
 
-    # Process MCP サーバーからツールを取得して統合
+    # Process MCP サーバーからツールを取得して統合（HOT のみ）
     try:
         process_manager = get_process_manager()
-        process_tools = await process_manager.list_tools()
+        # HOT サーバーのツールのみ返却（COLD はオンデマンド）
+        process_tools = await process_manager.list_tools(mode="hot")
+        hot_servers = process_manager.get_hot_servers()
+        cold_servers = process_manager.get_cold_servers()
         if process_tools:
-            print(f"[SSE Integration] Merging {len(process_tools)} process tools with {len(tools)} docker tools")
+            print(f"[SSE Integration] Merging {len(process_tools)} HOT tools with {len(tools)} docker tools")
+            print(f"[SSE Integration] HOT servers: {hot_servers}, COLD servers (not included): {cold_servers}")
             tools.extend(process_tools)
     except Exception as e:
         print(f"[SSE Integration] Failed to get process tools: {e}")
@@ -284,7 +319,11 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
 
         full_description = tool.get("description")
         schema_partitioner.store_tool_description(tool_name, full_description)
-        lightweight_description = _summarize_description(full_description or "")
+        # Use configured description mode (default: brief for token optimization)
+        lightweight_description = _summarize_description(
+            full_description or "",
+            mode=settings.DESCRIPTION_MODE
+        )
 
         # スキーマを分割
         partitioned_schema = schema_partitioner.partition_schema(input_schema)
@@ -307,7 +346,11 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
             "extensions": extensions
         }
 
-        if lightweight_description:
+        # Handle description based on mode
+        if settings.DESCRIPTION_MODE == DescriptionMode.NONE:
+            # Remove description entirely for maximum token savings
+            partitioned_tool.pop("description", None)
+        elif lightweight_description:
             partitioned_tool["description"] = lightweight_description
 
         partitioned_tools.append(partitioned_tool)

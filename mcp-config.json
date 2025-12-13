@@ -119,13 +119,7 @@
       "mode": "cold"
     },
     "serena": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "http://serena:8000/sse",
-        "--allow-http"
-      ],
+      "profile": "${SERENA_MODE:-serena-remote}",
       "env": {},
       "enabled": true,
       "mode": "cold"
@@ -164,6 +158,28 @@
       "env": {},
       "enabled": false,
       "mode": "cold"
+    }
+  },
+  "profiles": {
+    "serena-local": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--transport",
+        "stdio"
+      ]
+    },
+    "serena-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://serena:8000/sse",
+        "--allow-http"
+      ]
     }
   },
   "log": {

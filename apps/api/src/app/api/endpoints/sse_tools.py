@@ -151,9 +151,37 @@ async def get_all_server_status() -> list[dict[str, Any]]:
     return servers
 
 
-async def get_combined_tools() -> dict[str, Any]:
+def _apply_brief_description(description: str, mode: str = "brief") -> str:
+    """Apply brief description mode (similar to mcp_proxy logic)."""
+    if not description or mode == "none":
+        return ""
+    if mode == "full":
+        return description
+
+    max_length = 160 if mode == "summary" else 60
+    text = description.strip()
+
+    for delimiter in [". ", "。", "！", "?", "？", "\n"]:
+        idx = text.find(delimiter)
+        if 0 < idx:
+            if delimiter == "\n":
+                text = text[:idx]
+            else:
+                text = text[:idx + len(delimiter.strip())]
+            break
+
+    if len(text) > max_length:
+        text = text[:max_length - 1].rstrip() + "…"
+    return text
+
+
+async def get_combined_tools(mode: str = "hot", description_mode: str = "brief") -> dict[str, Any]:
     """
-    Get all tools from all sources.
+    Get all tools from all sources with brief descriptions.
+
+    Args:
+        mode: Tool listing mode ("hot", "cold", "all")
+        description_mode: Description verbosity ("full", "summary", "brief", "none")
 
     Returns:
         {
@@ -165,12 +193,20 @@ async def get_combined_tools() -> dict[str, Any]:
     servers = await get_all_server_status()
     all_tools = []
 
-    # Get tools from Process servers
+    # Get tools from Process servers (HOT by default)
     try:
         manager = get_process_manager()
-        process_tools = await manager.list_tools()
+        process_tools = await manager.list_tools(mode=mode)
         for tool in process_tools:
             tool["_source"] = "process"
+            # Apply brief description mode
+            if "description" in tool:
+                if description_mode == "none":
+                    del tool["description"]
+                else:
+                    tool["description"] = _apply_brief_description(
+                        tool["description"], description_mode
+                    )
         all_tools.extend(process_tools)
     except Exception as e:
         print(f"[SSE] Failed to get process tools: {e}")
@@ -179,6 +215,7 @@ async def get_combined_tools() -> dict[str, Any]:
         "servers": servers,
         "tools": all_tools,
         "tools_count": len(all_tools),
+        "description_mode": description_mode,
         "generatedAt": int(time.time()),
     }
 
@@ -285,19 +322,27 @@ async def sse_tools_stream(request: Request):
 
 
 @router.get("/tools/combined")
-async def get_tools_combined():
+async def get_tools_combined(
+    mode: str = "hot",
+    desc: str = "brief"
+):
     """
     Get combined tools list (SSE fallback for non-streaming clients).
+
+    Query params:
+        mode: Tool listing mode ("hot", "cold", "all"). Default: hot
+        desc: Description verbosity ("full", "summary", "brief", "none"). Default: brief
 
     Returns:
         {
             "servers": [...],
             "tools": [...],
             "tools_count": int,
+            "description_mode": str,
             "generatedAt": int
         }
     """
-    return JSONResponse(await get_combined_tools())
+    return JSONResponse(await get_combined_tools(mode=mode, description_mode=desc))
 
 
 @router.get("/tools/status")

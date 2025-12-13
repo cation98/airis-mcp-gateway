@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "AIRIS MCP Gateway API"
     DEBUG: bool = True
 
+    # Schema Partitioning
+    # Description mode: "full", "summary" (160 chars), "brief" (60 chars), "none"
+    DESCRIPTION_MODE: str = os.getenv("DESCRIPTION_MODE", "brief")
+
     # CORS
     CORS_ORIGINS: list[str] = []
 
