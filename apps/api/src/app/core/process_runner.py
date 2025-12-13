@@ -78,6 +78,7 @@ class ProcessRunner:
         # Server capabilities (populated after initialize)
         self._server_info: dict[str, Any] = {}
         self._tools: list[dict[str, Any]] = []
+        self._prompts: list[dict[str, Any]] = []
 
         # Metrics tracking
         self._started_at: Optional[float] = None
@@ -98,6 +99,10 @@ class ProcessRunner:
     @property
     def tools(self) -> list[dict[str, Any]]:
         return self._tools
+
+    @property
+    def prompts(self) -> list[dict[str, Any]]:
+        return self._prompts
 
     def _default_stderr_handler(self, server_name: str, line: str):
         print(f"[{server_name}][stderr] {line}")
@@ -195,7 +200,8 @@ class ProcessRunner:
         }
 
         try:
-            response = await self._send_request(init_request, timeout=10.0)
+            # Longer timeout for servers that download dependencies on startup (e.g., morphllm)
+            response = await self._send_request(init_request, timeout=60.0)
 
             if "error" in response:
                 error_msg = str(response['error'])
@@ -216,8 +222,11 @@ class ProcessRunner:
             # Fetch tools list
             await self._fetch_tools()
 
+            # Fetch prompts list (if supported)
+            await self._fetch_prompts()
+
             self._state = ProcessState.READY
-            print(f"[ProcessRunner] {self.config.name} is READY with {len(self._tools)} tools")
+            print(f"[ProcessRunner] {self.config.name} is READY with {len(self._tools)} tools, {len(self._prompts)} prompts")
 
         except Exception as e:
             print(f"[ProcessRunner] {self.config.name} initialize error: {e}")
@@ -237,6 +246,56 @@ class ProcessRunner:
 
         if "result" in response:
             self._tools = response["result"].get("tools", [])
+
+    async def _fetch_prompts(self):
+        """Fetch available prompts from the server."""
+        # Only fetch if server declares prompts capability
+        capabilities = self._server_info.get("capabilities", {})
+        if not capabilities.get("prompts"):
+            return
+
+        request = {
+            "jsonrpc": "2.0",
+            "id": self._next_id(),
+            "method": "prompts/list",
+            "params": {}
+        }
+
+        try:
+            response = await self._send_request(request, timeout=10.0)
+            if "result" in response:
+                self._prompts = response["result"].get("prompts", [])
+                print(f"[ProcessRunner] {self.config.name} has {len(self._prompts)} prompts")
+        except Exception as e:
+            # Not all servers support prompts - this is OK
+            print(f"[ProcessRunner] {self.config.name} prompts/list failed (may not be supported): {e}")
+
+    async def get_prompt(self, prompt_name: str, arguments: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """
+        Get a prompt from this MCP server.
+
+        Returns the JSON-RPC response (with result or error).
+        """
+        if not await self.ensure_ready():
+            return {
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32603,
+                    "message": f"Server {self.config.name} failed to initialize"
+                }
+            }
+
+        request = {
+            "jsonrpc": "2.0",
+            "id": self._next_id(),
+            "method": "prompts/get",
+            "params": {
+                "name": prompt_name,
+                "arguments": arguments or {}
+            }
+        }
+
+        return await self._send_request(request, timeout=30.0)
 
     async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """
@@ -449,6 +508,7 @@ class ProcessRunner:
         self._proc = None
         self._state = ProcessState.STOPPED
         self._tools = []
+        self._prompts = []
         self._server_info = {}
         self._started_at = None
 
