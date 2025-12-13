@@ -176,9 +176,9 @@
         "@21st-dev/magic@latest"
       ],
       "env": {
-        "TWENTYFIRST_API_KEY": "${TWENTYFIRST_API_KEY}"
+        "API_KEY": "843946a41d42f0efab2510871985a40cc6d0d4aaca73a0c82252ff313f606419"
       },
-      "enabled": false,
+      "enabled": true,
       "mode": "cold"
     },
     "morphllm": {
@@ -188,10 +188,10 @@
         "@morphllm/morphmcp"
       ],
       "env": {
-        "MORPH_API_KEY": "${MORPH_API_KEY}",
+        "MORPH_API_KEY": "sk-mO-tOX1-qHOuPPK8zY8L7eAM6sDJSNsIB-T0XUvFJ0GgPOls",
         "ENABLED_TOOLS": "edit_file,warpgrep_codebase_search"
       },
-      "enabled": false,
+      "enabled": true,
       "mode": "cold"
     },
     "chrome-devtools": {
