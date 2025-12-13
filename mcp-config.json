@@ -158,6 +158,51 @@
       "env": {},
       "enabled": false,
       "mode": "cold"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
+      "env": {},
+      "enabled": true,
+      "mode": "cold"
+    },
+    "magic": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@21st-dev/magic@latest"
+      ],
+      "env": {
+        "TWENTYFIRST_API_KEY": "${TWENTYFIRST_API_KEY}"
+      },
+      "enabled": false,
+      "mode": "cold"
+    },
+    "morphllm": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@morphllm/morphmcp"
+      ],
+      "env": {
+        "MORPH_API_KEY": "${MORPH_API_KEY}",
+        "ENABLED_TOOLS": "edit_file,warpgrep_codebase_search"
+      },
+      "enabled": false,
+      "mode": "cold"
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
+      "env": {},
+      "enabled": true,
+      "mode": "cold"
     }
   },
   "profiles": {
