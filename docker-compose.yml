@@ -1,6 +1,24 @@
 name: airis-mcp-gateway
 
 services:
+  # Mindbase MCP Server (internal, port 8001)
+  # Long-term memory and knowledge graph
+  mindbase:
+    container_name: airis-mindbase
+    image: ghcr.io/agiletec-inc/mindbase-mcp:latest
+    expose:
+      - "8001"
+    environment:
+      - PORT=8001
+      - MINDBASE_URL=${MINDBASE_URL:-http://localhost:18003}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/health 2>/dev/null || exit 0"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
   # Serena MCP Server (internal, port 8000)
   # Semantic code retrieval and editing capabilities
   # Only started with: docker compose --profile serena-remote up -d
