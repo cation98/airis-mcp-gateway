@@ -46,6 +46,7 @@ class ProcessManager:
         self._runners: dict[str, ProcessRunner] = {}
         self._server_configs: dict[str, McpServerConfig] = {}
         self._tool_to_server: dict[str, str] = {}  # tool_name -> server_name
+        self._prompt_to_server: dict[str, str] = {}  # prompt_name -> server_name
         self._initialized = False
 
     async def initialize(self):
@@ -189,6 +190,111 @@ class ProcessManager:
                 self._tool_to_server[tool_name] = name
 
         return runner.tools
+
+    async def list_prompts(
+        self,
+        server_name: Optional[str] = None,
+        mode: Optional[str] = None,  # "hot", "cold", "all", or None (default: "hot")
+    ) -> list[dict[str, Any]]:
+        """
+        Get aggregated prompts list from all servers.
+
+        Args:
+            server_name: If specified, only list prompts from that server.
+            mode: Filter by server mode:
+                  - "hot": Only HOT servers (default)
+                  - "cold": Only COLD servers
+                  - "all": All enabled servers
+
+        Returns:
+            List of prompt definitions
+        """
+        if server_name:
+            return await self._list_prompts_for_server(server_name)
+
+        # Determine which servers to query based on mode
+        if mode == "all":
+            servers = self.get_enabled_servers()
+        elif mode == "cold":
+            servers = self.get_cold_servers()
+        else:  # Default to "hot"
+            servers = self.get_hot_servers()
+
+        all_prompts = []
+        for name in servers:
+            prompts = await self._list_prompts_for_server(name)
+            all_prompts.extend(prompts)
+
+        return all_prompts
+
+    async def _list_prompts_for_server(self, name: str) -> list[dict[str, Any]]:
+        """Get prompts for a specific server (starts process if needed)."""
+        runner = self._runners.get(name)
+        if not runner:
+            return []
+
+        config = self._server_configs.get(name)
+        if not config or not config.enabled:
+            return []
+
+        # Ensure process is running and initialized
+        if not await runner.ensure_ready():
+            print(f"[ProcessManager] Failed to start server: {name}")
+            return []
+
+        # Cache prompt -> server mapping
+        for prompt in runner.prompts:
+            prompt_name = prompt.get("name", "")
+            if prompt_name:
+                self._prompt_to_server[prompt_name] = name
+
+        return runner.prompts
+
+    async def get_prompt(self, prompt_name: str, arguments: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """
+        Get a prompt, auto-routing to the correct server.
+
+        Args:
+            prompt_name: Name of the prompt to get
+            arguments: Prompt arguments
+
+        Returns:
+            JSON-RPC response (with result or error)
+        """
+        # Find server for this prompt
+        server_name = self._prompt_to_server.get(prompt_name)
+
+        if not server_name:
+            # Prompt not cached - refresh prompt lists from all enabled servers
+            for name in self.get_enabled_servers():
+                prompts = await self._list_prompts_for_server(name)
+                for prompt in prompts:
+                    if prompt.get("name") == prompt_name:
+                        server_name = name
+                        break
+                if server_name:
+                    break
+
+        if not server_name:
+            return {
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32601,
+                    "message": f"Prompt not found: {prompt_name}"
+                }
+            }
+
+        runner = self._runners.get(server_name)
+        if not runner:
+            return {
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32603,
+                    "message": f"Server not available: {server_name}"
+                }
+            }
+
+        return await runner.get_prompt(prompt_name, arguments)
 
     async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """

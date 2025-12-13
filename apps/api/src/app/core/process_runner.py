@@ -249,9 +249,9 @@ class ProcessRunner:
 
     async def _fetch_prompts(self):
         """Fetch available prompts from the server."""
-        # Only fetch if server declares prompts capability
+        # Only fetch if server declares prompts capability (check key existence, not truthiness)
         capabilities = self._server_info.get("capabilities", {})
-        if not capabilities.get("prompts"):
+        if "prompts" not in capabilities:
             return
 
         request = {

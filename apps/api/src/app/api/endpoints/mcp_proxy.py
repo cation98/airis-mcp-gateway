@@ -238,6 +238,10 @@ async def proxy_sse_stream(request: Request):
                             data = await apply_schema_partitioning(data)
                             await protocol_logger.log_message("server→client", data, {"phase": "tools_list"})
 
+                        # prompts/list レスポンスをインターセプト（Process MCP サーバーのプロンプトを追加）
+                        if isinstance(data, dict) and "result" in data and "prompts" in data.get("result", {}):
+                            data = await apply_prompts_merging(data)
+
                         # 変換後のデータを返す
                         yield f"data: {json.dumps(data)}\n\n"
 
@@ -276,6 +280,35 @@ async def proxy_sse_stream(request: Request):
                         yield f"{line}\n"
                 else:
                     yield f"{line}\n"
+
+
+async def apply_prompts_merging(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    prompts/list レスポンスに Process MCP サーバーのプロンプトを追加
+
+    Args:
+        data: prompts/list JSON-RPC 2.0 レスポンス
+
+    Returns:
+        プロンプトがマージされたレスポンス
+    """
+    if "result" not in data or "prompts" not in data["result"]:
+        return data
+
+    prompts = list(data["result"]["prompts"])
+
+    # Process MCP サーバーからプロンプトを取得して統合
+    try:
+        process_manager = get_process_manager()
+        process_prompts = await process_manager.list_prompts(mode="hot")
+        if process_prompts:
+            print(f"[Prompts Integration] Merging {len(process_prompts)} HOT prompts with {len(prompts)} docker prompts")
+            prompts.extend(process_prompts)
+    except Exception as e:
+        print(f"[Prompts Integration] Failed to get process prompts: {e}")
+
+    data["result"]["prompts"] = prompts
+    return data
 
 
 async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -752,6 +785,38 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
         if tool_name == "expandSchema":
             # expandSchema は Gateway にproxyしない（ローカル処理）
             return await handle_expand_schema(rpc_request)
+
+    # prompts/get リクエスト処理
+    if rpc_request.get("method") == "prompts/get":
+        params = rpc_request.get("params", {})
+        prompt_name = params.get("name", "")
+        arguments = params.get("arguments", {})
+
+        # Process MCP サーバーのプロンプトかチェック
+        try:
+            process_manager = get_process_manager()
+            if prompt_name in process_manager._prompt_to_server:
+                print(f"[MCP Proxy] Routing prompt {prompt_name} to ProcessManager")
+                result = await process_manager.get_prompt(prompt_name, arguments)
+                # JSON-RPC レスポンス形式で返す
+                response_data = {
+                    "jsonrpc": "2.0",
+                    "id": rpc_request.get("id"),
+                    **result
+                }
+                return Response(
+                    content=json.dumps(response_data),
+                    status_code=200,
+                    media_type="application/json"
+                )
+        except Exception as e:
+            print(f"[MCP Proxy] ProcessManager prompt routing check failed: {e}")
+
+    # tools/call リクエスト処理
+    if rpc_request.get("method") == "tools/call":
+        params = rpc_request.get("params", {})
+        tool_name = params.get("name", "")
+        arguments = params.get("arguments", {})
 
         # Process MCP サーバーのツールかチェック
         try:

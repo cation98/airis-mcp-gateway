@@ -15,6 +15,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
 const API_URL = process.env.API_URL || "http://localhost:9400";
@@ -52,6 +54,7 @@ const server = new Server(
   {
     capabilities: {
       tools: {},
+      prompts: {},
     },
   }
 );
@@ -287,6 +290,156 @@ SSE Stats:
       ],
       isError: true,
     };
+  }
+});
+
+// List available prompts (become slash commands in Claude Code)
+server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  return {
+    prompts: [
+      {
+        name: "status",
+        description: "Show gateway health and all server status",
+      },
+      {
+        name: "tools",
+        description: "List all available tools from enabled MCP servers",
+      },
+      {
+        name: "servers",
+        description: "List all MCP servers with their status",
+      },
+      {
+        name: "enable",
+        description: "Enable an MCP server",
+        arguments: [
+          {
+            name: "server_name",
+            description: "Name of the server to enable",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "disable",
+        description: "Disable an MCP server",
+        arguments: [
+          {
+            name: "server_name",
+            description: "Name of the server to disable",
+            required: true,
+          },
+        ],
+      },
+    ],
+  };
+});
+
+// Handle prompt requests
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  switch (name) {
+    case "status": {
+      return {
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: "Check the AIRIS MCP Gateway health status and show me an overview of all servers. Use the gateway_health tool.",
+            },
+          },
+        ],
+      };
+    }
+
+    case "tools": {
+      return {
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: "List all available tools from all enabled MCP servers. Use the gateway_list_tools tool.",
+            },
+          },
+        ],
+      };
+    }
+
+    case "servers": {
+      return {
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: "List all MCP servers registered in the gateway with their current status. Use the gateway_list_servers tool.",
+            },
+          },
+        ],
+      };
+    }
+
+    case "enable": {
+      const serverName = args?.server_name;
+      if (!serverName) {
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Enable an MCP server. Which server would you like to enable? Use gateway_list_servers to show available servers first.",
+              },
+            },
+          ],
+        };
+      }
+      return {
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: `Enable the MCP server named "${serverName}". Use the gateway_enable_server tool with server_name="${serverName}".`,
+            },
+          },
+        ],
+      };
+    }
+
+    case "disable": {
+      const serverName = args?.server_name;
+      if (!serverName) {
+        return {
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Disable an MCP server. Which server would you like to disable? Use gateway_list_servers to show available servers first.",
+              },
+            },
+          ],
+        };
+      }
+      return {
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: `Disable the MCP server named "${serverName}". Use the gateway_disable_server tool with server_name="${serverName}".`,
+            },
+          },
+        ],
+      };
+    }
+
+    default:
+      throw new Error(`Unknown prompt: ${name}`);
   }
 });
 
