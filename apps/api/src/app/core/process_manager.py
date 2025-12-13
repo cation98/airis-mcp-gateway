@@ -322,6 +322,10 @@ class ProcessManager:
             "tools_count": len(runner.tools),
         }
 
+        # Include runner info for profile-based servers (e.g., serena)
+        if config.runner:
+            status["runner"] = config.runner
+
         if include_metrics:
             status["metrics"] = runner.get_metrics()
 

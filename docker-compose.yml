@@ -3,8 +3,10 @@ name: airis-mcp-gateway
 services:
   # Serena MCP Server (internal, port 8000)
   # Semantic code retrieval and editing capabilities
+  # Only started with: docker compose --profile serena-remote up -d
   serena:
     container_name: airis-serena
+    profiles: ["serena-remote"]
     image: ghcr.io/oraios/serena:latest
     command:
       - serena
@@ -61,6 +63,7 @@ services:
     environment:
       - MCP_GATEWAY_URL=http://gateway:9390
       - MCP_CONFIG_PATH=/app/mcp-config.json
+      - SERENA_MODE=${SERENA_MODE:-serena-local}
     volumes:
       - ./mcp-config.json:/app/mcp-config.json:ro
       - ./apps/gateway-control/dist:/app/gateway-control:ro

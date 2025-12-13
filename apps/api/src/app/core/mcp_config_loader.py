@@ -50,6 +50,7 @@ class McpServerConfig:
     enabled: bool
     mode: ServerMode = ServerMode.COLD  # Default to cold
     cwd: Optional[str] = None
+    runner: Optional[str] = None  # "local" or "remote" for profile-based servers
 
     def to_process_config(self, idle_timeout: int = 120) -> ProcessConfig:
         """Convert to ProcessConfig for ProcessRunner."""
@@ -119,13 +120,30 @@ def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerCon
 
     servers: dict[str, McpServerConfig] = {}
     mcp_servers = raw_config.get("mcpServers", {})
+    profiles = raw_config.get("profiles", {})
 
     for name, server_def in mcp_servers.items():
-        command = server_def.get("command", "")
-        args = server_def.get("args", [])
         env = server_def.get("env", {})
         enabled = server_def.get("enabled", False)
         mode_str = server_def.get("mode", "cold")
+
+        # Check for profile-based configuration
+        profile_ref = server_def.get("profile")
+        if profile_ref:
+            # Expand environment variables in profile reference (e.g., ${SERENA_MODE:-serena-remote})
+            profile_name = _expand_env_vars(profile_ref)
+            profile = profiles.get(profile_name, {})
+            if not profile:
+                print(f"[McpConfigLoader] Warning: profile '{profile_name}' not found for server '{name}'")
+                continue
+            command = profile.get("command", "")
+            args = profile.get("args", [])
+            runner = "local" if profile_name.endswith("-local") else "remote"
+            print(f"[McpConfigLoader] {name}: using profile '{profile_name}' (runner={runner})")
+        else:
+            command = server_def.get("command", "")
+            args = server_def.get("args", [])
+            runner = None
 
         # Parse mode
         try:
@@ -149,6 +167,7 @@ def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerCon
             env=expanded_env,
             enabled=enabled,
             mode=mode,
+            runner=runner,
         )
 
         print(f"[McpConfigLoader] {name}: type={server_type.value}, mode={mode.value}, enabled={enabled}")
