@@ -81,8 +81,9 @@
         "--allow-http"
       ],
       "env": {},
-      "enabled": true,
-      "mode": "cold"
+      "enabled": false,
+      "mode": "cold",
+      "_comment": "Managed by Docker MCP Gateway via airis-catalog.yaml"
     },
     "airis-mcp-gateway-control": {
       "command": "node",

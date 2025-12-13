@@ -1,23 +1,8 @@
 name: airis-mcp-gateway
 
 services:
-  # Mindbase MCP Server (internal, port 8001)
-  # Long-term memory and knowledge graph
-  mindbase:
-    container_name: airis-mindbase
-    image: ghcr.io/agiletec-inc/mindbase-mcp:latest
-    expose:
-      - "8001"
-    environment:
-      - PORT=8001
-      - MINDBASE_URL=${MINDBASE_URL:-http://localhost:18003}
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8001/health 2>/dev/null || exit 0"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
+  # Note: mindbase is now managed by Docker MCP Gateway via airis-catalog.yaml
+  # The gateway handles stdio-to-SSE conversion automatically
 
   # Serena MCP Server (internal, port 8000)
   # Semantic code retrieval and editing capabilities
@@ -56,12 +41,14 @@ services:
       - --transport=sse
       - --port=9390
       - --watch
-      - --servers=time
+      - --additional-catalog=/catalogs/airis-catalog.yaml
+      - --servers=time,mindbase
     expose:
       - "9390"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOST_WORKSPACE_DIR:-${HOME}/github}:/workspace:rw
+      - ./catalogs:/catalogs:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qS --spider http://localhost:9390/health 2>&1 | grep -q '200'"]
       interval: 10s
@@ -81,9 +68,11 @@ services:
     environment:
       - MCP_GATEWAY_URL=http://gateway:9390
       - MCP_CONFIG_PATH=/app/mcp-config.json
+      - GATEWAY_CONFIG_PATH=/app/config/gateway-config.yaml
       - SERENA_MODE=${SERENA_MODE:-serena-local}
     volumes:
       - ./mcp-config.json:/app/mcp-config.json:ro
+      - ./config/gateway-config.yaml:/app/config/gateway-config.yaml:ro
       - ./apps/gateway-control/dist:/app/gateway-control:ro
       - ./apps/airis-commands/dist:/app/airis-commands:ro
       - ./profiles:/app/profiles:rw
