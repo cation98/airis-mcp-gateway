@@ -76,14 +76,13 @@
       "command": "npx",
       "args": [
         "-y",
-        "tsx",
-        "https://raw.githubusercontent.com/agiletec-inc/mindbase/main/apps/mcp-server/index.ts"
+        "mcp-remote",
+        "http://mindbase:8001/sse",
+        "--allow-http"
       ],
-      "env": {
-        "MINDBASE_URL": "${MINDBASE_URL:-http://localhost:18003}"
-      },
-      "enabled": false,
-      "mode": "hot"
+      "env": {},
+      "enabled": true,
+      "mode": "cold"
     },
     "airis-mcp-gateway-control": {
       "command": "node",
@@ -116,13 +115,13 @@
       ],
       "env": {},
       "enabled": true,
-      "mode": "hot"
+      "mode": "cold"
     },
     "serena": {
       "profile": "${SERENA_MODE:-serena-remote}",
       "env": {},
       "enabled": true,
-      "mode": "hot"
+      "mode": "cold"
     },
     "tavily": {
       "command": "npx",
