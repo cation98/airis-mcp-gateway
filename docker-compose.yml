@@ -1,6 +1,24 @@
 name: airis-mcp-gateway
 
 services:
+  # PostgreSQL for mindbase (with pgvector extension)
+  # Required by mindbase MCP server for memory/graph storage
+  mindbase-postgres-dev:
+    container_name: mindbase-postgres-dev
+    image: pgvector/pgvector:pg16
+    environment:
+      - POSTGRES_USER=mindbase
+      - POSTGRES_PASSWORD=mindbase
+      - POSTGRES_DB=mindbase
+    volumes:
+      - mindbase-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mindbase -d mindbase"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # Note: mindbase is now managed by Docker MCP Gateway via airis-catalog.yaml
   # The gateway handles stdio-to-SSE conversion automatically
 
@@ -85,3 +103,6 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+
+volumes:
+  mindbase-data:
