@@ -1,5 +1,6 @@
 """Unit tests for MCP server state CRUD operations"""
 import pytest
+import pytest_asyncio
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from app.models.mcp_server_state import MCPServerState
@@ -13,7 +14,7 @@ from app.schemas.mcp_server import MCPServerCreate
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_db():
     """Create test database session"""
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)

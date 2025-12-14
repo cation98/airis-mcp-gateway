@@ -1,5 +1,6 @@
 """Tests for dashboard summary aggregation."""
 import pytest
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 from app.api.endpoints.mcp_config import MCPServerInfo
@@ -11,7 +12,7 @@ from app.crud import mcp_server_state as state_crud
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_db():
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
     async with engine.begin() as conn:
@@ -39,6 +40,7 @@ async def test_dashboard_summary_counts(monkeypatch, test_db: AsyncSession):
             apiKeyRequired=True,
             recommended=True,
             builtin=False,
+            enabled=False,
             command="npx",
             args=["tavily"],
             env=None,
@@ -51,6 +53,7 @@ async def test_dashboard_summary_counts(monkeypatch, test_db: AsyncSession):
             apiKeyRequired=False,
             recommended=True,
             builtin=False,
+            enabled=False,
             command="npx",
             args=["fs"],
             env=None,

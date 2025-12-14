@@ -1,5 +1,6 @@
 """Unit tests for secrets CRUD operations"""
 import pytest
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from app.models.secret import Secret
 from app.crud import secret as crud
@@ -10,7 +11,7 @@ from app.core.database import Base
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_db():
     """Create test database session"""
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
