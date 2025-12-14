@@ -42,7 +42,12 @@ class ProcessConfig:
     args: list[str] = field(default_factory=list)
     env: dict[str, str] = field(default_factory=dict)
     cwd: Optional[str] = None
-    idle_timeout: int = 120  # seconds
+    idle_timeout: int = 120  # seconds (base, can be overridden by adaptive TTL)
+    # Adaptive TTL settings
+    adaptive_ttl_enabled: bool = True
+    min_ttl: int = 30  # minimum TTL in seconds
+    max_ttl: int = 300  # maximum TTL in seconds
+    ttl_window: int = 300  # window for measuring call frequency (5 minutes)
 
 
 class ProcessRunner:
@@ -88,6 +93,11 @@ class ProcessRunner:
         self._call_latencies: deque[float] = deque(maxlen=100)  # Last 100 calls
         self._total_calls = 0
 
+        # Adaptive TTL tracking
+        self._call_timestamps: deque[float] = deque(maxlen=1000)  # Recent call timestamps
+        self._current_ttl: float = config.idle_timeout  # Start with base TTL
+        self._cold_start_time: Optional[float] = None  # Track cold start duration
+
     @property
     def state(self) -> ProcessState:
         return self._state
@@ -103,6 +113,68 @@ class ProcessRunner:
     @property
     def prompts(self) -> list[dict[str, Any]]:
         return self._prompts
+
+    @property
+    def current_ttl(self) -> float:
+        """Get current adaptive TTL value."""
+        return self._current_ttl
+
+    def _calculate_adaptive_ttl(self) -> float:
+        """
+        Calculate adaptive TTL based on usage patterns.
+
+        Algorithm:
+        1. Count calls within the TTL window
+        2. Scale TTL based on call frequency
+        3. Consider cold start cost (longer TTL for expensive cold starts)
+
+        Returns:
+            Calculated TTL in seconds
+        """
+        if not self.config.adaptive_ttl_enabled:
+            return self.config.idle_timeout
+
+        now = time.time()
+        window_start = now - self.config.ttl_window
+
+        # Count recent calls
+        recent_calls = sum(1 for ts in self._call_timestamps if ts > window_start)
+
+        # Calculate calls per minute
+        calls_per_minute = (recent_calls / self.config.ttl_window) * 60
+
+        # Base scaling: more calls = longer TTL
+        # 0 calls/min -> min_ttl
+        # 10+ calls/min -> max_ttl
+        if calls_per_minute <= 0:
+            base_ttl = self.config.min_ttl
+        elif calls_per_minute >= 10:
+            base_ttl = self.config.max_ttl
+        else:
+            # Linear interpolation
+            ratio = calls_per_minute / 10
+            base_ttl = self.config.min_ttl + ratio * (self.config.max_ttl - self.config.min_ttl)
+
+        # Cold start penalty: if cold start was slow, extend TTL
+        if self._cold_start_time and self._cold_start_time > 5.0:
+            # Add penalty proportional to cold start time
+            cold_start_penalty = min(self._cold_start_time * 10, 60)  # max 60s bonus
+            base_ttl = min(base_ttl + cold_start_penalty, self.config.max_ttl)
+
+        return base_ttl
+
+    def _update_ttl(self):
+        """Update current TTL based on usage patterns."""
+        new_ttl = self._calculate_adaptive_ttl()
+        if new_ttl != self._current_ttl:
+            old_ttl = self._current_ttl
+            self._current_ttl = new_ttl
+            print(f"[ProcessRunner] {self.config.name} TTL adjusted: {old_ttl:.0f}s -> {new_ttl:.0f}s")
+
+    def _record_call(self):
+        """Record a tool call for TTL calculation."""
+        self._call_timestamps.append(time.time())
+        self._update_ttl()
 
     def _default_stderr_handler(self, server_name: str, line: str):
         print(f"[{server_name}][stderr] {line}")
@@ -180,6 +252,7 @@ class ProcessRunner:
     async def _initialize(self):
         """Send initialize request and wait for response."""
         self._state = ProcessState.INITIALIZING
+        cold_start_begin = time.time()
 
         # MCP initialize request
         init_request = {
@@ -225,8 +298,12 @@ class ProcessRunner:
             # Fetch prompts list (if supported)
             await self._fetch_prompts()
 
+            # Track cold start duration for adaptive TTL
+            self._cold_start_time = time.time() - cold_start_begin
+            self._update_ttl()
+
             self._state = ProcessState.READY
-            print(f"[ProcessRunner] {self.config.name} is READY with {len(self._tools)} tools, {len(self._prompts)} prompts")
+            print(f"[ProcessRunner] {self.config.name} is READY with {len(self._tools)} tools, {len(self._prompts)} prompts (cold start: {self._cold_start_time:.1f}s, TTL: {self._current_ttl:.0f}s)")
 
         except Exception as e:
             print(f"[ProcessRunner] {self.config.name} initialize error: {e}")
@@ -322,12 +399,13 @@ class ProcessRunner:
             }
         }
 
-        # Track latency
+        # Track latency and record call for adaptive TTL
         start_time = time.time()
         result = await self._send_request(request, timeout=60.0)
         latency_ms = (time.time() - start_time) * 1000
         self._call_latencies.append(latency_ms)
         self._total_calls += 1
+        self._record_call()  # For adaptive TTL
 
         return result
 
@@ -457,14 +535,16 @@ class ProcessRunner:
                 print(f"[ProcessRunner] {self.config.name} stderr reader error: {e}")
 
     async def _idle_reaper(self):
-        """Kill process after idle timeout."""
+        """Kill process after idle timeout (uses adaptive TTL)."""
         while self._state not in (ProcessState.STOPPING, ProcessState.STOPPED):
             await asyncio.sleep(5)
 
             if self._state == ProcessState.READY:
                 idle_time = time.time() - self._last_used
-                if idle_time > self.config.idle_timeout:
-                    print(f"[ProcessRunner] {self.config.name} idle for {idle_time:.0f}s, stopping")
+                # Use adaptive TTL if enabled, otherwise fall back to config
+                effective_ttl = self._current_ttl if self.config.adaptive_ttl_enabled else self.config.idle_timeout
+                if idle_time > effective_ttl:
+                    print(f"[ProcessRunner] {self.config.name} idle for {idle_time:.0f}s (TTL: {effective_ttl:.0f}s), stopping")
                     self._idle_kill_count += 1
                     await self.stop()
                     return
@@ -528,7 +608,8 @@ class ProcessRunner:
                 "memory_rss_mb": float or None,
                 "cpu_percent": float or None,
                 "last_error": str or None,
-                "pid": int or None
+                "pid": int or None,
+                "adaptive_ttl": {...}  # Adaptive TTL metrics
             }
         """
         metrics: dict[str, Any] = {
@@ -543,6 +624,15 @@ class ProcessRunner:
             "cpu_percent": None,
             "last_error": self._last_error,
             "pid": None,
+            # Adaptive TTL metrics
+            "adaptive_ttl": {
+                "enabled": self.config.adaptive_ttl_enabled,
+                "current_ttl_s": round(self._current_ttl, 1),
+                "min_ttl_s": self.config.min_ttl,
+                "max_ttl_s": self.config.max_ttl,
+                "cold_start_time_s": round(self._cold_start_time, 2) if self._cold_start_time else None,
+                "recent_calls": len([ts for ts in self._call_timestamps if ts > time.time() - self.config.ttl_window]),
+            },
         }
 
         # Calculate uptime
