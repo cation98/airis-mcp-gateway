@@ -4,7 +4,7 @@
   <img src="./assets/demo.gif" width="720" alt="AIRIS MCP Gateway Demo" />
 </p>
 
-One command to add 27+ AI tools to Claude Code. No config, no setup, just works.
+One command to add 60+ AI tools to Claude Code. No config, no setup, just works.
 
 ## Quick Start
 
@@ -18,19 +18,28 @@ docker compose up -d
 claude mcp add --scope user --transport sse airis-mcp-gateway http://localhost:9400/sse
 ```
 
-Done! You now have access to 50 tools.
+Done! You now have access to 60+ tools.
 
 ## Default Enabled Servers
 
-| Server | Runner | Tools | Description |
-|--------|--------|-------|-------------|
-| **airis-agent** | uvx | 10 | Confidence check, deep research, repo indexing |
-| **context7** | npx | 2 | Library documentation lookup |
-| **fetch** | uvx | 1 | Web page fetching as markdown |
-| **memory** | npx | 9 | Knowledge graph (entities, relations) |
-| **sequential-thinking** | npx | 1 | Step-by-step reasoning |
-| **serena** | mcp-remote | 23 | Semantic code retrieval and editing |
-| **tavily** | npx | 4 | Web search via Tavily API |
+| Server | Runner | Mode | Description |
+|--------|--------|------|-------------|
+| **airis-agent** | uvx | HOT | Confidence check, deep research, repo indexing |
+| **context7** | npx | COLD | Library documentation lookup |
+| **fetch** | uvx | COLD | Web page fetching as markdown |
+| **memory** | npx | HOT | Knowledge graph (entities, relations) |
+| **sequential-thinking** | npx | COLD | Step-by-step reasoning |
+| **serena** | mcp-remote | COLD | Semantic code retrieval and editing |
+| **tavily** | npx | COLD | Web search via Tavily API |
+| **playwright** | npx | COLD | Browser automation |
+| **magic** | npx | COLD | UI component generation |
+| **morphllm** | npx | COLD | Code editing with warpgrep |
+| **chrome-devtools** | npx | COLD | Chrome debugging |
+| **airis-mcp-gateway-control** | node | HOT | Gateway management tools |
+| **airis-commands** | node | HOT | Config and profile management |
+
+**HOT**: Always running, immediate response
+**COLD**: Start on-demand, auto-terminate when idle
 
 ## Architecture
 
@@ -43,18 +52,28 @@ Claude Code / Cursor / Zed
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐    │
 │  │  Docker Gateway (9390)                          │    │
-│  │  └─ schema partitioning + initialized fix       │    │
+│  │  └─ mindbase, time (via catalog)                │    │
 │  └─────────────────────────────────────────────────┘    │
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐    │
 │  │  ProcessManager (Lazy start + idle-kill)        │    │
-│  │  ├─ airis-agent (uvx)     10 tools              │    │
-│  │  ├─ context7 (npx)         2 tools              │    │
-│  │  ├─ fetch (uvx)            1 tool               │    │
-│  │  ├─ memory (npx)           9 tools              │    │
-│  │  ├─ sequential-thinking    1 tool               │    │
-│  │  ├─ serena (mcp-remote)   23 tools              │    │
-│  │  └─ tavily (npx)           4 tools              │    │
+│  │  ├─ airis-agent (uvx)       HOT                 │    │
+│  │  ├─ memory (npx)            HOT                 │    │
+│  │  ├─ gateway-control (node)  HOT                 │    │
+│  │  ├─ airis-commands (node)   HOT                 │    │
+│  │  ├─ context7 (npx)          COLD                │    │
+│  │  ├─ fetch (uvx)             COLD                │    │
+│  │  ├─ sequential-thinking     COLD                │    │
+│  │  ├─ serena (mcp-remote)     COLD                │    │
+│  │  ├─ tavily (npx)            COLD                │    │
+│  │  ├─ playwright (npx)        COLD                │    │
+│  │  ├─ magic (npx)             COLD                │    │
+│  │  ├─ morphllm (npx)          COLD                │    │
+│  │  └─ chrome-devtools (npx)   COLD                │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  PostgreSQL + pgvector (mindbase storage)       │    │
 │  └─────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -71,12 +90,14 @@ Edit `mcp-config.json`:
     "memory": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "enabled": true
+      "enabled": true,
+      "mode": "hot"
     },
     "fetch": {
       "command": "uvx",
       "args": ["mcp-server-fetch"],
-      "enabled": true
+      "enabled": true,
+      "mode": "cold"
     }
   }
 }
@@ -131,7 +152,8 @@ curl http://localhost:9400/api/tools/status | jq '.servers[] | {name, status}'
   "my-server": {
     "command": "uvx",
     "args": ["my-mcp-server"],
-    "enabled": true
+    "enabled": true,
+    "mode": "cold"
   }
 }
 ```
@@ -143,7 +165,8 @@ curl http://localhost:9400/api/tools/status | jq '.servers[] | {name, status}'
   "my-server": {
     "command": "npx",
     "args": ["-y", "@org/my-mcp-server"],
-    "enabled": true
+    "enabled": true,
+    "mode": "cold"
   }
 }
 ```
@@ -154,6 +177,7 @@ curl http://localhost:9400/api/tools/status | jq '.servers[] | {name, status}'
 |---------|-------------|
 | [airis-agent](https://github.com/agiletec-inc/airis-agent) | Intelligence layer - confidence checks, deep research |
 | [mindbase](https://github.com/agiletec-inc/mindbase) | Cross-session semantic memory |
+| [airis-workspace](https://github.com/agiletec-inc/airis-workspace) | Docker-first monorepo manager |
 
 ## Troubleshooting
 
