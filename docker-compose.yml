@@ -94,6 +94,7 @@ services:
       - ./apps/gateway-control/dist:/app/gateway-control:ro
       - ./apps/airis-commands/dist:/app/airis-commands:ro
       - ./profiles:/app/profiles:rw
+      - uv-cache:/root/.cache/uv
     depends_on:
       gateway:
         condition: service_healthy
@@ -106,3 +107,4 @@ services:
 
 volumes:
   mindbase-data:
+  uv-cache:

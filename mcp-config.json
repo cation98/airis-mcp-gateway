@@ -9,7 +9,7 @@
       ],
       "env": {},
       "enabled": true,
-      "mode": "hot"
+      "mode": "cold"
     },
     "airis-workspace": {
       "command": "uvx",
@@ -70,7 +70,7 @@
       ],
       "env": {},
       "enabled": true,
-      "mode": "hot"
+      "mode": "cold"
     },
     "mindbase": {
       "command": "npx",

@@ -88,8 +88,23 @@ async def root_sse_proxy(request: Request):
 
 @app.post("/sse")
 async def root_sse_proxy_post(request: Request):
-    """POST to /sse for transports that need it."""
+    """
+    POST to /sse for MCP SSE transport.
+
+    MCP SSE transport:
+    - GET /sse → SSE stream (server-initiated messages)
+    - POST /sse?sessionid=X → JSON-RPC request/response
+
+    POST requests with sessionid should ALWAYS go through JSON-RPC handler.
+    """
     from fastapi.responses import StreamingResponse
+
+    # POST requests with sessionid are JSON-RPC requests - handle directly
+    session_id = request.query_params.get("sessionid")
+    if session_id:
+        return await mcp_proxy._proxy_jsonrpc_request(request)
+
+    # Legacy: POST without sessionid and requesting SSE stream
     accept = request.headers.get("accept", "")
     if "text/event-stream" in accept.lower():
         return StreamingResponse(
