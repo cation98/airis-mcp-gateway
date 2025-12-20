@@ -24,6 +24,26 @@ Each repository has ONE responsibility and produces ONE OCI image.
 - Rate limiting and auth (future)
 - Audit logging (future)
 
+### Why Schema Partitioning Must Be Here
+
+Schema partitioning **cannot** be moved to airis-agent because:
+
+```
+Claude Code
+    ↓ tools/list request
+Gateway ← Must intercept HERE to reduce tokens
+    ↓
+MCP servers (return full schemas)
+```
+
+- airis-agent is just ONE MCP server among many
+- It cannot intercept other servers' responses (tavily, context7, mindbase, etc.)
+- Token optimization must happen at the proxy layer
+
+**Separation:**
+- Gateway: **Execution** of schema partitioning (technical necessity)
+- Agent: **Configuration/rules** for what to partition (via settings)
+
 ### Prohibited
 
 - **NO PM Logic**: ConfidenceChecker, SelfCheckProtocol, ReflexionPattern
