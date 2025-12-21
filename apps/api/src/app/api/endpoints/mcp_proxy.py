@@ -14,6 +14,7 @@ from ...core.schema_partitioning import schema_partitioner
 from ...core.config import settings
 from ...core.protocol_logger import protocol_logger
 from ...core.process_manager import get_process_manager
+from ...core.dynamic_mcp import get_dynamic_mcp
 
 router = APIRouter()
 
@@ -426,15 +427,42 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
 
     Returns:
         Schema partitioningされたレスポンス（Docker + Process統合）
+        DYNAMIC_MCP=true の場合はメタツールのみ返す
     """
     if "result" not in data or "tools" not in data["result"]:
         return data
 
-    tools = list(data["result"]["tools"])
+    docker_tools = list(data["result"]["tools"])
+    process_manager = get_process_manager()
+
+    # Dynamic MCP mode: return only meta-tools
+    if settings.DYNAMIC_MCP:
+        print("[Dynamic MCP] Mode enabled - returning meta-tools only")
+
+        # Get ALL tools for caching (from all enabled servers, not just HOT)
+        all_process_tools = await process_manager.list_tools(mode="all")
+
+        # Refresh Dynamic MCP cache with all available tools
+        dynamic_mcp = get_dynamic_mcp()
+        await dynamic_mcp.refresh_cache(process_manager, docker_tools)
+
+        # Also store full schemas for airis-schema lookups
+        for tool in docker_tools + all_process_tools:
+            tool_name = tool.get("name", "")
+            if tool_name:
+                schema_partitioner.store_full_schema(tool_name, tool.get("inputSchema", {}))
+                schema_partitioner.store_tool_description(tool_name, tool.get("description", ""))
+
+        # Return only meta-tools
+        data["result"]["tools"] = dynamic_mcp.get_meta_tools()
+        print(f"[Dynamic MCP] Cached {len(docker_tools)} docker + {len(all_process_tools)} process tools, returning 3 meta-tools")
+        return data
+
+    # Standard mode: merge HOT tools and apply schema partitioning
+    tools = docker_tools
 
     # Process MCP サーバーからツールを取得して統合（HOT のみ）
     try:
-        process_manager = get_process_manager()
         # HOT サーバーのツールのみ返却（COLD はオンデマンド）
         process_tools = await process_manager.list_tools(mode="hot")
         hot_servers = process_manager.get_hot_servers()
@@ -906,6 +934,16 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
             # expandSchema は Gateway にproxyしない（ローカル処理）
             return await handle_expand_schema(rpc_request)
 
+        # Dynamic MCP meta-tools (only when DYNAMIC_MCP=true)
+        if tool_name == "airis-find":
+            return await handle_airis_find(rpc_request)
+
+        if tool_name == "airis-exec":
+            return await handle_airis_exec(rpc_request, session_id=session_id)
+
+        if tool_name == "airis-schema":
+            return await handle_airis_schema(rpc_request)
+
     # prompts/get リクエスト処理
     if rpc_request.get("method") == "prompts/get":
         params = rpc_request.get("params", {})
@@ -1101,6 +1139,267 @@ async def proxy_root_well_known(request: Request, path: str) -> Response:
     return await _proxy_streaming_gateway_request(
         request,
         include_api_prefix=False,
+    )
+
+
+async def handle_airis_find(rpc_request: Dict[str, Any]) -> Response:
+    """
+    airis-find ツールコール: ツール/サーバー検索
+
+    Args:
+        rpc_request: JSON-RPC 2.0 リクエスト
+
+    Returns:
+        JSON-RPC 2.0 レスポンス
+    """
+    params = rpc_request.get("params", {})
+    arguments = params.get("arguments", {})
+
+    query = arguments.get("query")
+    server = arguments.get("server")
+
+    dynamic_mcp = get_dynamic_mcp()
+
+    # Auto-refresh cache if empty (tools/list not called yet)
+    # Only cache HOT servers to avoid cold start delays
+    if not dynamic_mcp._tools:
+        print("[Dynamic MCP] Cache empty, refreshing from HOT servers...")
+        process_manager = get_process_manager()
+        # Only get tools from HOT servers (already running)
+        hot_tools = await process_manager.list_tools(mode="hot")
+        # Manually populate cache without starting cold servers
+        for tool in hot_tools:
+            tool_name = tool.get("name", "")
+            server_name = process_manager._tool_to_server.get(tool_name, "unknown")
+            if tool_name:
+                from ...core.dynamic_mcp import ToolInfo
+                dynamic_mcp._tools[tool_name] = ToolInfo(
+                    name=tool_name,
+                    server=server_name,
+                    description=tool.get("description", ""),
+                    input_schema=tool.get("inputSchema", {}),
+                    source="process"
+                )
+                dynamic_mcp._tool_to_server[tool_name] = server_name
+        # Cache server info
+        for name in process_manager.get_enabled_servers():
+            status = process_manager.get_server_status(name)
+            from ...core.dynamic_mcp import ServerInfo
+            dynamic_mcp._servers[name] = ServerInfo(
+                name=name,
+                enabled=status.get("enabled", False),
+                mode=status.get("mode", "cold"),
+                tools_count=status.get("tools_count", 0),
+                source="process"
+            )
+        print(f"[Dynamic MCP] Cached {len(dynamic_mcp._tools)} tools from HOT servers")
+
+    results = dynamic_mcp.find(query=query, server=server)
+
+    # Format results as text for LLM consumption
+    lines = []
+    lines.append(f"Found {len(results['tools'])} tools across {results['total_servers']} servers\n")
+
+    if results['servers']:
+        lines.append("## Servers")
+        for s in results['servers']:
+            status = "enabled" if s['enabled'] else "disabled"
+            lines.append(f"- **{s['name']}** ({s['mode']}, {status}): {s['tools_count']} tools")
+        lines.append("")
+
+    if results['tools']:
+        lines.append("## Tools")
+        for t in results['tools']:
+            lines.append(f"- **{t['server']}:{t['name']}** - {t['description']}")
+
+    if not results['tools'] and not results['servers']:
+        lines.append("No matches found. Try a different query or use airis-find without arguments to list all.")
+
+    response_text = "\n".join(lines)
+
+    return Response(
+        content=json.dumps({
+            "jsonrpc": "2.0",
+            "id": rpc_request.get("id"),
+            "result": {
+                "content": [{"type": "text", "text": response_text}]
+            }
+        }),
+        status_code=200,
+        media_type="application/json"
+    )
+
+
+async def handle_airis_exec(rpc_request: Dict[str, Any], session_id: Optional[str] = None) -> Response:
+    """
+    airis-exec ツールコール: 任意のツールを実行
+
+    Args:
+        rpc_request: JSON-RPC 2.0 リクエスト
+        session_id: SSEセッションID（レスポンスキュー用）
+
+    Returns:
+        JSON-RPC 2.0 レスポンス
+    """
+    params = rpc_request.get("params", {})
+    arguments = params.get("arguments", {})
+
+    tool_ref = arguments.get("tool")
+    tool_args = arguments.get("arguments", {})
+
+    if not tool_ref:
+        return Response(
+            content=json.dumps({
+                "jsonrpc": "2.0",
+                "id": rpc_request.get("id"),
+                "error": {"code": -32602, "message": "tool is required"}
+            }),
+            status_code=200,
+            media_type="application/json"
+        )
+
+    dynamic_mcp = get_dynamic_mcp()
+    server_name, tool_name = dynamic_mcp.parse_tool_reference(tool_ref)
+
+    print(f"[Dynamic MCP] airis-exec: {tool_ref} -> server={server_name}, tool={tool_name}")
+
+    if not server_name:
+        return Response(
+            content=json.dumps({
+                "jsonrpc": "2.0",
+                "id": rpc_request.get("id"),
+                "error": {
+                    "code": -32601,
+                    "message": f"Tool not found: {tool_ref}. Use airis-find to discover available tools."
+                }
+            }),
+            status_code=200,
+            media_type="application/json"
+        )
+
+    # Route to ProcessManager
+    process_manager = get_process_manager()
+    if process_manager.is_process_server(server_name):
+        result = await process_manager.call_tool_on_server(server_name, tool_name, tool_args)
+
+        response_data = {
+            "jsonrpc": "2.0",
+            "id": rpc_request.get("id"),
+        }
+        if "error" in result:
+            response_data["error"] = result["error"]
+        else:
+            response_data["result"] = result.get("result")
+
+        # Send via SSE queue if session exists
+        if session_id:
+            queue = get_response_queue(session_id)
+            await queue.put(response_data)
+            return Response(status_code=202)
+
+        return Response(
+            content=json.dumps(response_data),
+            status_code=200,
+            media_type="application/json"
+        )
+
+    # For docker gateway tools, we need to call the actual tool
+    # (This would require proxying to docker gateway - for now return error)
+    return Response(
+        content=json.dumps({
+            "jsonrpc": "2.0",
+            "id": rpc_request.get("id"),
+            "error": {
+                "code": -32603,
+                "message": f"Docker gateway tool execution via airis-exec not yet implemented: {tool_ref}"
+            }
+        }),
+        status_code=200,
+        media_type="application/json"
+    )
+
+
+async def handle_airis_schema(rpc_request: Dict[str, Any]) -> Response:
+    """
+    airis-schema ツールコール: ツールのスキーマを取得
+
+    Args:
+        rpc_request: JSON-RPC 2.0 リクエスト
+
+    Returns:
+        JSON-RPC 2.0 レスポンス
+    """
+    params = rpc_request.get("params", {})
+    arguments = params.get("arguments", {})
+
+    tool_ref = arguments.get("tool")
+
+    if not tool_ref:
+        return Response(
+            content=json.dumps({
+                "jsonrpc": "2.0",
+                "id": rpc_request.get("id"),
+                "error": {"code": -32602, "message": "tool is required"}
+            }),
+            status_code=200,
+            media_type="application/json"
+        )
+
+    # Parse tool reference
+    dynamic_mcp = get_dynamic_mcp()
+    _, tool_name = dynamic_mcp.parse_tool_reference(tool_ref)
+
+    # Get schema from cache
+    schema = dynamic_mcp.get_tool_schema(tool_name)
+    if not schema:
+        # Try schema_partitioner as fallback
+        full_schema = schema_partitioner.expand_schema(tool_name, None)
+        description = schema_partitioner.get_tool_description(tool_name)
+        if full_schema:
+            schema = {
+                "name": tool_name,
+                "description": description or "",
+                "inputSchema": full_schema
+            }
+
+    if not schema:
+        return Response(
+            content=json.dumps({
+                "jsonrpc": "2.0",
+                "id": rpc_request.get("id"),
+                "error": {
+                    "code": -32602,
+                    "message": f"Schema not found for tool: {tool_ref}. Use airis-find to discover available tools."
+                }
+            }),
+            status_code=200,
+            media_type="application/json"
+        )
+
+    # Format schema as readable text
+    lines = [
+        f"# {schema['name']}",
+        "",
+        f"**Server:** {schema.get('server', 'unknown')}",
+        "",
+        f"**Description:** {schema.get('description', 'No description')}",
+        "",
+        "## Input Schema",
+        "```json",
+        json.dumps(schema.get("inputSchema", {}), indent=2),
+        "```"
+    ]
+
+    return Response(
+        content=json.dumps({
+            "jsonrpc": "2.0",
+            "id": rpc_request.get("id"),
+            "result": {
+                "content": [{"type": "text", "text": "\n".join(lines)}]
+            }
+        }),
+        status_code=200,
+        media_type="application/json"
     )
 
 

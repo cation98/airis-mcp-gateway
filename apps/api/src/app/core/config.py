@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     # Description mode: "full", "summary" (160 chars), "brief" (60 chars), "none"
     DESCRIPTION_MODE: str = os.getenv("DESCRIPTION_MODE", "brief")
 
+    # Dynamic MCP Mode
+    # When enabled, tools/list returns only meta-tools (airis-find, airis-exec)
+    # instead of all available tools. This dramatically reduces context usage.
+    DYNAMIC_MCP: bool = os.getenv("DYNAMIC_MCP", "false").lower() in ("true", "1", "yes")
+
     # CORS
     CORS_ORIGINS: list[str] = []
 
