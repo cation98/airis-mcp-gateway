@@ -51,10 +51,28 @@ FastAPI API (port 9400) - Hybrid MCP Multiplexer
 ```
 
 **Key patterns:**
+- **Dynamic MCP** (default): Only 3 meta-tools exposed (airis-find, airis-exec, airis-schema)
 - **Lazy loading**: Process servers start on first request, not at startup
 - **Idle-kill**: Unused servers terminate after 120s (configurable)
 - **Tool routing**: ProcessManager maps tool names to server names dynamically
 - **Schema partitioning**: Full tool schemas lazy-loaded to reduce token usage
+
+## Dynamic MCP Mode
+
+By default, `DYNAMIC_MCP=true` exposes only 3 meta-tools instead of 60+:
+
+| Tool | Purpose |
+|------|---------|
+| `airis-find` | Search tools by query (e.g., `airis-find query="memory"`) |
+| `airis-exec` | Execute tool by name (e.g., `airis-exec tool="memory:create_entities"`) |
+| `airis-schema` | Get full input schema for a tool |
+
+**Token savings:** ~98% reduction (42k → 600 tokens)
+
+To disable and expose all tools directly:
+```bash
+DYNAMIC_MCP=false docker compose up -d
+```
 
 ## Key Files
 
@@ -116,6 +134,7 @@ Server types: `uvx` (Python), `npx` (Node.js), `sh` (Docker via shell), `node` (
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
+| `DYNAMIC_MCP` | `true` | Enable Dynamic MCP (3 meta-tools only) |
 | `MCP_GATEWAY_URL` | `http://gateway:9390` | Docker gateway URL |
 | `MCP_CONFIG_PATH` | `/app/mcp-config.json` | Server config path |
 | `GATEWAY_MODE` | `lite` | `lite` (stateless) or `full` (with DB) |

@@ -91,9 +91,10 @@ services:
       - MCP_CONFIG_PATH=/app/mcp-config.json
       - GATEWAY_CONFIG_PATH=/app/config/gateway-config.yaml
       - SERENA_MODE=${SERENA_MODE:-serena-local}
-      # Dynamic MCP: set to "true" to expose only meta-tools (airis-find, airis-exec)
-      # instead of all tools - dramatically reduces context token usage
-      - DYNAMIC_MCP=${DYNAMIC_MCP:-false}
+      # Dynamic MCP: exposes only meta-tools (airis-find, airis-exec, airis-schema)
+      # instead of all tools - reduces context token usage by ~98%
+      # Set to "false" to disable and expose all tools directly
+      - DYNAMIC_MCP=${DYNAMIC_MCP:-true}
     volumes:
       - ./mcp-config.json:/app/mcp-config.json:ro
       - ./config/gateway-config.yaml:/app/config/gateway-config.yaml:ro

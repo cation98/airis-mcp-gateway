@@ -18,7 +18,47 @@ docker compose up -d
 claude mcp add --scope user --transport sse airis-mcp-gateway http://localhost:9400/sse
 ```
 
-Done! You now have access to 60+ tools.
+Done! You now have access to 60+ tools via **Dynamic MCP** - a token-efficient way to access all tools.
+
+## Dynamic MCP (Default)
+
+Instead of exposing all 60+ tools directly (which bloats context), Dynamic MCP exposes only 3 meta-tools:
+
+| Meta-Tool | Description |
+|-----------|-------------|
+| `airis-find` | Search for tools by name, description, or server |
+| `airis-exec` | Execute any tool by `server:tool_name` |
+| `airis-schema` | Get full input schema for a tool |
+
+### How It Works
+
+```
+User: "Save this note about the meeting"
+
+Claude: [calls airis-find query="memory"]
+→ memory:create_entities, memory:search_entities, ...
+
+Claude: [calls airis-schema tool="memory:create_entities"]
+→ { "entities": [...], "relations": [...] }
+
+Claude: [calls airis-exec tool="memory:create_entities" arguments={...}]
+→ Done!
+```
+
+### Token Savings
+
+```
+Traditional: 60 tools × ~700 tokens = ~42,000 tokens
+Dynamic MCP: 3 tools × ~200 tokens = ~600 tokens (98% reduction)
+```
+
+### Disable Dynamic MCP
+
+If you prefer all tools exposed directly (legacy mode):
+
+```bash
+DYNAMIC_MCP=false docker compose up -d
+```
 
 ## Default Enabled Servers
 
