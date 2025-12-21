@@ -1159,12 +1159,12 @@ async def handle_airis_find(rpc_request: Dict[str, Any]) -> Response:
     server = arguments.get("server")
 
     dynamic_mcp = get_dynamic_mcp()
+    process_manager = get_process_manager()
 
     # Auto-refresh cache if empty (tools/list not called yet)
     # Only cache HOT servers to avoid cold start delays
     if not dynamic_mcp._tools:
         print("[Dynamic MCP] Cache empty, refreshing from HOT servers...")
-        process_manager = get_process_manager()
         # Only get tools from HOT servers (already running)
         hot_tools = await process_manager.list_tools(mode="hot")
         # Manually populate cache without starting cold servers
@@ -1181,7 +1181,7 @@ async def handle_airis_find(rpc_request: Dict[str, Any]) -> Response:
                     source="process"
                 )
                 dynamic_mcp._tool_to_server[tool_name] = server_name
-        # Cache server info
+        # Cache server info for ALL enabled servers (including COLD)
         for name in process_manager.get_enabled_servers():
             status = process_manager.get_server_status(name)
             from ...core.dynamic_mcp import ServerInfo
@@ -1192,7 +1192,30 @@ async def handle_airis_find(rpc_request: Dict[str, Any]) -> Response:
                 tools_count=status.get("tools_count", 0),
                 source="process"
             )
-        print(f"[Dynamic MCP] Cached {len(dynamic_mcp._tools)} tools from HOT servers")
+        print(f"[Dynamic MCP] Cached {len(dynamic_mcp._tools)} tools from HOT servers, {len(dynamic_mcp._servers)} servers total")
+
+    # If specific server requested and it's COLD, start it and cache tools
+    if server and process_manager.is_process_server(server):
+        server_info = dynamic_mcp._servers.get(server)
+        if server_info and server_info.mode == "cold" and server_info.tools_count == 0:
+            print(f"[Dynamic MCP] Starting COLD server '{server}' to get tools...")
+            server_tools = await process_manager._list_tools_for_server(server)
+            for tool in server_tools:
+                tool_name = tool.get("name", "")
+                if tool_name:
+                    from ...core.dynamic_mcp import ToolInfo
+                    dynamic_mcp._tools[tool_name] = ToolInfo(
+                        name=tool_name,
+                        server=server,
+                        description=tool.get("description", ""),
+                        input_schema=tool.get("inputSchema", {}),
+                        source="process"
+                    )
+                    dynamic_mcp._tool_to_server[tool_name] = server
+            # Update server tools count
+            if server in dynamic_mcp._servers:
+                dynamic_mcp._servers[server].tools_count = len(server_tools)
+            print(f"[Dynamic MCP] Loaded {len(server_tools)} tools from '{server}'")
 
     results = dynamic_mcp.find(query=query, server=server)
 
@@ -1303,20 +1326,81 @@ async def handle_airis_exec(rpc_request: Dict[str, Any], session_id: Optional[st
             media_type="application/json"
         )
 
-    # For docker gateway tools, we need to call the actual tool
-    # (This would require proxying to docker gateway - for now return error)
-    return Response(
-        content=json.dumps({
-            "jsonrpc": "2.0",
-            "id": rpc_request.get("id"),
-            "error": {
-                "code": -32603,
-                "message": f"Docker gateway tool execution via airis-exec not yet implemented: {tool_ref}"
-            }
-        }),
-        status_code=200,
-        media_type="application/json"
-    )
+    # Route to Docker Gateway for non-process tools
+    # Check if we have a session to proxy through
+    if not session_id:
+        return Response(
+            content=json.dumps({
+                "jsonrpc": "2.0",
+                "id": rpc_request.get("id"),
+                "error": {
+                    "code": -32603,
+                    "message": f"Cannot execute Docker gateway tool without session: {tool_ref}"
+                }
+            }),
+            status_code=200,
+            media_type="application/json"
+        )
+
+    # Build tools/call request for Docker Gateway
+    gateway_request = {
+        "jsonrpc": "2.0",
+        "id": rpc_request.get("id"),
+        "method": "tools/call",
+        "params": {
+            "name": tool_name,
+            "arguments": tool_args
+        }
+    }
+
+    gateway_post_url = f"{settings.MCP_GATEWAY_URL.rstrip('/')}/sse?sessionid={session_id}"
+    print(f"[Dynamic MCP] Proxying airis-exec to Docker Gateway: {tool_name}")
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                gateway_post_url,
+                json=gateway_request,
+                headers={"Content-Type": "application/json"}
+            )
+
+            # SSE transport returns 202 Accepted, actual response comes via SSE stream
+            if response.status_code == 202:
+                # Response will come through SSE - return accepted
+                return Response(status_code=202)
+
+            # Direct response (shouldn't happen with SSE transport, but handle it)
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                media_type="application/json"
+            )
+    except httpx.TimeoutException:
+        return Response(
+            content=json.dumps({
+                "jsonrpc": "2.0",
+                "id": rpc_request.get("id"),
+                "error": {
+                    "code": -32603,
+                    "message": f"Docker gateway timeout for tool: {tool_ref}"
+                }
+            }),
+            status_code=200,
+            media_type="application/json"
+        )
+    except Exception as e:
+        return Response(
+            content=json.dumps({
+                "jsonrpc": "2.0",
+                "id": rpc_request.get("id"),
+                "error": {
+                    "code": -32603,
+                    "message": f"Docker gateway error: {str(e)}"
+                }
+            }),
+            status_code=200,
+            media_type="application/json"
+        )
 
 
 async def handle_airis_schema(rpc_request: Dict[str, Any]) -> Response:
