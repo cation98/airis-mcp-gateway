@@ -122,12 +122,136 @@ docker compose restart api
 
 ## Commands
 
+All commands are managed via [go-task](https://taskfile.dev). Enter the development shell first:
+
 ```bash
-docker compose up -d          # Start
-docker compose down           # Stop
-docker compose restart api    # Restart API
-docker compose logs -f api    # View API logs
-docker compose pull && docker compose up -d  # Update
+devbox shell              # Enter dev environment (or use direnv)
+task --list-all           # Show all available tasks
+```
+
+### Common Tasks
+
+```bash
+task docker:up            # Start the stack
+task docker:down          # Stop the stack
+task docker:logs          # Follow API logs
+task docker:restart       # Restart API container
+task test:e2e             # Run end-to-end tests
+task status               # Quick health check
+```
+
+### All Task Namespaces
+
+| Namespace | Description |
+|-----------|-------------|
+| `docker:*` | Container lifecycle (up, down, logs, shell, clean) |
+| `dev:*` | Development mode with hot reload |
+| `build:*` | MCP server builds (pnpm/esbuild) |
+| `test:*` | Health checks and e2e tests |
+
+## Development
+
+### Prerequisites
+
+Install [Devbox](https://www.jetify.com/devbox) for a reproducible dev environment:
+
+```bash
+curl -fsSL https://get.jetify.com/devbox | bash
+```
+
+### Why Devbox + go-task?
+
+This project uses Devbox and go-task to solve common development pain points:
+
+**The Problem:**
+- "It works on my machine" - Different Node/Python versions cause subtle bugs
+- Onboarding friction - New contributors spend hours installing dependencies
+- Command sprawl - Scattered scripts, docker commands, and manual steps
+- AI pairing issues - Claude Code struggles with inconsistent environments
+
+**The Solution:**
+
+| Tool | What it does | Why it matters |
+|------|--------------|----------------|
+| **Devbox** | Isolated, reproducible dev environment | Everyone gets identical tools (Node 22, Python 3.12, etc.) without polluting their system. Works on macOS, Linux, and WSL. |
+| **go-task** | Task runner with namespaced commands | One way to do things: `task docker:up` instead of memorizing docker-compose flags. Self-documenting via `task --list-all`. |
+
+**Benefits for AI-assisted development:**
+- Claude Code can reliably run `task test:e2e` knowing it will work
+- Consistent paths via `REPO_ROOT` prevent path-related errors
+- Namespaced tasks are discoverable and predictable
+
+**No Devbox? No problem:**
+```bash
+# Manual alternative (you manage your own tool versions)
+docker compose up -d
+curl http://localhost:9400/health
+```
+
+### Dev Workflow
+
+```bash
+devbox shell              # Enter dev environment
+task dev:up               # Start with hot reload
+task docker:logs          # Watch for changes
+```
+
+**What dev mode provides:**
+- Python hot reload (uvicorn `--reload`)
+- Source code mounted - edit `apps/api/src/` and changes apply immediately
+- Node dist folders mounted - rebuild locally, changes reflect without Docker rebuild
+
+**TypeScript changes:**
+```bash
+task build:mcp            # Rebuild MCP servers
+# Or use watch mode:
+task dev:watch            # Auto-rebuild on file changes
+```
+
+**Note:** Dev and prod use the same ports (9400). Stop one before starting the other.
+
+## Claude Code Integration
+
+This repo includes built-in slash commands for Claude Code users. When you open this project in Claude Code, you get instant access to testing and troubleshooting tools.
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `/test` | End-to-end test of gateway health, tools, and pre-warming |
+| `/test persistence` | Full test including data persistence across restart |
+| `/status` | Quick status check of containers, API, and servers |
+| `/troubleshoot [issue]` | Diagnose issues (startup, timeout, tools, connection) |
+
+### Usage
+
+```bash
+# In Claude Code TUI, just type:
+/test                    # Run full test suite
+/status                  # Quick health check
+/troubleshoot timeout    # Debug timeout issues
+```
+
+### How It Works
+
+Commands live in `.claude/commands/` and become prompts that Claude executes with appropriate tool permissions. This means:
+
+- **Zero setup** - Commands are available as soon as you open the repo
+- **Context-aware** - Commands reference project files and config automatically
+- **Safe** - Tool permissions are scoped (only docker, curl, MCP tools)
+
+### Creating Custom Commands
+
+Add a markdown file to `.claude/commands/`:
+
+```markdown
+# .claude/commands/my-command.md
+---
+description: What this command does
+allowed-tools: Bash(docker*), mcp__airis-mcp-gateway__*
+---
+
+Your prompt here. Use $ARGUMENTS for user input.
 ```
 
 ## Verify Installation
