@@ -866,6 +866,10 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
                 else:
                     print(f"[MCP Proxy] Initialize request accepted: {init_response.status_code}")
 
+                    # Wait for Gateway to process initialize request
+                    # This delay is critical - Gateway needs time to set up session state
+                    await asyncio.sleep(0.15)
+
                     # Step 2: Send notifications/initialized
                     # Per MCP spec, this should come after initialize response, but in SSE transport
                     # the response comes via stream. Gateway accepts this sequence for recovery.
@@ -880,6 +884,8 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
                     )
 
                     if notif_response.status_code in (200, 202):
+                        # Wait for Gateway to complete initialization before allowing tools/call
+                        await asyncio.sleep(0.10)
                         _proxy_jsonrpc_request._initialized_sessions.add(session_id)
                         print(f"[MCP Proxy] Session {session_id} initialized successfully")
                     else:
