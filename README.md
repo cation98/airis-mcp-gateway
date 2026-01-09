@@ -45,6 +45,24 @@ Claude: [calls airis-exec tool="memory:create_entities" arguments={...}]
 → Done!
 ```
 
+### Auto-Enable on Demand
+
+LLM can discover ALL servers (including disabled ones) via `airis-find`:
+
+```
+Claude: [calls airis-find query="stripe"]
+→ stripe (cold, disabled): 50 tools
+
+Claude: [calls airis-exec tool="stripe:create_customer" arguments={...}]
+→ Server auto-enabled, tool executed!
+```
+
+When `airis-exec` is called on a disabled server:
+1. Server is automatically enabled
+2. Tools are loaded
+3. Tool is executed
+4. No manual enable/disable required
+
 ### Token Savings
 
 ```
@@ -60,14 +78,18 @@ If you prefer all tools exposed directly (legacy mode):
 DYNAMIC_MCP=false docker compose up -d
 ```
 
-## Default Enabled Servers
+## Server List
+
+### Enabled by Default
 
 | Server | Runner | Mode | Description |
 |--------|--------|------|-------------|
-| **airis-agent** | uvx | HOT | Confidence check, deep research, repo indexing |
+| **airis-agent** | uvx | COLD | Confidence check, deep research, repo indexing |
+| **airis-mcp-gateway-control** | node | HOT | Gateway management tools |
+| **airis-commands** | node | HOT | Config and profile management |
 | **context7** | npx | COLD | Library documentation lookup |
 | **fetch** | uvx | COLD | Web page fetching as markdown |
-| **memory** | npx | HOT | Knowledge graph (entities, relations) |
+| **memory** | npx | COLD | Knowledge graph (entities, relations) |
 | **sequential-thinking** | npx | COLD | Step-by-step reasoning |
 | **serena** | mcp-remote | COLD | Semantic code retrieval and editing |
 | **tavily** | npx | COLD | Web search via Tavily API |
@@ -75,11 +97,25 @@ DYNAMIC_MCP=false docker compose up -d
 | **magic** | npx | COLD | UI component generation |
 | **morphllm** | npx | COLD | Code editing with warpgrep |
 | **chrome-devtools** | npx | COLD | Chrome debugging |
-| **airis-mcp-gateway-control** | node | HOT | Gateway management tools |
-| **airis-commands** | node | HOT | Config and profile management |
+| **supabase** | npx | COLD | Supabase database management |
+| **stripe** | npx | COLD | Stripe payments API |
+
+### Disabled by Default (Auto-Enable via airis-exec)
+
+| Server | Runner | Description |
+|--------|--------|-------------|
+| **twilio** | npx | Twilio voice/SMS API |
+| **cloudflare** | npx | Cloudflare management |
+| **github** | npx | GitHub API |
+| **postgres** | npx | Direct PostgreSQL access |
+| **filesystem** | npx | File system operations |
+| **git** | npx | Git operations |
+| **time** | npx | Time utilities |
 
 **HOT**: Always running, immediate response
 **COLD**: Start on-demand, auto-terminate when idle
+
+> Disabled servers are discoverable via `airis-find` and automatically enabled when you call `airis-exec`.
 
 ## Architecture
 
@@ -91,29 +127,29 @@ Claude Code / Cursor / Zed
 │  FastAPI Hybrid MCP Multiplexer (port 9400)             │
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐    │
-│  │  Docker Gateway (9390)                          │    │
-│  │  └─ mindbase, time (via catalog)                │    │
+│  │  Dynamic MCP Layer                              │    │
+│  │  ├─ airis-find    (discover all servers/tools)  │    │
+│  │  ├─ airis-exec    (execute + auto-enable)       │    │
+│  │  └─ airis-schema  (get tool input schema)       │    │
 │  └─────────────────────────────────────────────────┘    │
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐    │
 │  │  ProcessManager (Lazy start + idle-kill)        │    │
-│  │  ├─ airis-agent (uvx)       HOT                 │    │
-│  │  ├─ memory (npx)            HOT                 │    │
 │  │  ├─ gateway-control (node)  HOT                 │    │
 │  │  ├─ airis-commands (node)   HOT                 │    │
+│  │  ├─ airis-agent (uvx)       COLD                │    │
+│  │  ├─ memory (npx)            COLD                │    │
 │  │  ├─ context7 (npx)          COLD                │    │
-│  │  ├─ fetch (uvx)             COLD                │    │
-│  │  ├─ sequential-thinking     COLD                │    │
 │  │  ├─ serena (mcp-remote)     COLD                │    │
 │  │  ├─ tavily (npx)            COLD                │    │
 │  │  ├─ playwright (npx)        COLD                │    │
-│  │  ├─ magic (npx)             COLD                │    │
-│  │  ├─ morphllm (npx)          COLD                │    │
-│  │  └─ chrome-devtools (npx)   COLD                │    │
+│  │  ├─ supabase (npx)          COLD                │    │
+│  │  ├─ stripe (npx)            COLD                │    │
+│  │  └─ ... (20+ more servers)                      │    │
 │  └─────────────────────────────────────────────────┘    │
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐    │
-│  │  PostgreSQL + pgvector (mindbase storage)       │    │
+│  │  Docker Gateway (9390) - mindbase, etc.         │    │
 │  └─────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────┘
 ```

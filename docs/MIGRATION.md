@@ -1,124 +1,108 @@
-# Migration Guide: PM Logic Separation
+# Migration Guide
 
-## Overview
-
-As of v1.x, `airis-mcp-gateway` no longer contains PM (Project Management) logic. The gateway is now **routing-only**.
+## Upgrading to Dynamic MCP (v2.x)
 
 ### What Changed
 
-| Before | After |
-|--------|-------|
-| Gateway had intent detection | Use `airis-agent` MCP tools |
-| Gateway had capability routing | Use `airis-agent` MCP tools |
-| Gateway had `/do` endpoint | Use `airis_do` MCP tool |
-| Gateway had `airis_confidence_check` | Use `airis-agent`'s implementation |
+Dynamic MCP is now the default mode. Instead of exposing 60+ tools directly, the gateway exposes 3 meta-tools:
 
-## Migration Steps
+| Old | New |
+|-----|-----|
+| 60+ tools in `tools/list` | 3 meta-tools: `airis-find`, `airis-exec`, `airis-schema` |
+| Manual server enable/disable | Auto-enable on `airis-exec` |
+| All servers visible to LLM | Servers discoverable via `airis-find` |
 
-### 1. Update Gateway
+### Migration Steps
 
-Pull the latest version:
-
-```bash
-docker compose pull api
-docker compose up -d api
-```
-
-### 2. Enable airis-agent
-
-The `airis-agent` MCP server provides all PM functionality:
+#### 1. Update Gateway
 
 ```bash
-# Via MCP tool
-airis_enable_mcp_server("airis-agent")
+docker compose pull
+docker compose up -d
 ```
 
-Or add to `mcp-config.json`:
+#### 2. Update Tool Usage (if using directly)
 
-```json
-{
-  "mcpServers": {
-    "airis-agent": {
-      "command": "uvx",
-      "args": ["--from", "airis-agent", "airis-agent"],
-      "enabled": true,
-      "mode": "cold"
-    }
-  }
-}
+If you were calling tools directly:
+
+```python
+# Old
+result = mcp.call("memory:create_entities", {...})
+
+# New (via Dynamic MCP)
+result = mcp.call("airis-exec", {
+    "tool": "memory:create_entities",
+    "arguments": {...}
+})
 ```
 
-### 3. Update Tool Calls
+#### 3. Discover Tools
 
-Replace gateway PM tools with airis-agent equivalents:
+Use `airis-find` to discover available tools:
 
-| Old (Gateway) | New (airis-agent) |
-|--------------|-------------------|
-| `POST /do` | `airis_do` MCP tool |
-| `POST /detect` | `airis_do` with `dry_run: true` |
-| `POST /capabilities` | `airis_confidence_check` |
-| Gateway confidence check | `airis_confidence_check` |
+```python
+# Find all memory-related tools
+mcp.call("airis-find", {"query": "memory"})
 
-### 4. Full Deployment (Optional)
+# Find tools on a specific server
+mcp.call("airis-find", {"server": "stripe"})
+```
 
-For production, use the full compose profile:
+### Reverting to Legacy Mode
+
+If you need all tools exposed directly:
 
 ```bash
-cd airis-mcp-gateway
-docker compose -f infra/compose.yaml --profile full up -d
+DYNAMIC_MCP=false docker compose up -d
 ```
 
-This runs all services as Docker containers:
-- `airis-gateway` - MCP routing
-- `airis-agent` - PM logic
-- `airis-mindbase` - Long-term memory
-- `postgres` - Database
+### API Compatibility
 
-## API Compatibility
+The SSE endpoint remains the same:
+- `GET /sse` - SSE stream
+- `POST /sse?sessionid=X` - JSON-RPC requests
 
-The following MCP tools remain unchanged and work through gateway routing:
+### Troubleshooting
 
-- `airis_do` → Routes to airis-agent
-- `airis_confidence_check` → Routes to airis-agent
-- `airis_agent` → Routes to airis-agent
-- `airis_deep_research` → Routes to airis-agent
-- `memory_*` → Routes to mindbase
-- `session_*` → Routes to mindbase
-- `conversation_*` → Routes to mindbase
+#### "Tool not found"
 
-## Troubleshooting
+Use `airis-find` first to discover the tool:
 
-### "Tool not found: airis_do"
-
-Enable the airis-agent server:
-
-```bash
-# Check status
-curl http://localhost:9400/process/servers
-
-# Enable
-curl -X POST http://localhost:9400/process/servers/airis-agent/enable
+```
+airis-find query="your_tool"
 ```
 
-### "Server not ready"
+#### Server not starting
 
-The server may need to start (cold mode). Wait a few seconds and retry, or change to hot mode:
+Check if the server is disabled:
 
-```json
-{
-  "airis-agent": {
-    "mode": "hot"
-  }
-}
+```
+airis-find server="server_name"
 ```
 
-### Old endpoint returns 404
+If disabled, `airis-exec` will auto-enable it.
+
+#### Old endpoints return 404
 
 The following endpoints have been removed:
-
 - `POST /do`
 - `POST /detect`
 - `POST /route`
 - `GET /capabilities`
 
-Use the equivalent MCP tools via `/sse` transport instead.
+Use Dynamic MCP meta-tools instead.
+
+## Changelog
+
+### v2.0 - Dynamic MCP
+
+- Added `airis-find`, `airis-exec`, `airis-schema` meta-tools
+- Auto-enable disabled servers on `airis-exec`
+- 98% context reduction (600 vs 42,000 tokens)
+- All servers discoverable (including disabled)
+
+### v1.x - Legacy
+
+- All tools exposed directly
+- Manual server management required
+- Higher context usage
