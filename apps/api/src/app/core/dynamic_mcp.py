@@ -221,6 +221,66 @@ class DynamicMCP:
 
         print(f"[DynamicMCP] Cached {len(self._tools)} HOT tools from {len(self._servers)} servers (COLD tools on-demand)")
 
+    async def load_tools_for_server(
+        self,
+        server_name: str,
+        process_manager,
+        force_enable: bool = False
+    ) -> list[dict]:
+        """
+        Load tools for a specific server on-demand.
+
+        This is used by airis-find to load tools for COLD/disabled servers
+        when the LLM queries a specific server.
+
+        Args:
+            server_name: Server to load tools from
+            process_manager: ProcessManager instance
+            force_enable: If True, enable the server if disabled (for airis-exec)
+
+        Returns:
+            List of tool definitions
+        """
+        config = process_manager._server_configs.get(server_name)
+        if not config:
+            return []
+
+        # Auto-enable if requested (for airis-exec)
+        if force_enable and not config.enabled:
+            await process_manager.enable_server(server_name)
+            print(f"[DynamicMCP] Auto-enabled server: {server_name}")
+
+        # Still disabled? Return empty
+        if not config.enabled and not force_enable:
+            return []
+
+        # Load tools from the server
+        try:
+            tools = await process_manager._list_tools_for_server(server_name)
+
+            # Cache the loaded tools
+            for tool in tools:
+                tool_name = tool.get("name", "")
+                if tool_name and tool_name not in self._tools:
+                    self._tools[tool_name] = ToolInfo(
+                        name=tool_name,
+                        server=server_name,
+                        description=tool.get("description", ""),
+                        input_schema=tool.get("inputSchema", {}),
+                        source="process"
+                    )
+                    self._tool_to_server[tool_name] = server_name
+
+            # Update server tools count
+            if server_name in self._servers:
+                self._servers[server_name].tools_count = len(tools)
+
+            print(f"[DynamicMCP] Loaded {len(tools)} tools from {server_name}")
+            return tools
+        except Exception as e:
+            print(f"[DynamicMCP] Failed to load tools from {server_name}: {e}")
+            return []
+
     def _infer_server_name(self, tool_name: str) -> str:
         """Infer server name from tool name pattern."""
         # Known Docker server tool prefixes mapping
