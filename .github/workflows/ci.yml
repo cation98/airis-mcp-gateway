@@ -55,7 +55,7 @@ jobs:
           cd apps/api
           python -m pytest tests/unit -v --tb=short
 
-  # TypeScript build (only when TS files change)
+  # TypeScript build and test (only when TS files change)
   build-typescript:
     needs: changes
     if: needs.changes.outputs.typescript == 'true'
@@ -71,16 +71,25 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install and build
+      - name: Install dependencies
         run: |
           cd apps/${{ matrix.package }}
           npm install
-          npm run build
+
+      - name: Run tests
+        run: |
+          cd apps/${{ matrix.package }}
+          npm test
 
       - name: Typecheck
         run: |
           cd apps/${{ matrix.package }}
           npx tsc --noEmit
+
+      - name: Build
+        run: |
+          cd apps/${{ matrix.package }}
+          npm run build
 
   # Auto-merge next to main
   merge-to-main:
