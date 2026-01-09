@@ -25,6 +25,12 @@ task test:health            # Quick health check
 task test:status            # Server status
 task test:api               # Run pytest in container
 
+# Local testing (without Docker)
+cd apps/api
+uv pip install -e ".[test]"
+uv run python -m pytest tests/unit -v              # All unit tests
+uv run python -m pytest tests/unit/test_dynamic_mcp.py -v  # Single file
+
 # All tasks
 task --list-all             # Show all available tasks
 ```
@@ -79,11 +85,13 @@ DYNAMIC_MCP=false docker compose up -d
 | File | Purpose |
 |------|---------|
 | `docker-compose.yml` | gateway (9390) + api (9400) containers |
-| `mcp-config.json` | Server definitions: command, args, env, enabled |
+| `mcp-config.json` | Server definitions: command, args, env, enabled, mode, TTL |
 | `apps/api/src/app/main.py` | FastAPI app entry point |
 | `apps/api/src/app/core/process_manager.py` | Manages uvx/npx servers |
-| `apps/api/src/app/core/process_runner.py` | Subprocess lifecycle |
-| `apps/api/src/app/api/endpoints/mcp_proxy.py` | Docker gateway proxy + initialized fix |
+| `apps/api/src/app/core/process_runner.py` | Subprocess lifecycle + timeout handling |
+| `apps/api/src/app/core/dynamic_mcp.py` | Dynamic MCP meta-tools (airis-find/exec/schema) |
+| `apps/api/src/app/core/mcp_config_loader.py` | Parse mcp-config.json + TTL settings |
+| `apps/api/src/app/api/endpoints/mcp_proxy.py` | SSE proxy + keepalive + timeout handling |
 
 ## API Endpoints
 
@@ -107,13 +115,19 @@ DYNAMIC_MCP=false docker compose up -d
       "command": "uvx|npx|sh|node",
       "args": ["arg1", "arg2"],
       "env": { "KEY": "value" },
-      "enabled": true
+      "enabled": true,
+      "mode": "hot|cold",
+      "idle_timeout": 120,
+      "min_ttl": 60,
+      "max_ttl": 3600
     }
   }
 }
 ```
 
-Server types: `uvx` (Python), `npx` (Node.js), `sh` (Docker via shell), `node` (direct)
+- **command types**: `uvx` (Python), `npx` (Node.js), `sh` (Docker via shell), `node` (direct)
+- **mode**: `hot` (always loaded), `cold` (lazy loaded on demand)
+- **TTL settings**: Per-server idle timeout and lifecycle controls
 
 ## Design Principles (NEVER VIOLATE)
 
@@ -135,7 +149,14 @@ Server types: `uvx` (Python), `npx` (Node.js), `sh` (Docker via shell), `node` (
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `DYNAMIC_MCP` | `true` | Enable Dynamic MCP (3 meta-tools only) |
+| `TOOL_CALL_TIMEOUT` | `90` | Fail-safe timeout (seconds) for MCP tool calls |
 | `MCP_GATEWAY_URL` | `http://gateway:9390` | Docker gateway URL |
 | `MCP_CONFIG_PATH` | `/app/mcp-config.json` | Server config path |
 | `GATEWAY_MODE` | `lite` | `lite` (stateless) or `full` (with DB) |
 | `DATABASE_URL` | - | PostgreSQL connection (full mode only) |
+
+## CI/CD
+
+Path-based CI triggers - only runs relevant jobs:
+- `apps/api/**` changes → Python tests (pytest)
+- `apps/gateway-control/**` or `apps/airis-commands/**` changes → TypeScript build
