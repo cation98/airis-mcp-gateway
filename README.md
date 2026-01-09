@@ -162,6 +162,27 @@ Claude Code / Cursor / Zed
 |----------|---------|-------------|
 | `DYNAMIC_MCP` | `true` | Enable Dynamic MCP (3 meta-tools vs 60+ tools) |
 | `TOOL_CALL_TIMEOUT` | `90` | Fail-safe timeout (seconds) for MCP tool calls |
+| `AIRIS_API_KEY` | *(none)* | API key for authentication (disabled if not set) |
+
+#### API Key Authentication
+
+Optional bearer token authentication. Disabled by default (open access).
+
+```bash
+# Generate a secure API key
+openssl rand -hex 32
+
+# Set in .env or docker-compose.yml
+AIRIS_API_KEY=your-generated-key
+```
+
+When enabled, all requests require the `Authorization` header:
+
+```bash
+curl -H "Authorization: Bearer your-api-key" http://localhost:9400/health
+```
+
+**Excluded endpoints** (no auth required): `/health`, `/ready`, `/`
 
 #### Fail-Safe Timeout
 

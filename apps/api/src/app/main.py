@@ -15,6 +15,7 @@ from .api.endpoints import mcp_proxy
 from .api.endpoints import process_mcp
 from .api.endpoints import sse_tools
 from .core.process_manager import initialize_process_manager, get_process_manager
+from .middleware.auth import OptionalBearerAuth
 
 MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway:9390")
 MCP_CONFIG_PATH = os.getenv("MCP_CONFIG_PATH", "/app/mcp-config.json")
@@ -220,6 +221,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Optional API key auth - only active if AIRIS_API_KEY env var is set
+# Skips auth for /health, /ready, /
+app.add_middleware(OptionalBearerAuth)
 
 # Mount MCP proxy router (Docker Gateway proxy with initialized notification fix)
 app.include_router(mcp_proxy.router, prefix="/mcp", tags=["mcp"])

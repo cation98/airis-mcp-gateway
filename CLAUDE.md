@@ -169,6 +169,7 @@ DYNAMIC_MCP=false docker compose up -d
 |----------|---------|---------|
 | `DYNAMIC_MCP` | `true` | Enable Dynamic MCP (3 meta-tools only) |
 | `TOOL_CALL_TIMEOUT` | `90` | Fail-safe timeout (seconds) for MCP tool calls |
+| `AIRIS_API_KEY` | *(none)* | API key for bearer auth (disabled if not set) |
 | `MCP_GATEWAY_URL` | `http://gateway:9390` | Docker gateway URL |
 | `MCP_CONFIG_PATH` | `/app/mcp-config.json` | Server config path |
 
