@@ -156,7 +156,7 @@
         "${SUPABASE_ACCESS_TOKEN}"
       ],
       "env": {},
-      "enabled": false,
+      "enabled": true,
       "mode": "cold"
     },
     "playwright": {
@@ -202,6 +202,70 @@
       ],
       "env": {},
       "enabled": true,
+      "mode": "cold"
+    },
+    "stripe": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@stripe/mcp",
+        "--tools=all",
+        "--api-key",
+        "${STRIPE_SECRET_KEY}"
+      ],
+      "env": {},
+      "enabled": false,
+      "mode": "cold",
+      "_comment": "Set STRIPE_SECRET_KEY in .env"
+    },
+    "twilio": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@twilio-alpha/mcp"
+      ],
+      "env": {
+        "TWILIO_ACCOUNT_SID": "${TWILIO_ACCOUNT_SID}",
+        "TWILIO_API_KEY": "${TWILIO_API_KEY}",
+        "TWILIO_API_SECRET": "${TWILIO_API_SECRET}"
+      },
+      "enabled": false,
+      "mode": "cold",
+      "_comment": "Create API Key at console.twilio.com > Account > API Keys"
+    },
+    "cloudflare": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-cloudflare"
+      ],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "enabled": false,
+      "mode": "cold"
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "enabled": false,
+      "mode": "cold"
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "${DATABASE_URL}"
+      ],
+      "env": {},
+      "enabled": false,
       "mode": "cold"
     }
   },
