@@ -38,30 +38,42 @@ task --list-all             # Show all available tasks
 ## Architecture
 
 ```
-Claude Code
-    |
-    v
-FastAPI API (port 9400) - Hybrid MCP Multiplexer
-    |
-    +-- /sse, /mcp/* --> Docker MCP Gateway (9390) --> Docker servers
-    |                    + schema partitioning
-    |                    + initialized notification fix
-    |                    + ProcessManager tools merge
-    |
-    +-- /process/*   --> ProcessManager (Lazy + idle-kill)
-                         + airis-agent (uvx)     10 tools
-                         + context7 (npx)         2 tools
-                         + fetch (uvx)            1 tool
-                         + memory (npx)           9 tools
-                         + sequential-thinking    1 tool
+Claude Code / Cursor / Zed
+    │
+    ▼ SSE (http://localhost:9400/sse)
+┌─────────────────────────────────────────────────────────┐
+│  FastAPI Hybrid MCP Multiplexer (port 9400)             │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  Dynamic MCP Layer                              │    │
+│  │  ├─ airis-find    (discover ALL servers/tools)  │    │
+│  │  ├─ airis-exec    (execute + auto-enable)       │    │
+│  │  └─ airis-schema  (get tool input schema)       │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  ProcessManager (Lazy start + idle-kill)        │    │
+│  │  ├─ gateway-control (node)  HOT                 │    │
+│  │  ├─ airis-commands (node)   HOT                 │    │
+│  │  ├─ airis-agent (uvx)       COLD                │    │
+│  │  ├─ memory (npx)            COLD                │    │
+│  │  ├─ stripe (npx)            COLD                │    │
+│  │  ├─ supabase (npx)          COLD                │    │
+│  │  └─ ... (20+ more servers)                      │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  Docker Gateway (9390) - mindbase, etc.         │    │
+│  └─────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────┘
 ```
 
 **Key patterns:**
 - **Dynamic MCP** (default): Only 3 meta-tools exposed (airis-find, airis-exec, airis-schema)
+- **Auto-enable**: Disabled servers are auto-enabled when airis-exec is called
 - **Lazy loading**: Process servers start on first request, not at startup
 - **Idle-kill**: Unused servers terminate after 120s (configurable)
 - **Tool routing**: ProcessManager maps tool names to server names dynamically
-- **Schema partitioning**: Full tool schemas lazy-loaded to reduce token usage
 
 ## Dynamic MCP Mode
 
@@ -69,9 +81,18 @@ By default, `DYNAMIC_MCP=true` exposes only 3 meta-tools instead of 60+:
 
 | Tool | Purpose |
 |------|---------|
-| `airis-find` | Search tools by query (e.g., `airis-find query="memory"`) |
-| `airis-exec` | Execute tool by name (e.g., `airis-exec tool="memory:create_entities"`) |
+| `airis-find` | Search tools/servers (including disabled ones) |
+| `airis-exec` | Execute tool by name (auto-enables disabled servers) |
 | `airis-schema` | Get full input schema for a tool |
+
+**Auto-Enable Flow:**
+```
+airis-find query="stripe"
+→ stripe (cold, disabled): 50 tools
+
+airis-exec tool="stripe:create_customer" arguments={...}
+→ Server auto-enabled → Tools loaded → Executed!
+```
 
 **Token savings:** ~98% reduction (42k → 600 tokens)
 
@@ -89,19 +110,17 @@ DYNAMIC_MCP=false docker compose up -d
 | `apps/api/src/app/main.py` | FastAPI app entry point |
 | `apps/api/src/app/core/process_manager.py` | Manages uvx/npx servers |
 | `apps/api/src/app/core/process_runner.py` | Subprocess lifecycle + timeout handling |
-| `apps/api/src/app/core/dynamic_mcp.py` | Dynamic MCP meta-tools (airis-find/exec/schema) |
+| `apps/api/src/app/core/dynamic_mcp.py` | Dynamic MCP meta-tools + auto-enable logic |
 | `apps/api/src/app/core/mcp_config_loader.py` | Parse mcp-config.json + TTL settings |
-| `apps/api/src/app/api/endpoints/mcp_proxy.py` | SSE proxy + keepalive + timeout handling |
+| `apps/api/src/app/api/endpoints/mcp_proxy.py` | SSE proxy + airis-find/exec/schema handlers |
 
 ## API Endpoints
 
 | Endpoint | Description |
 |----------|-------------|
 | `/sse` | SSE endpoint for Claude Code |
-| `/mcp/*` | Docker MCP Gateway proxy |
+| `/health` | Health check |
 | `/process/servers` | List process servers |
-| `/process/tools` | List tools from process servers |
-| `/process/tools/call` | Call tool (auto-routes to correct server) |
 | `/api/tools/combined` | All tools from all sources |
 | `/api/tools/status` | Server status overview |
 | `/metrics` | Prometheus metrics |
@@ -127,9 +146,9 @@ DYNAMIC_MCP=false docker compose up -d
 
 - **command types**: `uvx` (Python), `npx` (Node.js), `sh` (Docker via shell), `node` (direct)
 - **mode**: `hot` (always loaded), `cold` (lazy loaded on demand)
-- **TTL settings**: Per-server idle timeout and lifecycle controls
+- **enabled**: `true` (active), `false` (discoverable but auto-enabled on use)
 
-## Design Principles (NEVER VIOLATE)
+## Design Principles
 
 ### 1. Global Registration Only
 - MCP Gateway MUST be registered globally (`--scope user`), NOT per-project
@@ -137,7 +156,7 @@ DYNAMIC_MCP=false docker compose up -d
 
 ### 2. ALL MCP Servers Through Gateway
 - All servers go through gateway - users don't register individual MCP servers
-- Dynamic enable/disable via `airis_enable_mcp_server` / `airis_disable_mcp_server`
+- Dynamic enable/disable via `airis-exec` (auto-enable on use)
 - Add new servers to `mcp-config.json`, NOT as separate registrations
 
 ### 3. One-Command Install
@@ -152,8 +171,6 @@ DYNAMIC_MCP=false docker compose up -d
 | `TOOL_CALL_TIMEOUT` | `90` | Fail-safe timeout (seconds) for MCP tool calls |
 | `MCP_GATEWAY_URL` | `http://gateway:9390` | Docker gateway URL |
 | `MCP_CONFIG_PATH` | `/app/mcp-config.json` | Server config path |
-| `GATEWAY_MODE` | `lite` | `lite` (stateless) or `full` (with DB) |
-| `DATABASE_URL` | - | PostgreSQL connection (full mode only) |
 
 ## CI/CD
 
