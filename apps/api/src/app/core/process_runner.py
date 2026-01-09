@@ -376,41 +376,110 @@ class ProcessRunner:
 
         return await self._send_request(request, timeout=30.0)
 
-    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any], max_retries: int = 2) -> dict[str, Any]:
         """
-        Call a tool on this MCP server.
+        Call a tool on this MCP server with automatic retry on failure.
 
         Returns the JSON-RPC response (with result or error).
+
+        Retry logic:
+        - If server fails to initialize, restart and retry
+        - If call times out or crashes, restart and retry
+        - Max retries configurable (default: 2)
         """
-        if not await self.ensure_ready():
-            return {
+        last_error = None
+
+        for attempt in range(max_retries + 1):
+            # Try to ensure server is ready
+            if not await self.ensure_ready():
+                last_error = f"Server {self.config.name} failed to initialize"
+                if attempt < max_retries:
+                    print(f"[ProcessRunner] {self.config.name} retry {attempt + 1}/{max_retries}: restarting after init failure")
+                    await self._restart_process()
+                    continue
+                return {
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32603,
+                        "message": last_error
+                    }
+                }
+
+            request = {
                 "jsonrpc": "2.0",
-                "error": {
-                    "code": -32603,
-                    "message": f"Server {self.config.name} failed to initialize"
+                "id": self._next_id(),
+                "method": "tools/call",
+                "params": {
+                    "name": tool_name,
+                    "arguments": arguments
                 }
             }
 
-        request = {
+            try:
+                # Track latency and record call for adaptive TTL
+                # Use configurable timeout (default: 90s) to prevent Claude Code hanging
+                start_time = time.time()
+                result = await self._send_request(request, timeout=settings.TOOL_CALL_TIMEOUT)
+                latency_ms = (time.time() - start_time) * 1000
+                self._call_latencies.append(latency_ms)
+                self._total_calls += 1
+                self._record_call()  # For adaptive TTL
+
+                # Check for process crash during call
+                if "error" in result:
+                    error_code = result.get("error", {}).get("code", 0)
+                    # Internal error or timeout - might be process crash
+                    if error_code in [-32603, -32000] and attempt < max_retries:
+                        last_error = result.get("error", {}).get("message", "Unknown error")
+                        print(f"[ProcessRunner] {self.config.name} retry {attempt + 1}/{max_retries}: {last_error}")
+                        await self._restart_process()
+                        continue
+
+                return result
+
+            except asyncio.TimeoutError:
+                last_error = f"Request timeout after {settings.TOOL_CALL_TIMEOUT}s"
+                if attempt < max_retries:
+                    print(f"[ProcessRunner] {self.config.name} retry {attempt + 1}/{max_retries}: timeout, restarting")
+                    await self._restart_process()
+                    continue
+                return {
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32603,
+                        "message": last_error
+                    }
+                }
+
+            except Exception as e:
+                last_error = str(e)
+                if attempt < max_retries:
+                    print(f"[ProcessRunner] {self.config.name} retry {attempt + 1}/{max_retries}: {e}")
+                    await self._restart_process()
+                    continue
+                return {
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32603,
+                        "message": f"Call failed: {last_error}"
+                    }
+                }
+
+        # Should not reach here, but just in case
+        return {
             "jsonrpc": "2.0",
-            "id": self._next_id(),
-            "method": "tools/call",
-            "params": {
-                "name": tool_name,
-                "arguments": arguments
+            "error": {
+                "code": -32603,
+                "message": f"Max retries exceeded: {last_error}"
             }
         }
 
-        # Track latency and record call for adaptive TTL
-        # Use configurable timeout (default: 90s) to prevent Claude Code hanging
-        start_time = time.time()
-        result = await self._send_request(request, timeout=settings.TOOL_CALL_TIMEOUT)
-        latency_ms = (time.time() - start_time) * 1000
-        self._call_latencies.append(latency_ms)
-        self._total_calls += 1
-        self._record_call()  # For adaptive TTL
-
-        return result
+    async def _restart_process(self):
+        """Stop and restart the process for recovery."""
+        print(f"[ProcessRunner] Restarting {self.config.name}...")
+        await self.stop()
+        await asyncio.sleep(0.5)  # Brief delay before restart
+        # ensure_ready will be called on next attempt, which starts the process
 
     async def send_raw_request(self, request: dict[str, Any]) -> dict[str, Any]:
         """Send a raw JSON-RPC request."""
