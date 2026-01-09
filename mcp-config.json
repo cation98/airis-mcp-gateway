@@ -237,12 +237,13 @@
       "command": "npx",
       "args": [
         "-y",
-        "mcp-cloudflare"
+        "@cloudflare/mcp-server-cloudflare@latest"
       ],
       "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
+        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID}"
       },
-      "enabled": false,
+      "enabled": true,
       "mode": "cold"
     },
     "github": {
