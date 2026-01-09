@@ -22,6 +22,91 @@ import * as path from "path";
 
 const CONFIG_PATH = process.env.MCP_CONFIG_PATH || "/app/mcp-config.json";
 const PROFILES_DIR = process.env.PROFILES_DIR || "/app/profiles";
+const WORKSPACE_DIR = process.env.HOST_WORKSPACE_DIR || "/workspace/host";
+
+// MCP mapping database - maps tech stack to official MCPs
+const MCP_MAPPINGS: Record<string, {
+  packages: string[];
+  detect?: string[];
+  mcp: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  envRequired: string[];
+  description: string;
+}> = {
+  stripe: {
+    packages: ["stripe", "@stripe/stripe-js"],
+    mcp: "@stripe/mcp",
+    command: "npx",
+    args: ["-y", "@stripe/mcp", "--tools=all", "--api-key", "${STRIPE_SECRET_KEY}"],
+    env: {},
+    envRequired: ["STRIPE_SECRET_KEY"],
+    description: "Stripe payments API",
+  },
+  twilio: {
+    packages: ["twilio"],
+    mcp: "@twilio-alpha/mcp",
+    command: "npx",
+    args: ["-y", "@twilio-alpha/mcp"],
+    env: {
+      TWILIO_ACCOUNT_SID: "${TWILIO_ACCOUNT_SID}",
+      TWILIO_API_KEY: "${TWILIO_API_KEY}",
+      TWILIO_API_SECRET: "${TWILIO_API_SECRET}",
+    },
+    envRequired: ["TWILIO_ACCOUNT_SID", "TWILIO_API_KEY", "TWILIO_API_SECRET"],
+    description: "Twilio voice/SMS API",
+  },
+  supabase: {
+    packages: ["@supabase/supabase-js", "@supabase/ssr"],
+    mcp: "@supabase/mcp-server-supabase",
+    command: "npx",
+    args: ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "${SUPABASE_ACCESS_TOKEN}"],
+    env: {},
+    envRequired: ["SUPABASE_ACCESS_TOKEN"],
+    description: "Supabase database management",
+  },
+  postgres: {
+    packages: ["pg", "postgres", "@prisma/client", "drizzle-orm"],
+    mcp: "@modelcontextprotocol/server-postgres",
+    command: "npx",
+    args: ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"],
+    env: {},
+    envRequired: ["DATABASE_URL"],
+    description: "Direct PostgreSQL access",
+  },
+  github: {
+    packages: ["@octokit/rest", "octokit"],
+    detect: [".git"],
+    mcp: "@modelcontextprotocol/server-github",
+    command: "npx",
+    args: ["-y", "@modelcontextprotocol/server-github"],
+    env: { GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}" },
+    envRequired: ["GITHUB_TOKEN"],
+    description: "GitHub API",
+  },
+  cloudflare: {
+    packages: ["@cloudflare/workers-types", "wrangler"],
+    mcp: "@cloudflare/mcp-server-cloudflare",
+    command: "npx",
+    args: ["-y", "@cloudflare/mcp-server-cloudflare@latest"],
+    env: {
+      CLOUDFLARE_ACCOUNT_ID: "${CLOUDFLARE_ACCOUNT_ID}",
+      CLOUDFLARE_API_TOKEN: "${CLOUDFLARE_API_TOKEN}",
+    },
+    envRequired: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"],
+    description: "Cloudflare Workers, KV, R2",
+  },
+  playwright: {
+    packages: ["playwright", "@playwright/test"],
+    mcp: "@playwright/mcp",
+    command: "npx",
+    args: ["-y", "@playwright/mcp@latest"],
+    env: {},
+    envRequired: [],
+    description: "Browser automation",
+  },
+};
 
 interface McpServerConfig {
   command: string;
@@ -207,6 +292,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "array",
               items: { type: "string" },
               description: "Servers to keep enabled",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "airis_mcp_detect",
+        description: "Detect tech stack in a repository and suggest relevant MCPs to add",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: {
+              type: "string",
+              description: "Path to repository (default: /workspace/host)",
+            },
+            autoAdd: {
+              type: "boolean",
+              description: "Automatically add detected MCPs (default: false, just suggest)",
             },
           },
           required: [],
@@ -434,6 +537,154 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: `Disabled ${disabled.length} servers (kept: ${except.join(", ") || "none"}). Restart API to apply.`,
             },
           ],
+        };
+      }
+
+      case "airis_mcp_detect": {
+        const repoPath = (args as any)?.path || WORKSPACE_DIR;
+        const autoAdd = (args as any)?.autoAdd === true;
+        const config = await readConfig();
+
+        const detected: Array<{
+          name: string;
+          reason: string;
+          mcp: string;
+          description: string;
+          envRequired: string[];
+          alreadyExists: boolean;
+        }> = [];
+
+        // Scan package.json for Node.js dependencies
+        try {
+          const pkgPath = path.join(repoPath, "package.json");
+          const pkgContent = await fs.readFile(pkgPath, "utf-8");
+          const pkg = JSON.parse(pkgContent);
+          const allDeps = {
+            ...pkg.dependencies,
+            ...pkg.devDependencies,
+          };
+
+          for (const [mcpName, mapping] of Object.entries(MCP_MAPPINGS)) {
+            for (const pkgName of mapping.packages) {
+              if (allDeps[pkgName]) {
+                detected.push({
+                  name: mcpName,
+                  reason: `Found "${pkgName}" in package.json`,
+                  mcp: mapping.mcp,
+                  description: mapping.description,
+                  envRequired: mapping.envRequired,
+                  alreadyExists: !!config.mcpServers[mcpName],
+                });
+                break;
+              }
+            }
+          }
+        } catch {
+          // No package.json or parse error
+        }
+
+        // Check for .git directory
+        try {
+          await fs.access(path.join(repoPath, ".git"));
+          const githubMapping = MCP_MAPPINGS.github;
+          if (!detected.find(d => d.name === "github")) {
+            detected.push({
+              name: "github",
+              reason: "Found .git directory",
+              mcp: githubMapping.mcp,
+              description: githubMapping.description,
+              envRequired: githubMapping.envRequired,
+              alreadyExists: !!config.mcpServers.github,
+            });
+          }
+        } catch {
+          // No .git directory
+        }
+
+        // Scan requirements.txt for Python dependencies
+        try {
+          const reqPath = path.join(repoPath, "requirements.txt");
+          const reqContent = await fs.readFile(reqPath, "utf-8");
+          const lines = reqContent.split("\n");
+
+          for (const [mcpName, mapping] of Object.entries(MCP_MAPPINGS)) {
+            for (const pkgName of mapping.packages) {
+              if (lines.some(line => line.toLowerCase().startsWith(pkgName.toLowerCase()))) {
+                if (!detected.find(d => d.name === mcpName)) {
+                  detected.push({
+                    name: mcpName,
+                    reason: `Found "${pkgName}" in requirements.txt`,
+                    mcp: mapping.mcp,
+                    description: mapping.description,
+                    envRequired: mapping.envRequired,
+                    alreadyExists: !!config.mcpServers[mcpName],
+                  });
+                }
+                break;
+              }
+            }
+          }
+        } catch {
+          // No requirements.txt
+        }
+
+        if (detected.length === 0) {
+          return {
+            content: [{
+              type: "text",
+              text: `No known MCPs detected in ${repoPath}.\n\nAvailable MCPs: ${Object.keys(MCP_MAPPINGS).join(", ")}`,
+            }],
+          };
+        }
+
+        // Filter to only new MCPs
+        const newMcps = detected.filter(d => !d.alreadyExists);
+        const existingMcps = detected.filter(d => d.alreadyExists);
+
+        // Auto-add if requested
+        if (autoAdd && newMcps.length > 0) {
+          for (const mcp of newMcps) {
+            const mapping = MCP_MAPPINGS[mcp.name];
+            config.mcpServers[mcp.name] = {
+              command: mapping.command,
+              args: mapping.args,
+              env: mapping.env,
+              enabled: false, // Start disabled, user needs to set env vars
+            };
+          }
+          await writeConfig(config);
+        }
+
+        // Format output
+        let output = `## Detected Tech Stack in ${repoPath}\n\n`;
+
+        if (newMcps.length > 0) {
+          output += `### ${autoAdd ? "Added" : "Suggested"} MCPs\n\n`;
+          for (const mcp of newMcps) {
+            output += `- **${mcp.name}**: ${mcp.description}\n`;
+            output += `  - Reason: ${mcp.reason}\n`;
+            output += `  - Package: \`${mcp.mcp}\`\n`;
+            if (mcp.envRequired.length > 0) {
+              output += `  - Required env: ${mcp.envRequired.map(e => `\`${e}\``).join(", ")}\n`;
+            }
+            output += "\n";
+          }
+          if (autoAdd) {
+            output += `\n> ${newMcps.length} MCPs added (disabled). Set required env vars and restart to use.\n`;
+          } else {
+            output += `\n> Run with \`autoAdd: true\` to add these MCPs to config.\n`;
+          }
+        }
+
+        if (existingMcps.length > 0) {
+          output += `### Already Configured\n\n`;
+          for (const mcp of existingMcps) {
+            output += `- **${mcp.name}**: ${mcp.reason}\n`;
+          }
+        }
+
+        return {
+          content: [{ type: "text", text: output }],
         };
       }
 
