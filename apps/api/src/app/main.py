@@ -316,14 +316,29 @@ async def root():
 
 @app.get("/metrics")
 async def metrics():
-    """Prometheus-style metrics endpoint."""
+    """
+    Prometheus-style metrics endpoint.
+
+    Metrics exposed:
+    - mcp_active_processes: Number of running MCP server processes
+    - mcp_stopped_processes: Number of stopped MCP server processes
+    - mcp_server_enabled: Whether a server is enabled (1) or disabled (0)
+    - mcp_server_tools: Number of tools provided by a server
+    - mcp_server_uptime_seconds: Uptime of a running server
+    - mcp_server_spawn_total: Total number of process spawns (restarts)
+    - mcp_server_calls_total: Total number of tool calls
+    - mcp_server_latency_p50_ms: 50th percentile latency
+    - mcp_server_latency_p95_ms: 95th percentile latency
+    - mcp_server_latency_p99_ms: 99th percentile latency
+    """
     from fastapi.responses import PlainTextResponse
 
     manager = get_process_manager()
-    process_status = manager.get_all_status()
+    process_status = manager.get_all_status(include_metrics=True)
 
     active = sum(1 for s in process_status if s.get("state") == "ready")
     stopped = sum(1 for s in process_status if s.get("state") == "stopped")
+    total = len(process_status)
 
     lines = [
         "# HELP mcp_active_processes Number of running MCP server processes",
@@ -334,13 +349,70 @@ async def metrics():
         "# TYPE mcp_stopped_processes gauge",
         f"mcp_stopped_processes {stopped}",
         "",
+        "# HELP mcp_total_processes Total number of configured MCP servers",
+        "# TYPE mcp_total_processes gauge",
+        f"mcp_total_processes {total}",
+        "",
+        "# HELP mcp_server_enabled Whether server is enabled (1) or disabled (0)",
+        "# TYPE mcp_server_enabled gauge",
     ]
 
     for status in process_status:
         name = status.get("name", "unknown")
         enabled = 1 if status.get("enabled") else 0
-        tools = status.get("tools_count", 0)
         lines.append(f'mcp_server_enabled{{server="{name}"}} {enabled}')
+
+    lines.extend(["", "# HELP mcp_server_tools Number of tools provided by server", "# TYPE mcp_server_tools gauge"])
+    for status in process_status:
+        name = status.get("name", "unknown")
+        tools = status.get("tools_count", 0)
         lines.append(f'mcp_server_tools{{server="{name}"}} {tools}')
 
+    lines.extend(["", "# HELP mcp_server_uptime_seconds Uptime of running server in seconds", "# TYPE mcp_server_uptime_seconds gauge"])
+    for status in process_status:
+        name = status.get("name", "unknown")
+        metrics_data = status.get("metrics", {})
+        uptime_ms = metrics_data.get("uptime_ms")
+        if uptime_ms is not None:
+            lines.append(f'mcp_server_uptime_seconds{{server="{name}"}} {uptime_ms / 1000:.2f}')
+
+    lines.extend(["", "# HELP mcp_server_spawn_total Total number of process spawns (includes restarts)", "# TYPE mcp_server_spawn_total counter"])
+    for status in process_status:
+        name = status.get("name", "unknown")
+        metrics_data = status.get("metrics", {})
+        spawn_count = metrics_data.get("spawn_count", 0)
+        lines.append(f'mcp_server_spawn_total{{server="{name}"}} {spawn_count}')
+
+    lines.extend(["", "# HELP mcp_server_calls_total Total number of tool calls", "# TYPE mcp_server_calls_total counter"])
+    for status in process_status:
+        name = status.get("name", "unknown")
+        metrics_data = status.get("metrics", {})
+        total_calls = metrics_data.get("total_calls", 0)
+        lines.append(f'mcp_server_calls_total{{server="{name}"}} {total_calls}')
+
+    lines.extend(["", "# HELP mcp_server_latency_p50_ms 50th percentile latency in milliseconds", "# TYPE mcp_server_latency_p50_ms gauge"])
+    for status in process_status:
+        name = status.get("name", "unknown")
+        metrics_data = status.get("metrics", {})
+        p50 = metrics_data.get("latency_p50_ms")
+        if p50 is not None:
+            lines.append(f'mcp_server_latency_p50_ms{{server="{name}"}} {p50}')
+
+    lines.extend(["", "# HELP mcp_server_latency_p95_ms 95th percentile latency in milliseconds", "# TYPE mcp_server_latency_p95_ms gauge"])
+    for status in process_status:
+        name = status.get("name", "unknown")
+        metrics_data = status.get("metrics", {})
+        p95 = metrics_data.get("latency_p95_ms")
+        if p95 is not None:
+            lines.append(f'mcp_server_latency_p95_ms{{server="{name}"}} {p95}')
+
+    lines.extend(["", "# HELP mcp_server_latency_p99_ms 99th percentile latency in milliseconds", "# TYPE mcp_server_latency_p99_ms gauge"])
+    for status in process_status:
+        name = status.get("name", "unknown")
+        metrics_data = status.get("metrics", {})
+        p99 = metrics_data.get("latency_p99_ms")
+        if p99 is not None:
+            lines.append(f'mcp_server_latency_p99_ms{{server="{name}"}} {p99}')
+
+    lines.append("")
     return PlainTextResponse("\n".join(lines), media_type="text/plain")

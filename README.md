@@ -262,7 +262,34 @@ docker compose restart api
 | `/api/tools/combined` | All tools from all sources |
 | `/api/tools/status` | Server status overview |
 | `/process/servers` | List process servers |
-| `/metrics` | Prometheus metrics |
+| `/metrics` | Prometheus metrics (see below) |
+
+### Prometheus Metrics
+
+The `/metrics` endpoint exposes Prometheus-compatible metrics:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `mcp_active_processes` | gauge | Number of running MCP servers |
+| `mcp_stopped_processes` | gauge | Number of stopped MCP servers |
+| `mcp_total_processes` | gauge | Total configured MCP servers |
+| `mcp_server_enabled{server}` | gauge | Server enabled (1) or disabled (0) |
+| `mcp_server_tools{server}` | gauge | Number of tools per server |
+| `mcp_server_uptime_seconds{server}` | gauge | Server uptime in seconds |
+| `mcp_server_spawn_total{server}` | counter | Total process spawns (restarts) |
+| `mcp_server_calls_total{server}` | counter | Total tool calls |
+| `mcp_server_latency_p50_ms{server}` | gauge | 50th percentile latency |
+| `mcp_server_latency_p95_ms{server}` | gauge | 95th percentile latency |
+| `mcp_server_latency_p99_ms{server}` | gauge | 99th percentile latency |
+
+Example scrape config for Prometheus:
+
+```yaml
+scrape_configs:
+  - job_name: 'airis-mcp-gateway'
+    static_configs:
+      - targets: ['localhost:9400']
+```
 
 ## Commands
 
