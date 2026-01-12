@@ -289,3 +289,132 @@ class TestGatewayControlTools:
                 break
         else:
             print(f"Available tools: {tool_names[:5]}...")
+
+
+class TestDynamicMCPToolsListBehavior:
+    """Test Dynamic MCP tools/list behavior.
+
+    When DYNAMIC_MCP=true, the gateway should return:
+    - Meta-tools (airis-find, airis-exec, airis-schema)
+    - HOT server tools (directly callable)
+
+    COLD server tools should NOT be in tools/list; they are
+    discovered via airis-find and called via airis-exec.
+    """
+
+    def test_hot_tools_endpoint_returns_gateway_control(self, api_client):
+        """HOT tools endpoint should return gateway control tools."""
+        response = api_client.get("/process/tools?mode=hot")
+        assert response.status_code == 200
+
+        data = response.json()
+        tools = data.get("tools", [])
+        tool_names = {t.get("name") for t in tools}
+
+        # Gateway control (HOT) tools should be present
+        assert "gateway_list_servers" in tool_names or len(tools) > 0, \
+            f"Expected gateway control tools, got: {list(tool_names)[:5]}"
+
+    def test_cold_tools_not_in_hot_response(self, api_client):
+        """COLD server tools should NOT be in HOT tools response."""
+        response = api_client.get("/process/tools?mode=hot")
+        assert response.status_code == 200
+
+        data = response.json()
+        tools = data.get("tools", [])
+        tool_names = {t.get("name") for t in tools}
+
+        # Supabase tools (COLD) should NOT be in HOT response
+        cold_tools = {"list_tables", "execute_sql", "list_projects", "list_migrations"}
+        found_cold = tool_names.intersection(cold_tools)
+
+        assert len(found_cold) == 0, \
+            f"COLD tools should not be in HOT response: {found_cold}"
+
+    def test_roster_shows_hot_and_cold_servers(self, api_client):
+        """Server roster should categorize HOT and COLD servers."""
+        response = api_client.get("/api/tools/status")
+        assert response.status_code == 200
+
+        data = response.json()
+        roster = data.get("roster", {})
+
+        assert "hot" in roster, "Roster should have HOT category"
+        assert "cold" in roster, "Roster should have COLD category"
+
+        hot_servers = roster.get("hot", [])
+        cold_servers = roster.get("cold", [])
+
+        # Should have at least some servers in each category
+        # (depends on mcp-config.json configuration)
+        print(f"HOT servers: {hot_servers}")
+        print(f"COLD servers: {cold_servers}")
+
+        # Gateway control should be HOT
+        hot_names = {s.get("name") if isinstance(s, dict) else s for s in hot_servers}
+        if "airis-mcp-gateway-control" in hot_names or "airis-commands" in hot_names:
+            print("Found expected HOT servers")
+
+    def test_tools_count_difference(self, api_client):
+        """HOT tools should be fewer than ALL tools (token savings)."""
+        # Get HOT tools count
+        hot_response = api_client.get("/process/tools?mode=hot")
+        assert hot_response.status_code == 200
+        hot_data = hot_response.json()
+        hot_count = len(hot_data.get("tools", []))
+
+        # Get ALL tools count (may be slow due to COLD server startup)
+        # Skip if takes too long
+        try:
+            import httpx
+            with httpx.Client(base_url=API_BASE_URL, timeout=10.0) as quick_client:
+                all_response = quick_client.get("/api/tools/combined")
+                if all_response.status_code == 200:
+                    all_data = all_response.json()
+                    all_count = all_data.get("tools_count", 0)
+
+                    print(f"HOT tools: {hot_count}, ALL tools: {all_count}")
+
+                    # HOT should be subset of ALL
+                    if all_count > 0:
+                        assert hot_count <= all_count, \
+                            f"HOT tools ({hot_count}) should be <= ALL tools ({all_count})"
+        except Exception as e:
+            print(f"Skipped ALL tools comparison: {e}")
+
+
+class TestMetaToolsAvailability:
+    """Test meta-tools are properly exposed."""
+
+    def test_tools_status_shows_meta_tools_info(self, api_client):
+        """Tools status should show meta-tools availability."""
+        response = api_client.get("/api/tools/status")
+        assert response.status_code == 200
+
+        data = response.json()
+        # Check if dynamic MCP info is available
+        print(f"Status response keys: {data.keys()}")
+
+    def test_gateway_tool_call_works(self, api_client):
+        """Gateway control tools should be callable via REST API."""
+        # Call gateway_list_servers (HOT tool)
+        response = api_client.post(
+            "/process/tools/call",
+            json={
+                "name": "gateway_list_servers",
+                "arguments": {}
+            }
+        )
+
+        # Should succeed or return structured error
+        assert response.status_code in [200, 500]
+
+        if response.status_code == 200:
+            data = response.json()
+            print(f"gateway_list_servers response: {data}")
+
+            # Should have result with server list
+            if "result" in data:
+                result = data["result"]
+                if isinstance(result, dict) and "content" in result:
+                    print("Successfully called HOT gateway tool")

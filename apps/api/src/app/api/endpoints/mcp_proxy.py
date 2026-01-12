@@ -517,15 +517,26 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
     docker_tools = list(data["result"]["tools"])
     process_manager = get_process_manager()
 
-    # Dynamic MCP mode: return only meta-tools (FAST PATH)
+    # Dynamic MCP mode: return meta-tools + HOT server tools
+    # HOT tools are always running and have low latency, so expose them directly
+    # COLD tools are discovered via airis-find and called via airis-exec
     if settings.DYNAMIC_MCP:
-        print("[Dynamic MCP] Mode enabled - returning meta-tools only")
+        print("[Dynamic MCP] Mode enabled - returning meta-tools + HOT tools")
 
-        # Return meta-tools IMMEDIATELY (no blocking operations)
         dynamic_mcp = get_dynamic_mcp()
-        meta_tools = dynamic_mcp.get_meta_tools()
-        data["result"]["tools"] = meta_tools
-        print(f"[Dynamic MCP] Returning {len(meta_tools)} meta-tools immediately")
+        tools = list(dynamic_mcp.get_meta_tools())
+
+        # Add HOT server tools (already running, no startup delay)
+        try:
+            hot_tools = await process_manager.list_tools(mode="hot")
+            if hot_tools:
+                tools.extend(hot_tools)
+                print(f"[Dynamic MCP] Added {len(hot_tools)} HOT tools")
+        except Exception as e:
+            print(f"[Dynamic MCP] Failed to get HOT tools: {e}")
+
+        data["result"]["tools"] = tools
+        print(f"[Dynamic MCP] Returning {len(tools)} tools (meta + HOT)")
 
         # Schedule background cache refresh (non-blocking)
         import asyncio
