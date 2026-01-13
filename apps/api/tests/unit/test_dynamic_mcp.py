@@ -294,14 +294,14 @@ class TestDynamicMCPTruncation:
 
 
 class TestDynamicMCPModeWithHotTools:
-    """Tests for Dynamic MCP mode with HOT server tools.
+    """Tests for Dynamic MCP mode (meta-tools only).
 
-    In Dynamic MCP mode (DYNAMIC_MCP=true), the gateway returns:
+    In Dynamic MCP mode (DYNAMIC_MCP=true), the gateway returns ONLY:
     - Meta-tools (airis-find, airis-exec, airis-schema)
-    - HOT server tools (directly callable, no startup delay)
 
-    COLD server tools are NOT returned; they are discovered via airis-find
-    and called via airis-exec for token efficiency.
+    ALL other tools (both HOT and COLD) are accessed via airis-exec.
+    This follows the Lasso MCP Gateway pattern for maximum token efficiency.
+    Reference: https://github.com/lasso-security/mcp-gateway
     """
 
     @pytest.fixture
@@ -386,42 +386,30 @@ class TestDynamicMCPModeWithHotTools:
         assert hot_tool_names.isdisjoint(cold_tool_names)
 
     def test_combined_tools_for_dynamic_mode(self, mcp_with_hot_and_cold):
-        """In Dynamic MCP mode, tools/list should return meta-tools + HOT tools only."""
+        """In Dynamic MCP mode, tools/list should return ONLY meta-tools."""
         meta_tools = mcp_with_hot_and_cold.get_meta_tools()
 
-        # Simulate Dynamic MCP tools/list response
-        # Meta-tools (3) + HOT server tools (should be filtered)
-        hot_servers = [s for s, info in mcp_with_hot_and_cold._servers.items()
-                       if info.mode == "hot" and info.enabled]
+        # Dynamic MCP mode: ONLY meta-tools (no HOT tools exposed directly)
+        # All tools (HOT and COLD) are accessed via airis-exec
+        dynamic_tools = list(meta_tools)
 
-        hot_tools = [t for name, t in mcp_with_hot_and_cold._tools.items()
-                     if t.server in hot_servers]
+        # Expected: 3 meta-tools ONLY
+        assert len(dynamic_tools) == 3
 
-        # Build expected response
-        dynamic_tools = list(meta_tools) + [
-            {"name": t.name, "description": t.description, "inputSchema": t.input_schema}
-            for t in hot_tools
-        ]
-
-        # Expected: 3 meta-tools + 3 HOT tools = 6
-        assert len(dynamic_tools) == 6
-
-        # Verify meta-tools are present
+        # Verify ONLY meta-tools are present
         tool_names = {t["name"] for t in dynamic_tools}
-        assert "airis-find" in tool_names
-        assert "airis-exec" in tool_names
-        assert "airis-schema" in tool_names
+        assert tool_names == {"airis-find", "airis-exec", "airis-schema"}
 
-        # Verify HOT tools are present
-        assert "gateway_list_servers" in tool_names
+        # Verify HOT tools are NOT directly exposed
+        assert "gateway_list_servers" not in tool_names
 
-        # Verify COLD tools are NOT present
+        # Verify COLD tools are NOT directly exposed
         assert "list_tables" not in tool_names
         assert "execute_sql" not in tool_names
 
     def test_token_savings_calculation(self):
         """Verify token savings from Dynamic MCP mode with realistic data."""
-        # Create a more realistic scenario with many COLD tools
+        # Create a more realistic scenario with many tools
         mcp = DynamicMCP()
 
         # HOT server (gateway-control) with 5 tools
@@ -453,24 +441,20 @@ class TestDynamicMCPModeWithHotTools:
         # Full mode: all tools
         all_tools_count = len(mcp._tools)  # 5 + 100 = 105 tools
 
-        # Dynamic mode: meta-tools + HOT tools
+        # Dynamic mode: meta-tools ONLY (no HOT tools exposed directly)
         meta_tools = mcp.get_meta_tools()
-        hot_servers = [s for s, info in mcp._servers.items()
-                       if info.mode == "hot" and info.enabled]
-        hot_tools = [t for t in mcp._tools.values() if t.server in hot_servers]
-
-        dynamic_tools_count = len(meta_tools) + len(hot_tools)  # 3 + 5 = 8 tools
+        dynamic_tools_count = len(meta_tools)  # 3 tools only
 
         # Token estimate (300 tokens per tool schema)
         full_mode_tokens = all_tools_count * 300  # 31,500 tokens
-        dynamic_mode_tokens = dynamic_tools_count * 300  # 2,400 tokens
+        dynamic_mode_tokens = dynamic_tools_count * 300  # 900 tokens
 
         # Calculate savings
         savings_percent = (1 - dynamic_mode_tokens / full_mode_tokens) * 100
 
-        # Should have significant savings (> 90%)
-        assert savings_percent > 90, \
-            f"Expected >90% savings, got {savings_percent:.1f}%"
+        # Should have significant savings (> 97% with meta-tools only)
+        assert savings_percent > 97, \
+            f"Expected >97% savings, got {savings_percent:.1f}%"
 
         print(f"Token savings: {savings_percent:.1f}% "
               f"({full_mode_tokens:,} -> {dynamic_mode_tokens:,} tokens)")
@@ -553,3 +537,115 @@ class TestRefreshCacheHotOnly:
         # Verify mode is correctly set
         assert mcp._servers["hot-server"].mode == "hot"
         assert mcp._servers["cold-server"].mode == "cold"
+
+
+class TestApplySchemaPartitioningDynamicMode:
+    """Tests for apply_schema_partitioning in Dynamic MCP mode.
+
+    Verifies that when DYNAMIC_MCP=true, only meta-tools are returned,
+    not HOT or COLD server tools.
+    """
+
+    @pytest.mark.asyncio
+    async def test_dynamic_mcp_returns_meta_tools_only(self):
+        """apply_schema_partitioning should return ONLY meta-tools in Dynamic MCP mode."""
+        from unittest.mock import patch, MagicMock, AsyncMock
+
+        # Import the function under test
+        from app.api.endpoints.mcp_proxy import apply_schema_partitioning
+
+        # Mock settings.DYNAMIC_MCP = True
+        mock_settings = MagicMock()
+        mock_settings.DYNAMIC_MCP = True
+
+        # Mock process manager
+        mock_pm = MagicMock()
+        mock_pm.list_tools = AsyncMock(return_value=[
+            {"name": "hot_tool_1", "description": "HOT tool", "inputSchema": {}},
+        ])
+
+        # Mock dynamic_mcp
+        mock_dynamic_mcp = MagicMock()
+        mock_dynamic_mcp.get_meta_tools.return_value = [
+            {"name": "airis-find", "description": "Find tools", "inputSchema": {"type": "object"}},
+            {"name": "airis-exec", "description": "Execute tool", "inputSchema": {"type": "object"}},
+            {"name": "airis-schema", "description": "Get schema", "inputSchema": {"type": "object"}},
+        ]
+
+        # Input data with docker tools
+        data = {
+            "result": {
+                "tools": [
+                    {"name": "docker_tool_1", "description": "Docker tool", "inputSchema": {}},
+                ]
+            }
+        }
+
+        with patch("app.api.endpoints.mcp_proxy.settings", mock_settings), \
+             patch("app.api.endpoints.mcp_proxy.get_process_manager", return_value=mock_pm), \
+             patch("app.api.endpoints.mcp_proxy.get_dynamic_mcp", return_value=mock_dynamic_mcp):
+
+            result = await apply_schema_partitioning(data)
+
+        # Should return ONLY meta-tools (3)
+        tools = result["result"]["tools"]
+        assert len(tools) == 3
+
+        tool_names = {t["name"] for t in tools}
+        assert tool_names == {"airis-find", "airis-exec", "airis-schema"}
+
+        # Should NOT include docker tools or HOT tools
+        assert "docker_tool_1" not in tool_names
+        assert "hot_tool_1" not in tool_names
+
+    @pytest.mark.asyncio
+    async def test_standard_mode_includes_hot_tools(self):
+        """apply_schema_partitioning should include HOT tools when DYNAMIC_MCP=false."""
+        from unittest.mock import patch, MagicMock, AsyncMock
+
+        from app.api.endpoints.mcp_proxy import apply_schema_partitioning
+
+        # Mock settings.DYNAMIC_MCP = False (standard mode)
+        mock_settings = MagicMock()
+        mock_settings.DYNAMIC_MCP = False
+        mock_settings.DESCRIPTION_MODE = "brief"
+
+        # Mock process manager with HOT tools
+        mock_pm = MagicMock()
+        mock_pm.list_tools = AsyncMock(return_value=[
+            {"name": "hot_tool_1", "description": "HOT tool 1", "inputSchema": {"type": "object"}},
+            {"name": "hot_tool_2", "description": "HOT tool 2", "inputSchema": {"type": "object"}},
+        ])
+        mock_pm.get_hot_servers.return_value = ["hot-server"]
+        mock_pm.get_cold_servers.return_value = ["cold-server"]
+
+        # Input data with docker tools
+        data = {
+            "result": {
+                "tools": [
+                    {"name": "docker_tool_1", "description": "Docker tool", "inputSchema": {"type": "object"}},
+                ]
+            }
+        }
+
+        with patch("app.api.endpoints.mcp_proxy.settings", mock_settings), \
+             patch("app.api.endpoints.mcp_proxy.get_process_manager", return_value=mock_pm):
+
+            result = await apply_schema_partitioning(data)
+
+        # Should include docker tools + HOT tools + expandSchema (no meta-tools in standard mode)
+        tools = result["result"]["tools"]
+        tool_names = {t["name"] for t in tools}
+
+        # Docker tool should be present
+        assert "docker_tool_1" in tool_names
+
+        # HOT tools should be present
+        assert "hot_tool_1" in tool_names
+        assert "hot_tool_2" in tool_names
+
+        # expandSchema tool should be present (for schema partitioning)
+        assert "expandSchema" in tool_names
+
+        # Total: 1 docker + 2 HOT + 1 expandSchema = 4 tools
+        assert len(tools) == 4
