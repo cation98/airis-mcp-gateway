@@ -517,26 +517,21 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
     docker_tools = list(data["result"]["tools"])
     process_manager = get_process_manager()
 
-    # Dynamic MCP mode: return meta-tools + HOT server tools
-    # HOT tools are always running and have low latency, so expose them directly
-    # COLD tools are discovered via airis-find and called via airis-exec
+    # Dynamic MCP mode: return ONLY meta-tools (airis-find, airis-exec, airis-schema)
+    # All other tools (HOT and COLD) are accessed via airis-exec
+    # This follows the Lasso MCP Gateway pattern for maximum token efficiency
+    # Reference: https://github.com/lasso-security/mcp-gateway
     if settings.DYNAMIC_MCP:
-        print("[Dynamic MCP] Mode enabled - returning meta-tools + HOT tools")
+        print("[Dynamic MCP] Mode enabled - returning meta-tools only (3 tools)")
 
         dynamic_mcp = get_dynamic_mcp()
         tools = list(dynamic_mcp.get_meta_tools())
 
-        # Add HOT server tools (already running, no startup delay)
-        try:
-            hot_tools = await process_manager.list_tools(mode="hot")
-            if hot_tools:
-                tools.extend(hot_tools)
-                print(f"[Dynamic MCP] Added {len(hot_tools)} HOT tools")
-        except Exception as e:
-            print(f"[Dynamic MCP] Failed to get HOT tools: {e}")
+        # HOT servers remain running for fast response, but tools are NOT exposed directly
+        # Users discover tools via airis-find and execute via airis-exec
 
         data["result"]["tools"] = tools
-        print(f"[Dynamic MCP] Returning {len(tools)} tools (meta + HOT)")
+        print(f"[Dynamic MCP] Returning {len(tools)} meta-tools only")
 
         # Schedule background cache refresh (non-blocking)
         import asyncio

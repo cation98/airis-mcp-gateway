@@ -30,6 +30,8 @@ Instead of exposing all 60+ tools directly (which bloats context), Dynamic MCP e
 | `airis-exec` | Execute any tool by `server:tool_name` |
 | `airis-schema` | Get full input schema for a tool |
 
+All other tools (HOT and COLD) are accessed via `airis-exec`. This follows the [Lasso MCP Gateway](https://github.com/lasso-security/mcp-gateway) pattern for maximum token efficiency.
+
 ### How It Works
 
 ```
@@ -66,9 +68,11 @@ When `airis-exec` is called on a disabled server:
 ### Token Savings
 
 ```
-Traditional: 60 tools × ~700 tokens = ~42,000 tokens
+Traditional: 60+ tools × ~700 tokens = ~42,000 tokens
 Dynamic MCP: 3 tools × ~200 tokens = ~600 tokens (98% reduction)
 ```
+
+This matches [Anthropic's recommendation](https://www.anthropic.com/engineering/code-execution-with-mcp) for progressive disclosure - only load tool definitions when needed.
 
 ### Disable Dynamic MCP
 

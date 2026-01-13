@@ -85,6 +85,8 @@ By default, `DYNAMIC_MCP=true` exposes only 3 meta-tools instead of 60+:
 | `airis-exec` | Execute tool by name (auto-enables disabled servers) |
 | `airis-schema` | Get full input schema for a tool |
 
+All other tools (HOT and COLD) are accessed via `airis-exec`. This follows the [Lasso MCP Gateway](https://github.com/lasso-security/mcp-gateway) pattern.
+
 **Auto-Enable Flow:**
 ```
 airis-find query="stripe"
