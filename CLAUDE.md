@@ -195,7 +195,10 @@ DYNAMIC_MCP=false docker compose up -d
 - Add new servers to `mcp-config.json`, NOT as separate registrations
 
 ### 3. One-Command Install
-- `docker compose up -d` from repo root handles everything
+```bash
+cp mcp-config.json.example mcp-config.json  # First time only, customize as needed
+docker compose up -d
+```
 - Register with Claude Code after startup
 
 ### 4. Auto-Start on Boot

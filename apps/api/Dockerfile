@@ -99,7 +99,7 @@ WORKDIR /app/api-src
 RUN uv pip install --system -e .
 
 # Copy config files (can be overridden by volume mounts)
-COPY mcp-config.json /app/mcp-config.json
+COPY mcp-config.json.example /app/mcp-config.json
 COPY config /app/config
 
 # Create data directory for persistent storage (memory.json, etc.)
