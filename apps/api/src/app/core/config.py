@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     # API
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "AIRIS MCP Gateway API"
-    DEBUG: bool = True
+    DEBUG: bool = os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")
 
     # Schema Partitioning
     # Description mode: "full", "summary" (160 chars), "brief" (60 chars), "none"
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     # Dynamic MCP Mode
     # When enabled, tools/list returns only meta-tools (airis-find, airis-exec)
     # instead of all available tools. This dramatically reduces context usage.
-    DYNAMIC_MCP: bool = os.getenv("DYNAMIC_MCP", "false").lower() in ("true", "1", "yes")
+    DYNAMIC_MCP: bool = os.getenv("DYNAMIC_MCP", "true").lower() in ("true", "1", "yes")
 
     # Tool Call Timeout (seconds)
     # Fail-safe timeout for MCP tool calls to prevent Claude Code from hanging indefinitely.

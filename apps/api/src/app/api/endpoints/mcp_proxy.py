@@ -57,18 +57,21 @@ def get_jsonrpc_timeout() -> httpx.Timeout:
 # Session-based response queues for ProcessManager responses
 # MCP SSE Transport: responses must be sent via SSE stream, not HTTP response body
 _session_response_queues: dict[str, asyncio.Queue] = {}
+_session_queues_lock = asyncio.Lock()
 
 
-def get_response_queue(session_id: str) -> asyncio.Queue:
-    """Get or create a response queue for a session."""
-    if session_id not in _session_response_queues:
-        _session_response_queues[session_id] = asyncio.Queue()
-    return _session_response_queues[session_id]
+async def get_response_queue(session_id: str) -> asyncio.Queue:
+    """Get or create a response queue for a session (thread-safe)."""
+    async with _session_queues_lock:
+        if session_id not in _session_response_queues:
+            _session_response_queues[session_id] = asyncio.Queue()
+        return _session_response_queues[session_id]
 
 
-def remove_response_queue(session_id: str):
-    """Remove a response queue when session ends."""
-    _session_response_queues.pop(session_id, None)
+async def remove_response_queue(session_id: str):
+    """Remove a response queue when session ends (thread-safe)."""
+    async with _session_queues_lock:
+        _session_response_queues.pop(session_id, None)
 
 
 class DescriptionMode:
@@ -265,7 +268,7 @@ async def proxy_sse_stream(request: Request):
                 nonlocal captured_session_id
                 while True:
                     if captured_session_id:
-                        queue = get_response_queue(captured_session_id)
+                        queue = await get_response_queue(captured_session_id)
                         try:
                             # Non-blocking check with timeout
                             response_data = await asyncio.wait_for(queue.get(), timeout=0.1)
@@ -314,25 +317,25 @@ async def proxy_sse_stream(request: Request):
                         except StopAsyncIteration:
                             # Gateway stream ended
                             if captured_session_id:
-                                remove_response_queue(captured_session_id)
+                                await remove_response_queue(captured_session_id)
                             return
                         except (httpx.ReadError, httpx.RemoteProtocolError, httpx.ConnectError) as e:
                             # Client disconnected - this is normal, exit gracefully
                             print(f"[MCP Proxy] Client disconnected: {type(e).__name__}")
                             if captured_session_id:
-                                remove_response_queue(captured_session_id)
+                                await remove_response_queue(captured_session_id)
                             return
                         except httpx.ReadTimeout:
                             # SSE read timeout - connection may be stale
                             print(f"[MCP Proxy] SSE read timeout (session={captured_session_id})")
                             if captured_session_id:
-                                remove_response_queue(captured_session_id)
+                                await remove_response_queue(captured_session_id)
                             return
                         except httpx.TimeoutException as e:
                             # Other timeout (connect, pool, etc.)
                             print(f"[MCP Proxy] Timeout exception: {type(e).__name__}")
                             if captured_session_id:
-                                remove_response_queue(captured_session_id)
+                                await remove_response_queue(captured_session_id)
                             return
 
                         if source == "tick":
@@ -379,7 +382,7 @@ async def proxy_sse_stream(request: Request):
                                         endpoint_url = data_str.strip()
                                         print(f"[MCP Proxy] Captured endpoint URL with sessionid={captured_session_id}")
                                         # Create response queue for this session
-                                        get_response_queue(captured_session_id)
+                                        await get_response_queue(captured_session_id)
                                 yield f"{line}\n"
                                 continue
 
@@ -468,7 +471,7 @@ async def proxy_sse_stream(request: Request):
                             pass
                 # Cleanup session queue
                 if captured_session_id:
-                    remove_response_queue(captured_session_id)
+                    await remove_response_queue(captured_session_id)
                 print(f"[MCP Proxy] SSE stream cleanup complete (session={captured_session_id})")
 
 
@@ -799,7 +802,9 @@ async def _proxy_streaming_gateway_request(
     method = request.method.upper()
     payload = await request.body() if _method_has_body(method) else None
 
+    # Use context manager pattern to ensure cleanup in all code paths
     client = httpx.AsyncClient(timeout=STREAM_TIMEOUT)
+    upstream = None
     try:
         upstream_request = client.build_request(
             method,
@@ -808,96 +813,101 @@ async def _proxy_streaming_gateway_request(
             content=payload,
         )
         upstream = await client.send(upstream_request, stream=True, follow_redirects=True)
-    except Exception:
-        await client.aclose()
-        raise
 
-    response_headers = {
-        key: value
-        for key, value in upstream.headers.items()
-        if key.lower() not in {"transfer-encoding", "connection"}
-    }
+        response_headers = {
+            key: value
+            for key, value in upstream.headers.items()
+            if key.lower() not in {"transfer-encoding", "connection"}
+        }
 
-    if method == "HEAD":
-        await upstream.aread()
-        await upstream.aclose()
-        await client.aclose()
-        return Response(
-            status_code=upstream.status_code,
-            headers=response_headers,
-        )
-
-    content_type = response_headers.get("content-type", "")
-    is_sse_response = "text/event-stream" in content_type.lower()
-
-    async def _inject_initialized_notifications():
-        """
-        Yield SSE stream chunks and append notifications/initialized when needed.
-        """
-        if not is_sse_response:
-            async for chunk in upstream.aiter_raw():
-                yield chunk
-            return
-
-        pending_lines: list[str] = []
-        tracked_initialize_id = initialize_request_id
-
-        def flush_lines() -> list[bytes]:
-            nonlocal pending_lines, tracked_initialize_id
-            if not pending_lines:
-                return [b"\n"]
-
-            event_text = "\n".join(pending_lines)
-            payload = _parse_sse_json(pending_lines)
-            chunks = [(event_text + "\n\n").encode("utf-8")]
-
-            if isinstance(payload, dict):
-                method = payload.get("method")
-                if method == "notifications/initialized":
-                    tracked_initialize_id = None
-                elif (
-                    tracked_initialize_id is not None
-                    and payload.get("id") == tracked_initialize_id
-                    and "result" in payload
-                ):
-                    chunks.append(
-                        _format_sse_event(
-                            {
-                                "jsonrpc": "2.0",
-                                "method": "notifications/initialized",
-                            }
-                        )
-                    )
-                    tracked_initialize_id = None
-
-            pending_lines = []
-            return chunks
-
-        async for line in upstream.aiter_lines():
-            if line == "":
-                for chunk in flush_lines():
-                    yield chunk
-            else:
-                pending_lines.append(line)
-
-        if pending_lines:
-            for chunk in flush_lines():
-                yield chunk
-
-    async def stream_body():
-        try:
-            async for chunk in _inject_initialized_notifications():
-                yield chunk
-        finally:
+        if method == "HEAD":
+            await upstream.aread()
             await upstream.aclose()
             await client.aclose()
+            return Response(
+                status_code=upstream.status_code,
+                headers=response_headers,
+            )
 
-    return StreamingResponse(
-        stream_body(),
-        status_code=upstream.status_code,
-        headers=response_headers,
-        media_type=upstream.headers.get("content-type"),
-    )
+        content_type = response_headers.get("content-type", "")
+        is_sse_response = "text/event-stream" in content_type.lower()
+
+        async def _inject_initialized_notifications():
+            """
+            Yield SSE stream chunks and append notifications/initialized when needed.
+            """
+            if not is_sse_response:
+                async for chunk in upstream.aiter_raw():
+                    yield chunk
+                return
+
+            pending_lines: list[str] = []
+            tracked_initialize_id = initialize_request_id
+
+            def flush_lines() -> list[bytes]:
+                nonlocal pending_lines, tracked_initialize_id
+                if not pending_lines:
+                    return [b"\n"]
+
+                event_text = "\n".join(pending_lines)
+                payload = _parse_sse_json(pending_lines)
+                chunks = [(event_text + "\n\n").encode("utf-8")]
+
+                if isinstance(payload, dict):
+                    method = payload.get("method")
+                    if method == "notifications/initialized":
+                        tracked_initialize_id = None
+                    elif (
+                        tracked_initialize_id is not None
+                        and payload.get("id") == tracked_initialize_id
+                        and "result" in payload
+                    ):
+                        chunks.append(
+                            _format_sse_event(
+                                {
+                                    "jsonrpc": "2.0",
+                                    "method": "notifications/initialized",
+                                }
+                            )
+                        )
+                        tracked_initialize_id = None
+
+                pending_lines = []
+                return chunks
+
+            async for line in upstream.aiter_lines():
+                if line == "":
+                    for chunk in flush_lines():
+                        yield chunk
+                else:
+                    pending_lines.append(line)
+
+            if pending_lines:
+                for chunk in flush_lines():
+                    yield chunk
+
+        async def stream_body():
+            try:
+                async for chunk in _inject_initialized_notifications():
+                    yield chunk
+            finally:
+                await upstream.aclose()
+                await client.aclose()
+
+        # Successfully created response - ownership transfers to StreamingResponse
+        # The stream_body() finally block will handle cleanup
+        return StreamingResponse(
+            stream_body(),
+            status_code=upstream.status_code,
+            headers=response_headers,
+            media_type=upstream.headers.get("content-type"),
+        )
+    except Exception:
+        # Cleanup on any failure before StreamingResponse is returned
+        if upstream is not None:
+            await upstream.aclose()
+        await client.aclose()
+        raise
 
 
 def _should_stream_sse(request: Request) -> bool:
@@ -1072,7 +1082,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
 
                 # MCP SSE Transport: レスポンスはSSEストリーム経由で送信
                 if session_id:
-                    queue = get_response_queue(session_id)
+                    queue = await get_response_queue(session_id)
                     await queue.put(response_data)
                     print(f"[MCP Proxy] Queued prompts/get response for session {session_id}")
                     return Response(status_code=202)
@@ -1112,7 +1122,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
 
                 # MCP SSE Transport: レスポンスはSSEストリーム経由で送信
                 if session_id:
-                    queue = get_response_queue(session_id)
+                    queue = await get_response_queue(session_id)
                     await queue.put(response_data)
                     print(f"[MCP Proxy] Queued tools/call response for session {session_id}")
                     return Response(status_code=202)
@@ -1382,7 +1392,7 @@ async def handle_airis_find(rpc_request: Dict[str, Any], session_id: Optional[st
 
     # MCP SSE Transport: Response via SSE stream
     if session_id:
-        queue = get_response_queue(session_id)
+        queue = await get_response_queue(session_id)
         await queue.put(response_data)
         print(f"[Dynamic MCP] Queued airis-find response for session {session_id}")
         return Response(status_code=202)
@@ -1460,7 +1470,7 @@ async def handle_airis_exec(rpc_request: Dict[str, Any], session_id: Optional[st
 
         # Send via SSE queue if session exists
         if session_id:
-            queue = get_response_queue(session_id)
+            queue = await get_response_queue(session_id)
             await queue.put(response_data)
             return Response(status_code=202)
 
@@ -1571,7 +1581,7 @@ async def handle_airis_schema(rpc_request: Dict[str, Any], session_id: Optional[
             "error": {"code": -32602, "message": "tool is required"}
         }
         if session_id:
-            queue = get_response_queue(session_id)
+            queue = await get_response_queue(session_id)
             await queue.put(error_data)
             return Response(status_code=202)
         return Response(
@@ -1607,7 +1617,7 @@ async def handle_airis_schema(rpc_request: Dict[str, Any], session_id: Optional[
             }
         }
         if session_id:
-            queue = get_response_queue(session_id)
+            queue = await get_response_queue(session_id)
             await queue.put(error_data)
             return Response(status_code=202)
         return Response(
@@ -1640,7 +1650,7 @@ async def handle_airis_schema(rpc_request: Dict[str, Any], session_id: Optional[
 
     # MCP SSE Transport: Response via SSE stream
     if session_id:
-        queue = get_response_queue(session_id)
+        queue = await get_response_queue(session_id)
         await queue.put(response_data)
         print(f"[Dynamic MCP] Queued airis-schema response for session {session_id}")
         return Response(status_code=202)
