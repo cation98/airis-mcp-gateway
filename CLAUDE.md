@@ -26,13 +26,37 @@ task test:status            # Server status
 task test:api               # Run pytest in container
 
 # Local testing (without Docker)
-cd apps/api
-uv pip install -e ".[test]"
-uv run python -m pytest tests/unit -v              # All unit tests
+cd apps/api && uv pip install -e ".[test]"
+uv run python -m pytest tests/unit -v                      # All unit tests
 uv run python -m pytest tests/unit/test_dynamic_mcp.py -v  # Single file
+uv run python -m pytest tests/unit -k "test_find"          # By test name
+
+# TypeScript tests
+cd apps/gateway-control && pnpm test
+cd apps/airis-commands && pnpm test
 
 # All tasks
 task --list-all             # Show all available tasks
+```
+
+## Project Structure
+
+```
+apps/
+├── api/                    # FastAPI MCP multiplexer (Python)
+│   ├── src/app/
+│   │   ├── main.py         # App entry point
+│   │   ├── core/           # Business logic (process_manager, dynamic_mcp, circuit)
+│   │   ├── api/endpoints/  # REST + SSE handlers (mcp_proxy is the main one)
+│   │   ├── models/         # SQLAlchemy models
+│   │   ├── schemas/        # Pydantic schemas
+│   │   └── crud/           # Database operations
+│   └── tests/
+│       ├── unit/           # Fast, no Docker required
+│       ├── integration/    # Requires database
+│       └── e2e/            # Full stack tests
+├── gateway-control/        # Gateway management MCP server (TypeScript)
+└── airis-commands/         # Config/profile MCP server (TypeScript)
 ```
 
 ## Architecture
@@ -115,6 +139,9 @@ DYNAMIC_MCP=false docker compose up -d
 | `apps/api/src/app/core/dynamic_mcp.py` | Dynamic MCP meta-tools + auto-enable logic |
 | `apps/api/src/app/core/mcp_config_loader.py` | Parse mcp-config.json + TTL settings |
 | `apps/api/src/app/api/endpoints/mcp_proxy.py` | SSE proxy + airis-find/exec/schema handlers |
+| `apps/api/src/app/core/circuit.py` | Circuit breaker for failing servers |
+| `apps/api/src/app/core/credentials_provider.py` | Secure credential injection |
+| `apps/api/tests/unit/conftest.py` | Test fixtures and mocks |
 
 ## API Endpoints
 
@@ -174,6 +201,45 @@ DYNAMIC_MCP=false docker compose up -d
 | `AIRIS_API_KEY` | *(none)* | API key for bearer auth (disabled if not set) |
 | `MCP_GATEWAY_URL` | `http://gateway:9390` | Docker gateway URL |
 | `MCP_CONFIG_PATH` | `/app/mcp-config.json` | Server config path |
+
+## Debugging
+
+```bash
+# View logs
+task docker:logs                                    # Follow API logs
+docker compose logs api 2>&1 | grep -i error        # Filter errors
+docker compose logs api 2>&1 | grep "server_name"   # Filter by server
+
+# Check server status
+curl http://localhost:9400/process/servers | jq     # All servers
+curl http://localhost:9400/process/servers/memory   # Specific server
+curl http://localhost:9400/metrics                  # Prometheus metrics
+
+# Common issues
+# "Server not found" → Check mcp-config.json, run task docker:restart
+# "Timeout" → Check TOOL_CALL_TIMEOUT env var, server may be slow to start
+# "Circuit open" → Server crashed repeatedly, check logs for root cause
+```
+
+## MCP Server Instructions
+
+The gateway automatically injects `instructions` into the MCP `initialize` response. This guides LLMs on how to use Dynamic MCP:
+
+```
+"instructions": "This is AIRIS MCP Gateway with Dynamic MCP. IMPORTANT: Do NOT call tools directly..."
+```
+
+This is implemented in `mcp_proxy.py:405-423` and ensures LLMs always know to use `airis-find` → `airis-schema` → `airis-exec` pattern.
+
+## Claude Code Slash Commands
+
+Built-in commands in `.claude/commands/`:
+
+| Command | Description |
+|---------|-------------|
+| `/test` | End-to-end test of gateway |
+| `/status` | Quick status check |
+| `/troubleshoot [issue]` | Diagnose issues |
 
 ## CI/CD
 
