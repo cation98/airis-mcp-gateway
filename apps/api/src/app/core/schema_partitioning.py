@@ -1,7 +1,7 @@
 """
-OpenMCP Lazy Loading Pattern実装
+OpenMCP Lazy Loading Pattern Implementation
 
-トークン消費を75-90%削減するためのスキーマ分割ロジック。
+Schema partitioning logic for 75-90% token consumption reduction.
 """
 
 from typing import Any, Dict, List, Optional
@@ -10,52 +10,48 @@ import copy
 
 class SchemaPartitioner:
     """
-    JSON Schemaをトップレベルプロパティのみに分割。
+    Partitions JSON Schema to top-level properties only.
 
     OpenMCP Pattern:
-    - tools/list: 軽量なスキーマ（トップレベルのみ）を返す
-    - expandSchema: 必要に応じて詳細を段階的に取得
+    - tools/list: Returns lightweight schema (top-level only)
+    - expandSchema: Retrieves details progressively as needed
     """
 
     def __init__(self):
-        # フルスキーマをメモリにキャッシュ
+        # Cache full schemas in memory
         self.full_schemas: Dict[str, Dict[str, Any]] = {}
         self.tool_docs: Dict[str, str] = {}
 
     def store_full_schema(self, tool_name: str, full_schema: Dict[str, Any]):
         """
-        フルスキーマを保存（expandSchema用）
+        Store full schema for expandSchema use.
 
         Args:
-            tool_name: ツール名
-            full_schema: 完全なinputSchema
+            tool_name: Tool name
+            full_schema: Complete inputSchema
         """
         self.full_schemas[tool_name] = copy.deepcopy(full_schema)
-        # ツール自体がmutateされる可能性もあるのでdocは別管理
+        # Docs are managed separately since tool itself may be mutated
 
     def store_tool_description(self, tool_name: str, description: Optional[str]):
-        """
-        ツール説明文を保存（遅延読み出し用）
-        """
+        """Store tool description for lazy loading."""
         if description:
             self.tool_docs[tool_name] = description.strip()
 
     def get_tool_description(self, tool_name: str) -> Optional[str]:
-        """
-        保存済みツール説明文を取得
-        """
+        """Retrieve stored tool description."""
         return self.tool_docs.get(tool_name)
 
     def partition_schema(self, schema: Dict[str, Any], depth: int = 1) -> Dict[str, Any]:
         """
-        スキーマをトップレベルプロパティのみに分割
+        Partition schema to top-level properties only.
 
         Args:
-            schema: 元のJSON Schema
-            depth: 残す階層の深さ（デフォルト: 1 = トップレベルのみ）
+            schema: Original JSON Schema
+            depth: Depth of hierarchy to retain (default: 1 = top-level only)
 
         Returns:
-            軽量化されたスキーマ
+            Lightweight schema
 
         Example:
             Input (1000 tokens):
@@ -82,7 +78,7 @@ class SchemaPartitioner:
                 "type": "object",
                 "properties": {
                     "amount": {"type": "number"},
-                    "metadata": {"type": "object"}  # ネスト削除
+                    "metadata": {"type": "object"}  # Nested removed
                 }
             }
         """
@@ -91,13 +87,13 @@ class SchemaPartitioner:
 
         partitioned = copy.deepcopy(schema)
 
-        # propertiesが存在する場合
+        # If properties exist
         if "properties" in partitioned and depth > 0:
             new_properties = {}
 
             for key, value in partitioned["properties"].items():
                 if isinstance(value, dict):
-                    # トップレベルのtypeとdescriptionのみ残す
+                    # Keep only top-level type and description
                     new_prop = {}
 
                     if "type" in value:
@@ -106,33 +102,33 @@ class SchemaPartitioner:
                     if "description" in value:
                         new_prop["description"] = value["description"]
 
-                    # enumやconstは残す（選択肢が必要）
+                    # Keep enum and const (needed for choices)
                     if "enum" in value:
                         new_prop["enum"] = value["enum"]
 
                     if "const" in value:
                         new_prop["const"] = value["const"]
 
-                    # format, pattern等のバリデーションは残す
+                    # Keep format, pattern and other validations
                     if "format" in value:
                         new_prop["format"] = value["format"]
 
                     if "pattern" in value:
                         new_prop["pattern"] = value["pattern"]
 
-                    # required, default も残す
+                    # Keep required and default
                     if "required" in value:
                         new_prop["required"] = value["required"]
 
                     if "default" in value:
                         new_prop["default"] = value["default"]
 
-                    # 配列の場合は items を再帰的に軽量化
+                    # For arrays, recursively partition items
                     if value.get("type") == "array" and isinstance(value.get("items"), dict):
                         new_prop["items"] = self.partition_schema(value["items"], max(depth - 1, 0))
 
-                    # ネストしたpropertiesは削除（type情報のみ残る）
-                    # これによりトークン削減
+                    # Nested properties are removed (only type info remains)
+                    # This achieves token reduction
 
                     new_properties[key] = new_prop
                 else:
@@ -140,7 +136,7 @@ class SchemaPartitioner:
 
             partitioned["properties"] = new_properties
 
-        # itemsが存在する場合（配列）
+        # If items exist (array)
         if "items" in partitioned and isinstance(partitioned["items"], dict):
             partitioned["items"] = self.partition_schema(partitioned["items"], depth - 1)
 
@@ -152,30 +148,30 @@ class SchemaPartitioner:
         path: Optional[List[str]] = None
     ) -> Optional[Dict[str, Any]]:
         """
-        指定されたパスのスキーマ詳細を取得
+        Get schema details for the specified path.
 
         Args:
-            tool_name: ツール名
-            path: スキーマパス（例: ["metadata", "shipping"]）
-                  Noneの場合は完全なスキーマを返す
+            tool_name: Tool name
+            path: Schema path (e.g., ["metadata", "shipping"])
+                  If None, returns the complete schema
 
         Returns:
-            指定パスのスキーマ、またはNone（見つからない場合）
+            Schema at specified path, or None if not found
 
         Example:
             expand_schema("stripe_create_payment", ["metadata", "shipping"])
-            → metadata.shipping 配下の完全なスキーマを返す
+            -> Returns complete schema under metadata.shipping
         """
         if tool_name not in self.full_schemas:
             return None
 
         schema = self.full_schemas[tool_name]
 
-        # パス指定なし = 完全なスキーマ
+        # No path specified = complete schema
         if not path:
             return copy.deepcopy(schema)
 
-        # パスをたどる
+        # Traverse the path
         current = schema
         for key in path:
             if isinstance(current, dict):
@@ -192,20 +188,20 @@ class SchemaPartitioner:
 
     def get_token_reduction_estimate(self, full_schema: Dict[str, Any]) -> Dict[str, int]:
         """
-        トークン削減効果の推定
+        Estimate token reduction effect.
 
         Args:
-            full_schema: 完全なスキーマ
+            full_schema: Complete schema
 
         Returns:
-            {"full": フルトークン数推定, "partitioned": 分割後トークン数推定, "reduction": 削減率%}
+            {"full": estimated full tokens, "partitioned": estimated partitioned tokens, "reduction": reduction %}
         """
         import json
 
         full_json = json.dumps(full_schema)
         partitioned_json = json.dumps(self.partition_schema(full_schema))
 
-        # JSON長をトークン数の近似値とする（実際は約4文字 = 1トークン）
+        # Use JSON length as token approximation (roughly 4 chars = 1 token)
         full_tokens = len(full_json) // 4
         partitioned_tokens = len(partitioned_json) // 4
 
@@ -218,5 +214,5 @@ class SchemaPartitioner:
         }
 
 
-# グローバルインスタンス（FastAPIで共有）
+# Global instance (shared by FastAPI)
 schema_partitioner = SchemaPartitioner()

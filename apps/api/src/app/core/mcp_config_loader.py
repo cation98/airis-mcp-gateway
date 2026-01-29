@@ -123,7 +123,8 @@ def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerCon
                 break
 
     if config_path is None or not os.path.exists(config_path):
-        print("[McpConfigLoader] No mcp-config.json found, using empty config")
+        print("[McpConfigLoader] WARNING: No mcp-config.json found, using empty config. "
+              "Set MCP_CONFIG_PATH env var or create mcp-config.json.")
         return {}
 
     print(f"[McpConfigLoader] Loading config from: {config_path}")
@@ -157,6 +158,11 @@ def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerCon
             command = server_def.get("command", "")
             args = server_def.get("args", [])
             runner = None
+
+        # Skip servers with empty command
+        if not command:
+            print(f"[McpConfigLoader] Warning: server '{name}' has no command, skipping")
+            continue
 
         # Parse mode
         try:
