@@ -22,6 +22,9 @@ import httpx
 from ...core.config import settings
 from ...core.process_manager import get_process_manager, ProcessManager
 from ...core.process_runner import ProcessState
+from ...core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -66,7 +69,7 @@ class SSEToolsPublisher:
         async with self._lock:
             client_id = self._next_client_id()
             self._clients[client_id] = SSEClient(id=client_id)
-            print(f"[SSE] Client {client_id} connected (total: {len(self._clients)})")
+            logger.info(f"Client {client_id} connected (total: {len(self._clients)})")
             return client_id
 
     async def remove_client(self, client_id: str):
@@ -74,7 +77,7 @@ class SSEToolsPublisher:
         async with self._lock:
             if client_id in self._clients:
                 del self._clients[client_id]
-                print(f"[SSE] Client {client_id} disconnected (total: {len(self._clients)})")
+                logger.info(f"Client {client_id} disconnected (total: {len(self._clients)})")
 
     @property
     def client_count(self) -> int:
@@ -110,7 +113,7 @@ async def get_docker_gateway_tools() -> list[dict[str, Any]]:
             # The actual tools come through the MCP protocol
             return []
     except Exception as e:
-        print(f"[SSE] Failed to fetch Docker Gateway tools: {e}")
+        logger.error(f"Failed to fetch Docker Gateway tools: {e}")
         return []
 
 
@@ -147,7 +150,7 @@ async def get_all_server_status() -> list[dict[str, Any]]:
                 "tools_count": status.get("tools_count", 0),
             })
     except Exception as e:
-        print(f"[SSE] Failed to get process status: {e}")
+        logger.error(f"Failed to get process status: {e}")
 
     return servers
 
@@ -210,7 +213,7 @@ async def get_combined_tools(mode: str = "hot", description_mode: str = "brief")
                     )
         all_tools.extend(process_tools)
     except Exception as e:
-        print(f"[SSE] Failed to get process tools: {e}")
+        logger.error(f"Failed to get process tools: {e}")
 
     return {
         "servers": servers,
@@ -278,10 +281,10 @@ async def sse_event_generator(client_id: str) -> AsyncIterator[str]:
                 })
 
     except asyncio.CancelledError:
-        print(f"[SSE] Client {client_id} stream cancelled")
+        logger.info(f"Client {client_id} stream cancelled")
         raise
     except Exception as e:
-        print(f"[SSE] Client {client_id} stream error: {e}")
+        logger.error(f"Client {client_id} stream error: {e}")
         yield format_sse_event("error", {
             "message": str(e),
             "timestamp": int(time.time()),
@@ -382,7 +385,7 @@ async def get_tools_status(metrics: bool = False):
             }
         }
     except Exception as e:
-        print(f"[SSE] Failed to get process status with metrics: {e}")
+        logger.error(f"Failed to get process status with metrics: {e}")
         processes = []
         roster = {"hot": [], "cold": [], "summary": {}}
 

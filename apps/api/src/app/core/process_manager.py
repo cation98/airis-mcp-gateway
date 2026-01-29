@@ -20,6 +20,9 @@ from .mcp_config_loader import (
     ServerType,
     ServerMode,
 )
+from .logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class ProcessManager:
@@ -66,10 +69,10 @@ class ProcessManager:
             )
             self._runners[name] = runner
 
-            print(f"[ProcessManager] Registered server: {name} (enabled={server_config.enabled})")
+            logger.info(f"Registered server: {name} (enabled={server_config.enabled})")
 
         self._initialized = True
-        print(f"[ProcessManager] Initialized with {len(self._runners)} process servers")
+        logger.info(f"Initialized with {len(self._runners)} process servers")
 
     def get_server_names(self) -> list[str]:
         """Get all registered server names."""
@@ -108,10 +111,10 @@ class ProcessManager:
         """
         hot_servers = self.get_hot_servers()
         if not hot_servers:
-            print("[ProcessManager] No HOT servers to pre-warm")
+            logger.info(" No HOT servers to pre-warm")
             return {}
 
-        print(f"[ProcessManager] Pre-warming {len(hot_servers)} HOT servers: {hot_servers}")
+        logger.info(f"Pre-warming {len(hot_servers)} HOT servers: {hot_servers}")
 
         async def warm_server(name: str) -> tuple[str, bool]:
             """Start a single server, return (name, success)."""
@@ -127,12 +130,12 @@ class ProcessManager:
                         tool_name = tool.get("name", "")
                         if tool_name:
                             self._tool_to_server[tool_name] = name
-                    print(f"[ProcessManager] Pre-warmed {name}: {len(runner.tools)} tools")
+                    logger.info(f"Pre-warmed {name}: {len(runner.tools)} tools")
                 else:
-                    print(f"[ProcessManager] Failed to pre-warm {name}")
+                    logger.warning(f"Failed to pre-warm {name}")
                 return (name, success)
             except Exception as e:
-                print(f"[ProcessManager] Error pre-warming {name}: {e}")
+                logger.error(f"Error pre-warming {name}: {e}")
                 return (name, False)
 
         # Start all HOT servers in parallel
@@ -149,10 +152,10 @@ class ProcessManager:
                 status[name] = success
             else:
                 # Exception case
-                print(f"[ProcessManager] Pre-warm exception: {result}")
+                logger.info(f"Pre-warm exception: {result}")
 
         ready_count = sum(1 for v in status.values() if v)
-        print(f"[ProcessManager] Pre-warm complete: {ready_count}/{len(hot_servers)} servers ready")
+        logger.info(f"Pre-warm complete: {ready_count}/{len(hot_servers)} servers ready")
         return status
 
     def is_process_server(self, name: str) -> bool:
@@ -168,7 +171,7 @@ class ProcessManager:
         if name not in self._server_configs:
             return False
         self._server_configs[name].enabled = True
-        print(f"[ProcessManager] Enabled server: {name}")
+        logger.info(f"Enabled server: {name}")
         return True
 
     async def disable_server(self, name: str) -> bool:
@@ -188,7 +191,7 @@ class ProcessManager:
             if server != name
         }
 
-        print(f"[ProcessManager] Disabled server: {name}")
+        logger.info(f"Disabled server: {name}")
         return True
 
     async def list_tools(
@@ -239,7 +242,7 @@ class ProcessManager:
 
         # Ensure process is running and initialized
         if not await runner.ensure_ready():
-            print(f"[ProcessManager] Failed to start server: {name}")
+            logger.error(f"Failed to start server: {name}")
             return []
 
         # Cache tool -> server mapping
@@ -298,7 +301,7 @@ class ProcessManager:
 
         # Ensure process is running and initialized
         if not await runner.ensure_ready():
-            print(f"[ProcessManager] Failed to start server: {name}")
+            logger.error(f"Failed to start server: {name}")
             return []
 
         # Cache prompt -> server mapping
@@ -505,7 +508,7 @@ class ProcessManager:
 
     async def shutdown(self):
         """Stop all running processes."""
-        print("[ProcessManager] Shutting down...")
+        logger.info(" Shutting down...")
 
         tasks = []
         for name, runner in self._runners.items():
@@ -515,7 +518,7 @@ class ProcessManager:
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
 
-        print("[ProcessManager] Shutdown complete")
+        logger.info(" Shutdown complete")
 
 
 # Global singleton

@@ -15,6 +15,9 @@ from ...core.config import settings
 from ...core.protocol_logger import protocol_logger
 from ...core.process_manager import get_process_manager
 from ...core.dynamic_mcp import get_dynamic_mcp
+from ...core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -255,7 +258,7 @@ async def proxy_sse_stream(request: Request):
     }
 
     if not session_id:
-        print("[MCP Proxy] SSE request missing sessionid", dict(request.headers))
+        logger.info("SSE request missing sessionid", dict(request.headers))
 
     gateway_sse_url = _build_gateway_sse_url(request)
 
@@ -329,19 +332,19 @@ async def proxy_sse_stream(request: Request):
                             return
                         except (httpx.ReadError, httpx.RemoteProtocolError, httpx.ConnectError) as e:
                             # Client disconnected - this is normal, exit gracefully
-                            print(f"[MCP Proxy] Client disconnected: {type(e).__name__}")
+                            logger.info(f"Client disconnected: {type(e).__name__}")
                             if captured_session_id:
                                 await remove_response_queue(captured_session_id)
                             return
                         except httpx.ReadTimeout:
                             # SSE read timeout - connection may be stale
-                            print(f"[MCP Proxy] SSE read timeout (session={captured_session_id})")
+                            logger.info(f"SSE read timeout (session={captured_session_id})")
                             if captured_session_id:
                                 await remove_response_queue(captured_session_id)
                             return
                         except httpx.TimeoutException as e:
                             # Other timeout (connect, pool, etc.)
-                            print(f"[MCP Proxy] Timeout exception: {type(e).__name__}")
+                            logger.info(f"Timeout exception: {type(e).__name__}")
                             if captured_session_id:
                                 await remove_response_queue(captured_session_id)
                             return
@@ -359,7 +362,7 @@ async def proxy_sse_stream(request: Request):
                         if source == "process_manager":
                             # ProcessManager からのレスポンスを SSE で送信
                             queue_task = None
-                            print(f"[MCP Proxy] Sending ProcessManager response via SSE: id={data.get('id')}")
+                            logger.info(f"Sending ProcessManager response via SSE: id={data.get('id')}")
                             yield f"data: {json.dumps(data)}\n\n"
                             continue
 
@@ -388,7 +391,7 @@ async def proxy_sse_stream(request: Request):
                                     if match:
                                         captured_session_id = match.group(1)
                                         endpoint_url = data_str.strip()
-                                        print(f"[MCP Proxy] Captured endpoint URL with sessionid={captured_session_id}")
+                                        logger.info(f"Captured endpoint URL with sessionid={captured_session_id}")
                                         # Create response queue for this session
                                         await get_response_queue(captured_session_id)
                                 yield f"{line}\n"
@@ -400,7 +403,7 @@ async def proxy_sse_stream(request: Request):
                                 # initialize リクエストを検出（SSEストリームで見えることはないが念のため）
                                 if isinstance(json_data, dict) and json_data.get("method") == "initialize":
                                     initialize_request_id = json_data.get("id")
-                                    print(f"[MCP Proxy] Detected initialize request (id={initialize_request_id})")
+                                    logger.info(f"Detected initialize request (id={initialize_request_id})")
                                     await protocol_logger.log_message("client→server", json_data, {"phase": "initialize"})
 
                                 # tools/list レスポンスをインターセプト
@@ -439,7 +442,7 @@ async def proxy_sse_stream(request: Request):
                                 # initialize responseを検出したらGatewayに notifications/initialized を POST
                                 if is_initialize_response:
 
-                                    print(f"[MCP Proxy] Detected initialize response, sending initialized notification to Gateway")
+                                    logger.info(f"Detected initialize response, sending initialized notification to Gateway")
                                     await protocol_logger.log_message("server→client", json_data, {"phase": "initialize"})
 
                                     # Gateway に notifications/initialized を POST
@@ -457,15 +460,15 @@ async def proxy_sse_stream(request: Request):
                                                 json=initialized_notification,
                                                 headers={"Content-Type": "application/json"}
                                             )
-                                            print(f"[MCP Proxy] Sent initialized notification to Gateway: {post_response.status_code}")
+                                            logger.info(f"Sent initialized notification to Gateway: {post_response.status_code}")
                                         except Exception as e:
-                                            print(f"[MCP Proxy] Failed to send initialized notification: {e}")
+                                            logger.error(f"Failed to send initialized notification: {e}")
                                     else:
-                                        print("[MCP Proxy] No sessionid available, cannot send initialized notification")
+                                        logger.info("No sessionid available, cannot send initialized notification")
 
                             except json.JSONDecodeError as e:
                                 # Log malformed JSON for debugging (truncate to avoid log spam)
-                                print(f"[MCP Proxy] Malformed JSON in SSE data: {str(e)[:100]}")
+                                logger.info(f"Malformed JSON in SSE data: {str(e)[:100]}")
                                 yield f"{line}\n"
                         else:
                             yield f"{line}\n"
@@ -481,7 +484,7 @@ async def proxy_sse_stream(request: Request):
                 # Cleanup session queue
                 if captured_session_id:
                     await remove_response_queue(captured_session_id)
-                print(f"[MCP Proxy] SSE stream cleanup complete (session={captured_session_id})")
+                logger.info(f"SSE stream cleanup complete (session={captured_session_id})")
 
 
 async def apply_prompts_merging(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -504,10 +507,10 @@ async def apply_prompts_merging(data: Dict[str, Any]) -> Dict[str, Any]:
         process_manager = get_process_manager()
         process_prompts = await process_manager.list_prompts(mode="hot")
         if process_prompts:
-            print(f"[Prompts Integration] Merging {len(process_prompts)} HOT prompts with {len(prompts)} docker prompts")
+            logger.info(f"Merging {len(process_prompts)} HOT prompts with {len(prompts)} docker prompts")
             prompts.extend(process_prompts)
     except Exception as e:
-        print(f"[Prompts Integration] Failed to get process prompts: {e}")
+        logger.error(f"Failed to get process prompts: {e}")
 
     data["result"]["prompts"] = prompts
     return data
@@ -524,9 +527,9 @@ async def _refresh_dynamic_mcp_cache(process_manager, docker_tools: list):
             schema_partitioner.store_full_schema(tool_name, tool_info.input_schema)
             schema_partitioner.store_tool_description(tool_name, tool_info.description)
 
-        print(f"[Dynamic MCP] Background cache refresh complete: {len(dynamic_mcp._tools)} tools")
+        logger.info(f"Background cache refresh complete: {len(dynamic_mcp._tools)} tools")
     except Exception as e:
-        print(f"[Dynamic MCP] Background cache refresh failed: {e}")
+        logger.error(f"Background cache refresh failed: {e}")
 
 
 async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -551,7 +554,7 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
     # This follows the Lasso MCP Gateway pattern for maximum token efficiency
     # Reference: https://github.com/lasso-security/mcp-gateway
     if settings.DYNAMIC_MCP:
-        print("[Dynamic MCP] Mode enabled - returning meta-tools only (3 tools)")
+        logger.info("Mode enabled - returning meta-tools only (3 tools)")
 
         dynamic_mcp = get_dynamic_mcp()
         tools = list(dynamic_mcp.get_meta_tools())
@@ -560,7 +563,7 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
         # Users discover tools via airis-find and execute via airis-exec
 
         data["result"]["tools"] = tools
-        print(f"[Dynamic MCP] Returning {len(tools)} meta-tools only")
+        logger.info(f"Returning {len(tools)} meta-tools only")
 
         # Schedule background cache refresh (non-blocking)
         import asyncio
@@ -578,11 +581,11 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
         hot_servers = process_manager.get_hot_servers()
         cold_servers = process_manager.get_cold_servers()
         if process_tools:
-            print(f"[SSE Integration] Merging {len(process_tools)} HOT tools with {len(tools)} docker tools")
-            print(f"[SSE Integration] HOT servers: {hot_servers}, COLD servers (not included): {cold_servers}")
+            logger.info(f"Merging {len(process_tools)} HOT tools with {len(tools)} docker tools")
+            logger.info(f"HOT servers: {hot_servers}, COLD servers (not included): {cold_servers}")
             tools.extend(process_tools)
     except Exception as e:
-        print(f"[SSE Integration] Failed to get process tools: {e}")
+        logger.error(f"Failed to get process tools: {e}")
 
     partitioned_tools = []
 
@@ -607,7 +610,7 @@ async def apply_schema_partitioning(data: Dict[str, Any]) -> Dict[str, Any]:
 
         # トークン削減効果をログ出力
         reduction = schema_partitioner.get_token_reduction_estimate(input_schema)
-        print(f"[Schema Partitioning] {tool_name}: {reduction['full']} → {reduction['partitioned']} tokens ({reduction['reduction']}% reduction)")
+        logger.debug(f" {tool_name}: {reduction['full']} → {reduction['partitioned']} tokens ({reduction['reduction']}% reduction)")
 
         extensions = dict(tool.get("extensions", {}))
         if full_description:
@@ -970,7 +973,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
     is_initialize_request = method == "initialize"
     session_id = request.query_params.get("sessionid")
 
-    print(f"[MCP Proxy] JSON-RPC request: method={method}, sessionid={session_id}")
+    logger.info(f"JSON-RPC request: method={method}, sessionid={session_id}")
 
     # セッション状態を追跡（初期化済みかどうか）
     if not hasattr(_proxy_jsonrpc_request, '_initialized_sessions'):
@@ -979,7 +982,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
     # Auto-initialize session if tools/call arrives for uninitialized session
     # This is a fallback for clients that don't follow proper MCP init sequence
     if method == "tools/call" and session_id and session_id not in _proxy_jsonrpc_request._initialized_sessions:
-        print(f"[MCP Proxy] Session {session_id} not initialized, running init sequence")
+        logger.info(f"Session {session_id} not initialized, running init sequence")
         gateway_post_url = f"{settings.MCP_GATEWAY_URL.rstrip('/')}/sse?sessionid={session_id}"
 
         async with httpx.AsyncClient(timeout=INIT_CLIENT_TIMEOUT) as init_client:
@@ -1006,10 +1009,10 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
 
                 # SSE transport returns 202 Accepted for successful POST
                 if init_response.status_code not in (200, 202):
-                    print(f"[MCP Proxy] Initialize request failed: {init_response.status_code}")
+                    logger.error(f"Initialize request failed: {init_response.status_code}")
                     # Continue anyway - let the actual request fail with proper error
                 else:
-                    print(f"[MCP Proxy] Initialize request accepted: {init_response.status_code}")
+                    logger.info(f"Initialize request accepted: {init_response.status_code}")
 
                     # Wait for Gateway to process initialize request
                     # This delay is critical - Gateway needs time to set up session state
@@ -1032,14 +1035,14 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
                         # Wait for Gateway to complete initialization before allowing tools/call
                         await asyncio.sleep(0.10)
                         _proxy_jsonrpc_request._initialized_sessions.add(session_id)
-                        print(f"[MCP Proxy] Session {session_id} initialized successfully")
+                        logger.info(f"Session {session_id} initialized successfully")
                     else:
-                        print(f"[MCP Proxy] Initialized notification failed: {notif_response.status_code}")
+                        logger.error(f"Initialized notification failed: {notif_response.status_code}")
 
             except httpx.TimeoutException:
-                print(f"[MCP Proxy] Init sequence timed out for session {session_id}")
+                logger.info(f"Init sequence timed out for session {session_id}")
             except Exception as e:
-                print(f"[MCP Proxy] Init sequence failed: {e}")
+                logger.error(f"Init sequence failed: {e}")
 
     # expandSchema ツールコール処理
     if rpc_request.get("method") == "tools/call":
@@ -1071,12 +1074,12 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
         # (キャッシュがなくても get_prompt は有効なサーバーを検索する)
         try:
             process_manager = get_process_manager()
-            print(f"[MCP Proxy] Trying ProcessManager for prompt: {prompt_name}")
+            logger.info(f"Trying ProcessManager for prompt: {prompt_name}")
             server_response = await process_manager.get_prompt(prompt_name, arguments)
 
             # Prompt not found の場合は Docker Gateway にフォールバック
             if "error" in server_response and server_response["error"].get("code") == -32601:
-                print(f"[MCP Proxy] Prompt {prompt_name} not found in ProcessManager, falling through to Gateway")
+                logger.info(f"Prompt {prompt_name} not found in ProcessManager, falling through to Gateway")
             else:
                 # JSON-RPC レスポンス形式で返す (クライアントのIDを使用)
                 response_data = {
@@ -1093,7 +1096,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
                 if session_id:
                     queue = await get_response_queue(session_id)
                     await queue.put(response_data)
-                    print(f"[MCP Proxy] Queued prompts/get response for session {session_id}")
+                    logger.info(f"Queued prompts/get response for session {session_id}")
                     return Response(status_code=202)
 
                 # sessionid がない場合はHTTPレスポンスで返す（フォールバック）
@@ -1103,7 +1106,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
                     media_type="application/json"
                 )
         except Exception as e:
-            print(f"[MCP Proxy] ProcessManager prompt routing failed: {e}")
+            logger.error(f"ProcessManager prompt routing failed: {e}")
 
     # tools/call リクエスト処理
     if rpc_request.get("method") == "tools/call":
@@ -1116,7 +1119,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
             process_manager = get_process_manager()
             # ツール名がProcessManagerに登録されているか確認
             if tool_name in process_manager._tool_to_server:
-                print(f"[MCP Proxy] Routing {tool_name} to ProcessManager")
+                logger.info(f"Routing {tool_name} to ProcessManager")
                 server_response = await process_manager.call_tool(tool_name, arguments)
                 # JSON-RPC レスポンス形式で返す (クライアントのIDを使用)
                 response_data = {
@@ -1133,7 +1136,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
                 if session_id:
                     queue = await get_response_queue(session_id)
                     await queue.put(response_data)
-                    print(f"[MCP Proxy] Queued tools/call response for session {session_id}")
+                    logger.info(f"Queued tools/call response for session {session_id}")
                     return Response(status_code=202)
 
                 # sessionid がない場合はHTTPレスポンスで返す（フォールバック）
@@ -1143,7 +1146,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
                     media_type="application/json"
                 )
         except Exception as e:
-            print(f"[MCP Proxy] ProcessManager routing check failed: {e}")
+            logger.error(f"ProcessManager routing check failed: {e}")
 
     # その他のツールコールはGatewayにproxy
     if not session_id:
@@ -1170,7 +1173,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
 
         # initialize リクエストが成功したら、notifications/initialized を Gateway に送信
         if is_initialize_request and response.status_code in (200, 202):
-            print(f"[MCP Proxy] Initialize request successful, sending initialized notification to Gateway (sessionid={session_id})")
+            logger.info(f"Initialize request successful, sending initialized notification to Gateway (sessionid={session_id})")
             initialized_notification = {
                 "jsonrpc": "2.0",
                 "method": "notifications/initialized"
@@ -1182,9 +1185,9 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
                     json=initialized_notification,
                     headers={"Content-Type": "application/json"}
                 )
-                print(f"[MCP Proxy] Sent initialized notification: {init_response.status_code}")
+                logger.info(f"Sent initialized notification: {init_response.status_code}")
             except Exception as e:
-                print(f"[MCP Proxy] Failed to send initialized notification: {e}")
+                logger.error(f"Failed to send initialized notification: {e}")
 
         return Response(
             content=response.content,
@@ -1284,7 +1287,7 @@ async def handle_airis_find(rpc_request: Dict[str, Any], session_id: Optional[st
 
     # Defensive null check
     if dynamic_mcp is None:
-        print("[Dynamic MCP] Warning: DynamicMCP singleton not initialized")
+        logger.warning("DynamicMCP singleton not initialized")
         return Response(
             content=json.dumps({
                 "jsonrpc": "2.0",
@@ -1298,7 +1301,7 @@ async def handle_airis_find(rpc_request: Dict[str, Any], session_id: Optional[st
     # Always ensure servers are cached (even if tools already exist)
     # This is needed because tools/list populates tools but not necessarily servers
     if not dynamic_mcp._servers:
-        print("[Dynamic MCP] Server cache empty, refreshing...")
+        logger.info("Server cache empty, refreshing...")
         # Cache server info for ALL enabled process servers (including COLD)
         for name in process_manager.get_enabled_servers():
             status = process_manager.get_server_status(name)
@@ -1310,14 +1313,14 @@ async def handle_airis_find(rpc_request: Dict[str, Any], session_id: Optional[st
                 source="process"
             )
 
-        print(f"[Dynamic MCP] Cached {len(dynamic_mcp._servers)} servers")
+        logger.info(f"Cached {len(dynamic_mcp._servers)} servers")
 
     # Auto-refresh ProcessManager tools if not yet cached
     # (Docker Gateway tools may be pre-cached at startup, but we still need ProcessManager tools)
     # Only load HOT servers here - COLD servers are loaded on-demand by smart discovery
     has_process_tools = any(t.source == "process" for t in dynamic_mcp._tools.values())
     if not has_process_tools:
-        print("[Dynamic MCP] No ProcessManager tools in cache, refreshing from HOT servers...")
+        logger.info("No ProcessManager tools in cache, refreshing from HOT servers...")
         # Load tools from HOT servers only - COLD servers loaded on-demand
         all_tools = await process_manager.list_tools(mode="hot")
         for tool in all_tools:
@@ -1332,7 +1335,7 @@ async def handle_airis_find(rpc_request: Dict[str, Any], session_id: Optional[st
                     source="process"
                 )
                 dynamic_mcp._tool_to_server[tool_name] = server_name
-        print(f"[Dynamic MCP] Cached {len(all_tools)} process tools (total: {len(dynamic_mcp._tools)})")
+        logger.info(f"Cached {len(all_tools)} process tools (total: {len(dynamic_mcp._tools)})")
 
     # If specific server requested and it's a process server, ensure it's in the cache
     if server:
@@ -1350,13 +1353,13 @@ async def handle_airis_find(rpc_request: Dict[str, Any], session_id: Optional[st
                 source="process"
             )
             server_info = dynamic_mcp._servers[server]
-            print(f"[Dynamic MCP] Added server '{server}' to cache (mode={server_info.mode})")
+            logger.info(f"Added server '{server}' to cache (mode={server_info.mode})")
 
         # If it's a COLD server with no tools cached, start it and cache tools
         # Note: tools_count is metadata, we need to check if tools are actually in _tools dict
         server_has_tools = any(t.server == server for t in dynamic_mcp._tools.values())
         if is_process and server_info and server_info.mode == "cold" and not server_has_tools:
-            print(f"[Dynamic MCP] Starting COLD server '{server}' to get tools...")
+            logger.info(f"Starting COLD server '{server}' to get tools...")
             server_tools = await process_manager._list_tools_for_server(server)
             for tool in server_tools:
                 tool_name = tool.get("name", "")
@@ -1372,7 +1375,7 @@ async def handle_airis_find(rpc_request: Dict[str, Any], session_id: Optional[st
             # Update server tools count
             if server in dynamic_mcp._servers:
                 dynamic_mcp._servers[server].tools_count = len(server_tools)
-            print(f"[Dynamic MCP] Loaded {len(server_tools)} tools from '{server}'")
+            logger.info(f"Loaded {len(server_tools)} tools from '{server}'")
 
     results = dynamic_mcp.find(query=query, server=server)
 
@@ -1416,7 +1419,7 @@ async def handle_airis_find(rpc_request: Dict[str, Any], session_id: Optional[st
     if session_id:
         queue = await get_response_queue(session_id)
         await queue.put(response_data)
-        print(f"[Dynamic MCP] Queued airis-find response for session {session_id}")
+        logger.info(f"Queued airis-find response for session {session_id}")
         return Response(status_code=202)
 
     # Fallback to HTTP response if no session_id
@@ -1458,7 +1461,7 @@ async def handle_airis_exec(rpc_request: Dict[str, Any], session_id: Optional[st
     dynamic_mcp = get_dynamic_mcp()
     server_name, tool_name = dynamic_mcp.parse_tool_reference(tool_ref)
 
-    print(f"[Dynamic MCP] airis-exec: {tool_ref} -> server={server_name}, tool={tool_name}")
+    logger.info(f"airis-exec: {tool_ref} -> server={server_name}, tool={tool_name}")
 
     if not server_name:
         return Response(
@@ -1530,7 +1533,7 @@ async def handle_airis_exec(rpc_request: Dict[str, Any], session_id: Optional[st
     }
 
     gateway_post_url = f"{settings.MCP_GATEWAY_URL.rstrip('/')}/sse?sessionid={session_id}"
-    print(f"[Dynamic MCP] Proxying airis-exec to Docker Gateway: {tool_name}")
+    logger.info(f"Proxying airis-exec to Docker Gateway: {tool_name}")
 
     try:
         # Use configurable timeout (default: 90s) to prevent Claude Code hanging
@@ -1674,7 +1677,7 @@ async def handle_airis_schema(rpc_request: Dict[str, Any], session_id: Optional[
     if session_id:
         queue = await get_response_queue(session_id)
         await queue.put(response_data)
-        print(f"[Dynamic MCP] Queued airis-schema response for session {session_id}")
+        logger.info(f"Queued airis-schema response for session {session_id}")
         return Response(status_code=202)
 
     # Fallback to HTTP response if no session_id

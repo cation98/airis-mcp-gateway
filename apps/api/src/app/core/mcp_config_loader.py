@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Optional
 
 from .process_runner import ProcessConfig
+from .logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class ServerType(Enum):
@@ -123,11 +126,11 @@ def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerCon
                 break
 
     if config_path is None or not os.path.exists(config_path):
-        print("[McpConfigLoader] WARNING: No mcp-config.json found, using empty config. "
-              "Set MCP_CONFIG_PATH env var or create mcp-config.json.")
+        logger.warning("No mcp-config.json found, using empty config. "
+                       "Set MCP_CONFIG_PATH env var or create mcp-config.json.")
         return {}
 
-    print(f"[McpConfigLoader] Loading config from: {config_path}")
+    logger.info(f"Loading config from: {config_path}")
 
     with open(config_path) as f:
         raw_config = json.load(f)
@@ -148,12 +151,12 @@ def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerCon
             profile_name = _expand_env_vars(profile_ref)
             profile = profiles.get(profile_name, {})
             if not profile:
-                print(f"[McpConfigLoader] Warning: profile '{profile_name}' not found for server '{name}'")
+                logger.warning(f"Profile '{profile_name}' not found for server '{name}'")
                 continue
             command = profile.get("command", "")
             args = profile.get("args", [])
             runner = "local" if profile_name.endswith("-local") else "remote"
-            print(f"[McpConfigLoader] {name}: using profile '{profile_name}' (runner={runner})")
+            logger.debug(f"{name}: using profile '{profile_name}' (runner={runner})")
         else:
             command = server_def.get("command", "")
             args = server_def.get("args", [])
@@ -161,7 +164,7 @@ def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerCon
 
         # Skip servers with empty command
         if not command:
-            print(f"[McpConfigLoader] Warning: server '{name}' has no command, skipping")
+            logger.warning(f"Server '{name}' has no command, skipping")
             continue
 
         # Parse mode
@@ -199,7 +202,7 @@ def load_mcp_config(config_path: Optional[str] = None) -> dict[str, McpServerCon
             adaptive_ttl_enabled=adaptive_ttl_enabled,
         )
 
-        print(f"[McpConfigLoader] {name}: type={server_type.value}, mode={mode.value}, enabled={enabled}")
+        logger.debug(f"{name}: type={server_type.value}, mode={mode.value}, enabled={enabled}")
 
     return servers
 

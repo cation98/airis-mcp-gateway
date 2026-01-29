@@ -18,6 +18,9 @@ from typing import Any, Callable, Optional
 from enum import Enum
 
 from .config import settings
+from .logging import get_logger
+
+logger = get_logger(__name__)
 
 # For memory/CPU metrics
 try:
@@ -172,7 +175,7 @@ class ProcessRunner:
         if new_ttl != self._current_ttl:
             old_ttl = self._current_ttl
             self._current_ttl = new_ttl
-            print(f"[ProcessRunner] {self.config.name} TTL adjusted: {old_ttl:.0f}s -> {new_ttl:.0f}s")
+            logger.info(f"{self.config.name} TTL adjusted: {old_ttl:.0f}s -> {new_ttl:.0f}s")
 
     def _record_call(self):
         """Record a tool call for TTL calculation."""
@@ -180,7 +183,7 @@ class ProcessRunner:
         self._update_ttl()
 
     def _default_stderr_handler(self, server_name: str, line: str):
-        print(f"[{server_name}][stderr] {line}")
+        logger.warning(f"[{server_name}][stderr] {line}")
 
     async def ensure_ready(self, timeout: float = 30.0) -> bool:
         """
@@ -223,7 +226,7 @@ class ProcessRunner:
         ]
 
         cmd = [self.config.command] + expanded_args
-        print(f"[ProcessRunner] Starting {self.config.name}: {' '.join(cmd)}")
+        logger.info(f"Starting {self.config.name}: {' '.join(cmd)}")
 
         try:
             self._proc = await asyncio.create_subprocess_exec(
@@ -244,10 +247,10 @@ class ProcessRunner:
             self._stderr_task = asyncio.create_task(self._stderr_reader())
             self._reaper_task = asyncio.create_task(self._idle_reaper())
 
-            print(f"[ProcessRunner] {self.config.name} started (PID: {self._proc.pid})")
+            logger.info(f"{self.config.name} started (PID: {self._proc.pid})")
 
         except Exception as e:
-            print(f"[ProcessRunner] Failed to start {self.config.name}: {e}")
+            logger.error(f"Failed to start {self.config.name}: {e}")
             self._state = ProcessState.STOPPED
             self._last_error = str(e)
             raise
@@ -281,13 +284,13 @@ class ProcessRunner:
 
             if "error" in response:
                 error_msg = str(response['error'])
-                print(f"[ProcessRunner] {self.config.name} initialize failed: {error_msg}")
+                logger.error(f"{self.config.name} initialize failed: {error_msg}")
                 self._state = ProcessState.STOPPED
                 self._last_error = error_msg
                 return
 
             self._server_info = response.get("result", {})
-            print(f"[ProcessRunner] {self.config.name} initialized: {self._server_info.get('serverInfo', {})}")
+            logger.info(f"{self.config.name} initialized: {self._server_info.get('serverInfo', {})}")
 
             # Send notifications/initialized
             await self._send_notification({
@@ -306,10 +309,10 @@ class ProcessRunner:
             self._update_ttl()
 
             self._state = ProcessState.READY
-            print(f"[ProcessRunner] {self.config.name} is READY with {len(self._tools)} tools, {len(self._prompts)} prompts (cold start: {self._cold_start_time:.1f}s, TTL: {self._current_ttl:.0f}s)")
+            logger.info(f"{self.config.name} is READY with {len(self._tools)} tools, {len(self._prompts)} prompts (cold start: {self._cold_start_time:.1f}s, TTL: {self._current_ttl:.0f}s)")
 
         except Exception as e:
-            print(f"[ProcessRunner] {self.config.name} initialize error: {e}")
+            logger.error(f"{self.config.name} initialize error: {e}")
             self._state = ProcessState.STOPPED
             self._last_error = str(e)
 
@@ -345,10 +348,10 @@ class ProcessRunner:
             response = await self._send_request(request, timeout=10.0)
             if "result" in response:
                 self._prompts = response["result"].get("prompts", [])
-                print(f"[ProcessRunner] {self.config.name} has {len(self._prompts)} prompts")
+                logger.info(f"{self.config.name} has {len(self._prompts)} prompts")
         except Exception as e:
             # Not all servers support prompts - this is OK
-            print(f"[ProcessRunner] {self.config.name} prompts/list failed (may not be supported): {e}")
+            logger.debug(f"{self.config.name} prompts/list failed (may not be supported): {e}")
 
     async def get_prompt(self, prompt_name: str, arguments: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
@@ -395,7 +398,7 @@ class ProcessRunner:
             if not await self.ensure_ready():
                 last_error = f"Server {self.config.name} failed to initialize"
                 if attempt < max_retries:
-                    print(f"[ProcessRunner] {self.config.name} retry {attempt + 1}/{max_retries}: restarting after init failure")
+                    logger.warning(f"{self.config.name} retry {attempt + 1}/{max_retries}: restarting after init failure")
                     await self._restart_process()
                     continue
                 return {
@@ -432,7 +435,7 @@ class ProcessRunner:
                     # Internal error or timeout - might be process crash
                     if error_code in [-32603, -32000] and attempt < max_retries:
                         last_error = result.get("error", {}).get("message", "Unknown error")
-                        print(f"[ProcessRunner] {self.config.name} retry {attempt + 1}/{max_retries}: {last_error}")
+                        logger.warning(f"{self.config.name} retry {attempt + 1}/{max_retries}: {last_error}")
                         await self._restart_process()
                         continue
 
@@ -441,7 +444,7 @@ class ProcessRunner:
             except asyncio.TimeoutError:
                 last_error = f"Request timeout after {settings.TOOL_CALL_TIMEOUT}s"
                 if attempt < max_retries:
-                    print(f"[ProcessRunner] {self.config.name} retry {attempt + 1}/{max_retries}: timeout, restarting")
+                    logger.warning(f"{self.config.name} retry {attempt + 1}/{max_retries}: timeout, restarting")
                     await self._restart_process()
                     continue
                 return {
@@ -455,7 +458,7 @@ class ProcessRunner:
             except Exception as e:
                 last_error = str(e)
                 if attempt < max_retries:
-                    print(f"[ProcessRunner] {self.config.name} retry {attempt + 1}/{max_retries}: {e}")
+                    logger.warning(f"{self.config.name} retry {attempt + 1}/{max_retries}: {e}")
                     await self._restart_process()
                     continue
                 return {
@@ -477,7 +480,7 @@ class ProcessRunner:
 
     async def _restart_process(self):
         """Stop and restart the process for recovery."""
-        print(f"[ProcessRunner] Restarting {self.config.name}...")
+        logger.info(f"Restarting {self.config.name}...")
         await self.stop()
         await asyncio.sleep(0.5)  # Brief delay before restart
         # ensure_ready will be called on next attempt, which starts the process
@@ -569,7 +572,7 @@ class ProcessRunner:
         method = request.get("method", "")
         request_id = request.get("id")
 
-        print(f"[ProcessRunner] {self.config.name} server request: {method} (id={request_id})")
+        logger.info(f"{self.config.name} server request: {method} (id={request_id})")
 
         response: dict[str, Any] = {
             "jsonrpc": "2.0",
@@ -599,7 +602,7 @@ class ProcessRunner:
             data = json.dumps(response) + "\n"
             self._proc.stdin.write(data.encode())
             await self._proc.stdin.drain()
-            print(f"[ProcessRunner] {self.config.name} responded to {method}")
+            logger.info(f"{self.config.name} responded to {method}")
 
     async def _stdout_reader(self):
         """Read JSON-RPC responses from stdout."""
@@ -617,7 +620,7 @@ class ProcessRunner:
                 try:
                     message = json.loads(line_str)
                 except json.JSONDecodeError:
-                    print(f"[ProcessRunner] {self.config.name} invalid JSON: {line_str[:100]}")
+                    logger.warning(f"{self.config.name} invalid JSON: {line_str[:100]}")
                     continue
 
                 # Handle server-initiated requests (has both "id" and "method")
@@ -634,11 +637,11 @@ class ProcessRunner:
                 # Handle server-initiated notifications (has "method" but no "id")
                 elif "method" in message:
                     # Log notifications for debugging
-                    print(f"[ProcessRunner] {self.config.name} notification: {message.get('method')}")
+                    logger.info(f"{self.config.name} notification: {message.get('method')}")
 
         except Exception as e:
             if self._state not in (ProcessState.STOPPING, ProcessState.STOPPED):
-                print(f"[ProcessRunner] {self.config.name} stdout reader error: {e}")
+                logger.error(f"{self.config.name} stdout reader error: {e}")
 
     async def _stderr_reader(self):
         """Read stderr and forward to handler."""
@@ -652,7 +655,7 @@ class ProcessRunner:
                     self.on_stderr(self.config.name, line_str)
         except Exception as e:
             if self._state not in (ProcessState.STOPPING, ProcessState.STOPPED):
-                print(f"[ProcessRunner] {self.config.name} stderr reader error: {e}")
+                logger.error(f"{self.config.name} stderr reader error: {e}")
 
     async def _idle_reaper(self):
         """Kill process after idle timeout (uses adaptive TTL)."""
@@ -668,7 +671,7 @@ class ProcessRunner:
                 # Use adaptive TTL if enabled, otherwise fall back to config
                 effective_ttl = self._current_ttl if self.config.adaptive_ttl_enabled else self.config.idle_timeout
                 if idle_time > effective_ttl:
-                    print(f"[ProcessRunner] {self.config.name} idle for {idle_time:.0f}s (TTL: {effective_ttl:.0f}s), stopping")
+                    logger.info(f"{self.config.name} idle for {idle_time:.0f}s (TTL: {effective_ttl:.0f}s), stopping")
                     self._idle_kill_count += 1
                     await self.stop()
                     return
@@ -707,7 +710,7 @@ class ProcessRunner:
             except ProcessLookupError:
                 pass
 
-            print(f"[ProcessRunner] {self.config.name} stopped")
+            logger.info(f"{self.config.name} stopped")
 
         self._proc = None
         self._state = ProcessState.STOPPED

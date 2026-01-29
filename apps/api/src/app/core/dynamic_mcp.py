@@ -14,6 +14,10 @@ import re
 from typing import Any, Optional
 from dataclasses import dataclass, field
 
+from .logging import get_logger
+
+logger = get_logger(__name__)
+
 
 @dataclass
 class ToolInfo:
@@ -101,7 +105,7 @@ class DynamicMCP:
                         )
                         new_tool_to_server[tool_name] = name
             except Exception as e:
-                print(f"[DynamicMCP] Failed to cache tools for {name}: {e}")
+                logger.error(f"Failed to cache tools for {name}: {e}")
 
         # Cache Docker MCP Gateway tools
         docker_server_tools: dict[str, int] = {}  # server_name -> tools_count
@@ -140,7 +144,7 @@ class DynamicMCP:
         self._servers = new_servers
         self._tool_to_server = new_tool_to_server
 
-        print(f"[DynamicMCP] Cached {len(self._tools)} tools from {len(self._servers)} servers")
+        logger.info(f"Cached {len(self._tools)} tools from {len(self._servers)} servers")
 
     async def refresh_cache_hot_only(
         self,
@@ -192,7 +196,7 @@ class DynamicMCP:
                             )
                             new_tool_to_server[tool_name] = name
                 except Exception as e:
-                    print(f"[DynamicMCP] Failed to cache HOT tools for {name}: {e}")
+                    logger.error(f"Failed to cache HOT tools for {name}: {e}")
 
         # Cache Docker MCP Gateway tools
         docker_server_tools: dict[str, int] = {}
@@ -226,7 +230,7 @@ class DynamicMCP:
         self._servers = new_servers
         self._tool_to_server = new_tool_to_server
 
-        print(f"[DynamicMCP] Cached {len(self._tools)} HOT tools from {len(self._servers)} servers (COLD tools on-demand)")
+        logger.info(f"Cached {len(self._tools)} HOT tools from {len(self._servers)} servers (COLD tools on-demand)")
 
     async def load_tools_for_server(
         self,
@@ -255,7 +259,7 @@ class DynamicMCP:
         # Auto-enable if requested (for airis-exec)
         if force_enable and not config.enabled:
             await process_manager.enable_server(server_name)
-            print(f"[DynamicMCP] Auto-enabled server: {server_name}")
+            logger.info(f"Auto-enabled server: {server_name}")
 
         # Still disabled? Return empty
         if not config.enabled and not force_enable:
@@ -282,10 +286,10 @@ class DynamicMCP:
             if server_name in self._servers:
                 self._servers[server_name].tools_count = len(tools)
 
-            print(f"[DynamicMCP] Loaded {len(tools)} tools from {server_name}")
+            logger.debug(f"Loaded {len(tools)} tools from {server_name}")
             return tools
         except Exception as e:
-            print(f"[DynamicMCP] Failed to load tools from {server_name}: {e}")
+            logger.error(f"Failed to load tools from {server_name}: {e}")
             return []
 
     def _infer_server_name(self, tool_name: str) -> str:

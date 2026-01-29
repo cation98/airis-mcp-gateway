@@ -7,6 +7,9 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.backends import default_backend
 from .config import settings
+from .logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def _default_key_path() -> Path:
@@ -40,8 +43,8 @@ class EncryptionManager:
             if not master_key:
                 master_key = Fernet.generate_key().decode()
                 self._persist_key(master_key)
-                print(f"ℹ️  Generated new ENCRYPTION_MASTER_KEY and stored it at {self._key_file_path}")
-                print("   Set ENCRYPTION_MASTER_KEY in your environment to override the persisted key")
+                logger.info(f"Generated new ENCRYPTION_MASTER_KEY and stored it at {self._key_file_path}")
+                logger.info("Set ENCRYPTION_MASTER_KEY in your environment to override the persisted key")
 
         self.master_key = master_key
         self._fernet = self._create_fernet(master_key)
@@ -104,7 +107,7 @@ class EncryptionManager:
                 # Permission adjustments may fail on some platforms (e.g. Windows)
                 pass
         except OSError as exc:
-            print(f"⚠️  Failed to persist ENCRYPTION_MASTER_KEY to {self._key_file_path}: {exc}")
+            logger.warning(f"Failed to persist ENCRYPTION_MASTER_KEY to {self._key_file_path}: {exc}")
 
     @staticmethod
     def generate_master_key() -> str:

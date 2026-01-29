@@ -15,7 +15,12 @@ from .api.endpoints import mcp_proxy
 from .api.endpoints import process_mcp
 from .api.endpoints import sse_tools
 from .core.process_manager import initialize_process_manager, get_process_manager
+from .core.logging import setup_logging, get_logger
 from .middleware.auth import OptionalBearerAuth
+
+# Initialize logging
+setup_logging()
+logger = get_logger(__name__)
 
 MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway:9390")
 MCP_CONFIG_PATH = os.getenv("MCP_CONFIG_PATH", "/app/mcp-config.json")
@@ -39,7 +44,7 @@ async def _precache_docker_gateway_tools():
     await asyncio.sleep(2.0)
 
     gateway_url = MCP_GATEWAY_URL.rstrip("/")
-    print(f"[Startup] Pre-caching Docker Gateway tools...")
+    logger.info(f"[Startup] Pre-caching Docker Gateway tools...")
 
     docker_tools = []
     endpoint_url = None
@@ -81,7 +86,7 @@ async def _precache_docker_gateway_tools():
             json={"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
             headers={"Content-Type": "application/json"}
         )
-        print(f"[Startup] Sent all requests to {endpoint}")
+        logger.info(f"[Startup] Sent all requests to {endpoint}")
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -108,7 +113,7 @@ async def _precache_docker_gateway_tools():
                         # Endpoint event - start sending requests
                         if event_type == "endpoint":
                             endpoint_url = f"{gateway_url}{data_str}"
-                            print(f"[Startup] Got endpoint: {endpoint_url}")
+                            logger.info(f"[Startup] Got endpoint: {endpoint_url}")
                             # Start sending requests in background
                             sender_task = asyncio.create_task(send_requests(client, endpoint_url))
                             continue
@@ -119,7 +124,7 @@ async def _precache_docker_gateway_tools():
                                 data = json.loads(data_str)
                                 if data.get("id") == 2 and "result" in data:
                                     docker_tools = data["result"].get("tools", [])
-                                    print(f"[Startup] Received {len(docker_tools)} tools from Gateway")
+                                    logger.info(f"[Startup] Received {len(docker_tools)} tools from Gateway")
                                     break
                             except json.JSONDecodeError:
                                 pass
@@ -158,37 +163,37 @@ async def _precache_docker_gateway_tools():
                             source="docker"
                         )
 
-                print(f"[Startup] Pre-cached {len(docker_tools)} Docker Gateway tools from {len(docker_server_tools)} servers")
+                logger.info(f"[Startup] Pre-cached {len(docker_tools)} Docker Gateway tools from {len(docker_server_tools)} servers")
             else:
-                print("[Startup] No Docker Gateway tools found in response")
+                logger.info("[Startup] No Docker Gateway tools found in response")
 
     except Exception as e:
         import traceback
-        print(f"[Startup] Docker Gateway pre-cache failed: {e}")
-        print(f"[Startup] Traceback: {traceback.format_exc()}")
+        logger.info(f"[Startup] Docker Gateway pre-cache failed: {e}")
+        logger.info(f"[Startup] Traceback: {traceback.format_exc()}")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("AIRIS MCP Gateway API starting")
-    print(f"   Docker Gateway URL: {MCP_GATEWAY_URL}")
-    print(f"   MCP Config Path: {MCP_CONFIG_PATH}")
+    logger.info("AIRIS MCP Gateway API starting")
+    logger.info(f"Docker Gateway URL: {MCP_GATEWAY_URL}")
+    logger.info(f"MCP Config Path: {MCP_CONFIG_PATH}")
 
     # Initialize ProcessManager for uvx/npx servers
     try:
         await initialize_process_manager(MCP_CONFIG_PATH)
         manager = get_process_manager()
-        print(f"   Process servers: {manager.get_server_names()}")
-        print(f"   Enabled: {manager.get_enabled_servers()}")
+        logger.info(f"Process servers: {manager.get_server_names()}")
+        logger.info(f"Enabled: {manager.get_enabled_servers()}")
 
         # Pre-warm HOT servers to avoid cold start timeouts on first tools/list
         # This runs in parallel and ensures servers are ready before clients connect
         hot_servers = manager.get_hot_servers()
         if hot_servers:
-            print(f"   Pre-warming HOT servers: {hot_servers}")
+            logger.info(f"Pre-warming HOT servers: {hot_servers}")
             prewarm_status = await manager.prewarm_hot_servers()
             ready = sum(1 for v in prewarm_status.values() if v)
-            print(f"   Pre-warm complete: {ready}/{len(hot_servers)} servers ready")
+            logger.info(f"Pre-warm complete: {ready}/{len(hot_servers)} servers ready")
 
         # Start background task to pre-cache Docker Gateway tools
         import asyncio
@@ -200,23 +205,23 @@ async def lifespan(app: FastAPI):
             except asyncio.CancelledError:
                 pass
             except Exception as e:
-                print(f"[Startup] Docker Gateway pre-cache task failed: {e}")
+                logger.info(f"[Startup] Docker Gateway pre-cache task failed: {e}")
 
         precache_task = asyncio.create_task(_precache_docker_gateway_tools())
         precache_task.add_done_callback(_handle_precache_error)
 
     except Exception as e:
-        print(f"   ProcessManager init failed: {e}")
+        logger.error(f"ProcessManager init failed: {e}")
 
     yield
 
     # Shutdown ProcessManager
-    print("Shutting down...")
+    logger.info("Shutting down...")
     try:
         manager = get_process_manager()
         await manager.shutdown()
     except Exception as e:
-        print(f"   ProcessManager shutdown error: {e}")
+        logger.error(f"ProcessManager shutdown error: {e}")
 
 
 app = FastAPI(
