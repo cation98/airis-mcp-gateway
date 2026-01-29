@@ -63,20 +63,22 @@ class DynamicMCP:
         """
         Refresh the tool/server cache from all sources.
 
+        Uses atomic update pattern to avoid race conditions during refresh.
+
         Args:
             process_manager: ProcessManager instance
             docker_tools: Tools from Docker MCP Gateway (optional)
         """
-        self._tools.clear()
-        self._servers.clear()
-        self._tool_to_server.clear()
+        # Build new cache in temporary variables (atomic update pattern)
+        new_tools: dict[str, ToolInfo] = {}
+        new_servers: dict[str, ServerInfo] = {}
+        new_tool_to_server: dict[str, str] = {}
 
         # Cache process servers and their tools
         for name in process_manager.get_enabled_servers():
             status = process_manager.get_server_status(name)
-            config = process_manager._server_configs.get(name)
 
-            self._servers[name] = ServerInfo(
+            new_servers[name] = ServerInfo(
                 name=name,
                 enabled=status.get("enabled", False),
                 mode=status.get("mode", "cold"),
@@ -90,14 +92,14 @@ class DynamicMCP:
                 for tool in tools:
                     tool_name = tool.get("name", "")
                     if tool_name:
-                        self._tools[tool_name] = ToolInfo(
+                        new_tools[tool_name] = ToolInfo(
                             name=tool_name,
                             server=name,
                             description=tool.get("description", ""),
                             input_schema=tool.get("inputSchema", {}),
                             source="process"
                         )
-                        self._tool_to_server[tool_name] = name
+                        new_tool_to_server[tool_name] = name
             except Exception as e:
                 print(f"[DynamicMCP] Failed to cache tools for {name}: {e}")
 
@@ -106,32 +108,37 @@ class DynamicMCP:
         if docker_tools:
             for tool in docker_tools:
                 tool_name = tool.get("name", "")
-                if tool_name and tool_name not in self._tools:
+                if tool_name and tool_name not in new_tools:
                     # Try to infer server name from tool name
                     server_name = self._infer_server_name(tool_name)
 
-                    self._tools[tool_name] = ToolInfo(
+                    new_tools[tool_name] = ToolInfo(
                         name=tool_name,
                         server=server_name,
                         description=tool.get("description", ""),
                         input_schema=tool.get("inputSchema", {}),
                         source="docker"
                     )
-                    self._tool_to_server[tool_name] = server_name
+                    new_tool_to_server[tool_name] = server_name
 
                     # Count tools per Docker server
                     docker_server_tools[server_name] = docker_server_tools.get(server_name, 0) + 1
 
             # Add Docker servers to server cache
             for server_name, tools_count in docker_server_tools.items():
-                if server_name not in self._servers:
-                    self._servers[server_name] = ServerInfo(
+                if server_name not in new_servers:
+                    new_servers[server_name] = ServerInfo(
                         name=server_name,
                         enabled=True,
                         mode="docker",  # Docker servers are always running
                         tools_count=tools_count,
                         source="docker"
                     )
+
+        # Atomic swap - assign all at once to minimize window of inconsistency
+        self._tools = new_tools
+        self._servers = new_servers
+        self._tool_to_server = new_tool_to_server
 
         print(f"[DynamicMCP] Cached {len(self._tools)} tools from {len(self._servers)} servers")
 
