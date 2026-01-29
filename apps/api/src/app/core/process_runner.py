@@ -137,13 +137,14 @@ class ProcessRunner:
             return self.config.idle_timeout
 
         now = time.time()
-        window_start = now - self.config.ttl_window
+        ttl_window = max(self.config.ttl_window, 1)  # Guard against zero or negative
+        window_start = now - ttl_window
 
         # Count recent calls
         recent_calls = sum(1 for ts in self._call_timestamps if ts > window_start)
 
         # Calculate calls per minute
-        calls_per_minute = (recent_calls / self.config.ttl_window) * 60
+        calls_per_minute = (recent_calls / ttl_window) * 60
 
         # Base scaling: more calls = longer TTL
         # 0 calls/min -> min_ttl

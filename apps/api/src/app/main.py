@@ -192,7 +192,18 @@ async def lifespan(app: FastAPI):
 
         # Start background task to pre-cache Docker Gateway tools
         import asyncio
-        asyncio.create_task(_precache_docker_gateway_tools())
+
+        def _handle_precache_error(task: asyncio.Task):
+            """Log any unhandled errors from the precache task."""
+            try:
+                task.result()
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                print(f"[Startup] Docker Gateway pre-cache task failed: {e}")
+
+        precache_task = asyncio.create_task(_precache_docker_gateway_tools())
+        precache_task.add_done_callback(_handle_precache_error)
 
     except Exception as e:
         print(f"   ProcessManager init failed: {e}")

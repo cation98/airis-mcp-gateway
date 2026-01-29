@@ -455,8 +455,9 @@ async def proxy_sse_stream(request: Request):
                                     else:
                                         print("[MCP Proxy] No sessionid available, cannot send initialized notification")
 
-                            except json.JSONDecodeError:
-                                # JSONでない場合はそのまま
+                            except json.JSONDecodeError as e:
+                                # Log malformed JSON for debugging (truncate to avoid log spam)
+                                print(f"[MCP Proxy] Malformed JSON in SSE data: {str(e)[:100]}")
                                 yield f"{line}\n"
                         else:
                             yield f"{line}\n"
@@ -1272,6 +1273,19 @@ async def handle_airis_find(rpc_request: Dict[str, Any], session_id: Optional[st
     process_manager = get_process_manager()
 
     from ...core.dynamic_mcp import ToolInfo, ServerInfo
+
+    # Defensive null check
+    if dynamic_mcp is None:
+        print("[Dynamic MCP] Warning: DynamicMCP singleton not initialized")
+        return Response(
+            content=json.dumps({
+                "jsonrpc": "2.0",
+                "id": rpc_request.get("id"),
+                "error": {"code": -32603, "message": "Dynamic MCP not initialized"}
+            }),
+            status_code=200,
+            media_type="application/json"
+        )
 
     # Always ensure servers are cached (even if tools already exist)
     # This is needed because tools/list populates tools but not necessarily servers
