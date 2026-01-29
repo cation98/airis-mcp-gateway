@@ -123,7 +123,8 @@ async def get_all_server_status() -> list[dict[str, Any]]:
         async with httpx.AsyncClient(timeout=2.0) as client:
             resp = await client.get(f"{settings.MCP_GATEWAY_URL}/health")
             docker_status = "ready" if resp.status_code == 200 else "error"
-    except Exception:
+    except (httpx.RequestError, httpx.HTTPStatusError):
+        # Catch all network errors for health check
         docker_status = "unreachable"
 
     servers.append({

@@ -308,7 +308,8 @@ async def ready():
         async with httpx.AsyncClient(timeout=2.0) as client:
             resp = await client.get(f"{MCP_GATEWAY_URL}/health")
             gateway_ok = resp.status_code == 200
-    except Exception:
+    except (httpx.RequestError, httpx.HTTPStatusError):
+        # Catch all network errors for health check
         gateway_ok = False
 
     return {
