@@ -6,6 +6,8 @@
 !.env.example
 .DS_Store
 mcp.json
+mcp-config.json
+!mcp-config.json.example
 
 # Docker volumes
 data/
