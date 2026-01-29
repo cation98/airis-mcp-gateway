@@ -1,0 +1,117 @@
+version: '3'
+
+vars:
+  AUTOSTART_DIR: "{{.REPO_ROOT}}/ops/autostart"
+
+tasks:
+  install:
+    desc: Install auto-start (LaunchAgent on macOS, systemd on Linux)
+    cmds:
+      - |
+        case "$(uname -s)" in
+          Darwin)
+            echo "Installing macOS LaunchAgent..."
+            chmod +x "{{.AUTOSTART_DIR}}/macos/install.sh"
+            "{{.AUTOSTART_DIR}}/macos/install.sh"
+            ;;
+          Linux)
+            echo "Installing Linux systemd service..."
+            chmod +x "{{.AUTOSTART_DIR}}/linux/install.sh"
+            "{{.AUTOSTART_DIR}}/linux/install.sh"
+            ;;
+          *)
+            echo "ERROR: Unsupported platform: $(uname -s)"
+            echo "Auto-start is only supported on macOS and Linux"
+            exit 1
+            ;;
+        esac
+
+  uninstall:
+    desc: Remove auto-start
+    cmds:
+      - |
+        case "$(uname -s)" in
+          Darwin)
+            echo "Removing macOS LaunchAgent..."
+            chmod +x "{{.AUTOSTART_DIR}}/macos/uninstall.sh"
+            "{{.AUTOSTART_DIR}}/macos/uninstall.sh"
+            ;;
+          Linux)
+            echo "Removing Linux systemd service..."
+            chmod +x "{{.AUTOSTART_DIR}}/linux/uninstall.sh"
+            "{{.AUTOSTART_DIR}}/linux/uninstall.sh"
+            ;;
+          *)
+            echo "ERROR: Unsupported platform: $(uname -s)"
+            exit 1
+            ;;
+        esac
+
+  status:
+    desc: Check auto-start status
+    cmds:
+      - |
+        case "$(uname -s)" in
+          Darwin)
+            echo "=== macOS LaunchAgent Status ==="
+            PLIST="$HOME/Library/LaunchAgents/com.agiletec.airis-mcp-gateway.plist"
+            if [ -f "$PLIST" ]; then
+              echo "Installed: YES"
+              echo "Plist: $PLIST"
+              echo ""
+              echo "LaunchAgent status:"
+              if launchctl list 2>/dev/null | grep -q "com.agiletec.airis-mcp-gateway"; then
+                launchctl list | grep "com.agiletec.airis-mcp-gateway" || true
+                echo "Status: LOADED"
+              else
+                echo "Status: NOT LOADED"
+              fi
+            else
+              echo "Installed: NO"
+              echo ""
+              echo "To install: task autostart:install"
+            fi
+            ;;
+          Linux)
+            echo "=== Linux systemd Status ==="
+            SERVICE="airis-mcp-gateway.service"
+            SERVICE_PATH="$HOME/.config/systemd/user/$SERVICE"
+            if [ -f "$SERVICE_PATH" ]; then
+              echo "Installed: YES"
+              echo "Service: $SERVICE_PATH"
+              echo ""
+              systemctl --user status "$SERVICE" --no-pager || true
+            else
+              echo "Installed: NO"
+              echo ""
+              echo "To install: task autostart:install"
+            fi
+            ;;
+          *)
+            echo "ERROR: Unsupported platform: $(uname -s)"
+            exit 1
+            ;;
+        esac
+
+  logs:
+    desc: View auto-start logs (macOS only)
+    cmds:
+      - |
+        case "$(uname -s)" in
+          Darwin)
+            echo "=== AIRIS MCP Gateway Logs ==="
+            echo ""
+            echo "--- stdout ---"
+            tail -50 "$HOME/Library/Logs/airis-mcp-gateway.log" 2>/dev/null || echo "(no logs)"
+            echo ""
+            echo "--- stderr ---"
+            tail -50 "$HOME/Library/Logs/airis-mcp-gateway.error.log" 2>/dev/null || echo "(no logs)"
+            ;;
+          Linux)
+            journalctl --user -u airis-mcp-gateway.service --no-pager -n 50
+            ;;
+          *)
+            echo "ERROR: Unsupported platform"
+            exit 1
+            ;;
+        esac

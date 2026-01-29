@@ -17,6 +17,9 @@ includes:
   test:
     taskfile: .tasks.d/test.yml
     optional: false
+  autostart:
+    taskfile: .tasks.d/autostart.yml
+    optional: false
 
 tasks:
   default:

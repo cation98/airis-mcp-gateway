@@ -14,6 +14,12 @@ task docker:logs            # View API logs
 task docker:restart         # Restart after config changes
 task docker:clean           # Remove containers and volumes
 
+# Auto-start (boot persistence)
+task autostart:install      # Enable auto-start on login (macOS/Linux)
+task autostart:uninstall    # Disable auto-start
+task autostart:status       # Check auto-start status
+task autostart:logs         # View auto-start logs
+
 # Development mode (hot reload)
 task dev:up                 # Start with hot reload
 task dev:watch              # Auto-rebuild TypeScript on change
@@ -191,6 +197,23 @@ DYNAMIC_MCP=false docker compose up -d
 ### 3. One-Command Install
 - `docker compose up -d` from repo root handles everything
 - Register with Claude Code after startup
+
+### 4. Auto-Start on Boot
+To ensure the gateway starts automatically on system reboot:
+```bash
+task autostart:install    # Installs LaunchAgent (macOS) or systemd service (Linux)
+task autostart:status     # Verify installation
+```
+
+**macOS (OrbStack/Docker Desktop):**
+- Creates `~/Library/LaunchAgents/com.agiletec.airis-mcp-gateway.plist`
+- Runs `docker compose up -d` on login
+- Logs: `~/Library/Logs/airis-mcp-gateway.log`
+
+**Linux:**
+- Creates `~/.config/systemd/user/airis-mcp-gateway.service`
+- Enables user lingering for boot persistence
+- Logs: `journalctl --user -u airis-mcp-gateway.service`
 
 ## Environment Variables
 

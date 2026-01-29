@@ -1,0 +1,16 @@
+[Unit]
+Description=AIRIS MCP Gateway
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory={{REPO_ROOT}}
+ExecStart=/usr/bin/docker compose -f {{REPO_ROOT}}/docker-compose.yml up -d
+ExecStop=/usr/bin/docker compose -f {{REPO_ROOT}}/docker-compose.yml down
+User={{USER}}
+Group={{USER}}
+
+[Install]
+WantedBy=multi-user.target
