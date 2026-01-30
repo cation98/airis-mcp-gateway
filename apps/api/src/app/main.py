@@ -185,6 +185,10 @@ async def lifespan(app: FastAPI):
     logger.info(f"Docker Gateway URL: {MCP_GATEWAY_URL}")
     logger.info(f"MCP Config Path: {MCP_CONFIG_PATH}")
 
+    # Validate and log configuration warnings
+    from .core.config import log_startup_warnings
+    log_startup_warnings()
+
     # Initialize ProcessManager for uvx/npx servers
     try:
         await initialize_process_manager(MCP_CONFIG_PATH)

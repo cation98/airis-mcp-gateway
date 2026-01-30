@@ -75,3 +75,61 @@ if not settings.CORS_ORIGINS:
         settings.UI_PUBLIC_URL,
         settings.GATEWAY_PUBLIC_URL,
     ]
+
+
+def validate_environment() -> list[str]:
+    """
+    Validate environment configuration at startup.
+
+    Returns list of warnings for non-critical issues.
+    Raises ValueError for critical misconfigurations.
+    """
+    warnings = []
+
+    # Check ALLOWED_ORIGINS in production
+    allowed_origins = os.getenv("ALLOWED_ORIGINS", "")
+    if not allowed_origins or allowed_origins == "*":
+        warnings.append(
+            "ALLOWED_ORIGINS not set or set to '*'. "
+            "Set explicit origins in production (e.g., ALLOWED_ORIGINS=https://app.example.com)"
+        )
+
+    # Check API key in production (optional but recommended)
+    if not settings.AIRIS_API_KEY:
+        warnings.append(
+            "AIRIS_API_KEY not set. API authentication is disabled. "
+            "Set AIRIS_API_KEY for public-facing deployments."
+        )
+
+    # Validate TOOL_CALL_TIMEOUT range
+    if settings.TOOL_CALL_TIMEOUT < 10:
+        warnings.append(
+            f"TOOL_CALL_TIMEOUT={settings.TOOL_CALL_TIMEOUT}s is very low. "
+            "Some MCP tools may timeout. Recommended minimum: 30s"
+        )
+    elif settings.TOOL_CALL_TIMEOUT > 300:
+        warnings.append(
+            f"TOOL_CALL_TIMEOUT={settings.TOOL_CALL_TIMEOUT}s is very high. "
+            "Consider lowering to prevent hung requests."
+        )
+
+    # Validate rate limits
+    rate_limit_ip = int(os.getenv("RATE_LIMIT_PER_IP", "100"))
+    rate_limit_key = int(os.getenv("RATE_LIMIT_PER_API_KEY", "1000"))
+    if rate_limit_ip > rate_limit_key:
+        warnings.append(
+            f"RATE_LIMIT_PER_IP ({rate_limit_ip}) > RATE_LIMIT_PER_API_KEY ({rate_limit_key}). "
+            "API key users should have higher limits than anonymous users."
+        )
+
+    return warnings
+
+
+def log_startup_warnings() -> None:
+    """Log configuration warnings at startup."""
+    import logging
+    logger = logging.getLogger("airis.config")
+
+    warnings = validate_environment()
+    for warning in warnings:
+        logger.warning(f"[Config] {warning}")
