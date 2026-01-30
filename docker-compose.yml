@@ -86,6 +86,9 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    # Resource limits for container (prevents runaway processes)
+    mem_limit: 2g
+    cpus: 2
     environment:
       - MCP_GATEWAY_URL=http://gateway:9390
       - MCP_CONFIG_PATH=/app/mcp-config.json
@@ -101,10 +104,10 @@ services:
       - ./mcp-config.json:/app/mcp-config.json:ro
       - ./config/gateway-config.yaml:/app/config/gateway-config.yaml:ro
       - ./profiles:/app/profiles:rw
-      # Persistent data volumes
-      - cache-uv:/root/.cache/uv        # uvx package cache (faster restarts)
-      - cache-npm:/root/.npm            # npm package cache (faster restarts)
-      - memory-data:/app/data           # Knowledge graph persistence
+      # Persistent data volumes (appuser home directory)
+      - cache-uv:/home/appuser/.cache/uv   # uvx package cache (faster restarts)
+      - cache-npm:/home/appuser/.npm       # npm package cache (faster restarts)
+      - memory-data:/app/data              # Knowledge graph persistence
     depends_on:
       gateway:
         condition: service_healthy

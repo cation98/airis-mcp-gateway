@@ -105,17 +105,33 @@ COPY config /app/config
 # Create data directory for persistent storage (memory.json, etc.)
 RUN mkdir -p /app/data
 
+# Copy startup script (separate file to avoid CRLF issues on Windows)
+COPY apps/api/start.sh /app/start.sh
+# Convert line endings to Unix format and make executable
+RUN sed -i 's/\r$//' /app/start.sh && chmod +x /app/start.sh
+
+# Create non-root user for security
+# UID 1000 matches typical host user for volume permissions
+RUN useradd -m -u 1000 -s /bin/bash appuser
+
+# Create cache directories for appuser
+RUN mkdir -p /home/appuser/.cache/uv /home/appuser/.npm
+
+# Change ownership of app directories to appuser
+RUN chown -R appuser:appuser /app /home/appuser
+
+# Switch to non-root user
+USER appuser
+
+# Set HOME for uv/npm cache paths
+ENV HOME=/home/appuser
+
 # API port
 EXPOSE 8000
 # VNC port (for VNC clients like RealVNC, TightVNC)
 EXPOSE 5900
 # noVNC web port (access browser view at http://localhost:6080/vnc.html)
 EXPOSE 6080
-
-# Copy startup script (separate file to avoid CRLF issues on Windows)
-COPY apps/api/start.sh /app/start.sh
-# Convert line endings to Unix format and make executable
-RUN sed -i 's/\r$//' /app/start.sh && chmod +x /app/start.sh
 
 # Run from api-src directory where the package is installed
 CMD ["/app/start.sh"]
