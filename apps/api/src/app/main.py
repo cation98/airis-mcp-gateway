@@ -21,6 +21,7 @@ from .middleware.request_id import RequestIDMiddleware
 from .middleware.logging_context import LoggingContextMiddleware
 from .middleware.rate_limit import RateLimitMiddleware
 from .middleware.http_metrics import HTTPMetricsMiddleware, get_http_metrics_store
+from .middleware.request_size import RequestSizeLimitMiddleware
 
 # Initialize logging
 setup_logging()
@@ -274,10 +275,13 @@ app.add_middleware(
 app.add_middleware(OptionalBearerAuth)
 
 # Middleware order matters! Last added = first executed in request chain.
-# Execution order: RequestID -> LoggingContext -> RateLimit -> HTTPMetrics -> Auth -> CORS -> Handler
+# Execution order: RequestID -> LoggingContext -> RateLimit -> RequestSize -> HTTPMetrics -> Auth -> CORS -> Handler
 
-# HTTP metrics - records request count and latency (includes 429s)
+# HTTP metrics - records request count and latency (includes 429s, 413s)
 app.add_middleware(HTTPMetricsMiddleware)
+
+# Request size limit - reject large payloads early (default 10MB)
+app.add_middleware(RequestSizeLimitMiddleware)
 
 # Rate limiting - 429 responses will include request_id in logs
 # Skips /health, /ready, /metrics
