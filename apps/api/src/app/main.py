@@ -20,6 +20,7 @@ from .middleware.auth import OptionalBearerAuth
 from .middleware.request_id import RequestIDMiddleware
 from .middleware.logging_context import LoggingContextMiddleware
 from .middleware.rate_limit import RateLimitMiddleware
+from .middleware.http_metrics import HTTPMetricsMiddleware, get_http_metrics_store
 
 # Initialize logging
 setup_logging()
@@ -273,7 +274,10 @@ app.add_middleware(
 app.add_middleware(OptionalBearerAuth)
 
 # Middleware order matters! Last added = first executed in request chain.
-# Execution order: RequestID -> LoggingContext -> RateLimit -> Auth -> CORS -> Handler
+# Execution order: RequestID -> LoggingContext -> RateLimit -> HTTPMetrics -> Auth -> CORS -> Handler
+
+# HTTP metrics - records request count and latency (includes 429s)
+app.add_middleware(HTTPMetricsMiddleware)
 
 # Rate limiting - 429 responses will include request_id in logs
 # Skips /health, /ready, /metrics
@@ -474,6 +478,30 @@ async def metrics():
         p99 = metrics_data.get("latency_p99_ms")
         if p99 is not None:
             lines.append(f'mcp_server_latency_p99_ms{{server="{name}"}} {p99}')
+
+    # HTTP request metrics
+    http_store = get_http_metrics_store()
+    request_counts = http_store.get_request_counts()
+    latency_stats = http_store.get_latency_stats()
+
+    lines.extend(["", "# HELP http_requests_total Total HTTP requests", "# TYPE http_requests_total counter"])
+    for (method, path, status_code), count in sorted(request_counts.items()):
+        lines.append(f'http_requests_total{{method="{method}",path="{path}",status="{status_code}"}} {count}')
+
+    lines.extend(["", "# HELP http_request_latency_p50_ms HTTP request latency 50th percentile", "# TYPE http_request_latency_p50_ms gauge"])
+    for path, stats in sorted(latency_stats.items()):
+        if stats["p50"] is not None:
+            lines.append(f'http_request_latency_p50_ms{{path="{path}"}} {stats["p50"]:.2f}')
+
+    lines.extend(["", "# HELP http_request_latency_p95_ms HTTP request latency 95th percentile", "# TYPE http_request_latency_p95_ms gauge"])
+    for path, stats in sorted(latency_stats.items()):
+        if stats["p95"] is not None:
+            lines.append(f'http_request_latency_p95_ms{{path="{path}"}} {stats["p95"]:.2f}')
+
+    lines.extend(["", "# HELP http_request_latency_p99_ms HTTP request latency 99th percentile", "# TYPE http_request_latency_p99_ms gauge"])
+    for path, stats in sorted(latency_stats.items()):
+        if stats["p99"] is not None:
+            lines.append(f'http_request_latency_p99_ms{{path="{path}"}} {stats["p99"]:.2f}')
 
     lines.append("")
     return PlainTextResponse("\n".join(lines), media_type="text/plain")
