@@ -50,10 +50,22 @@ jobs:
           cd apps/api
           uv pip install --system -e ".[test]"
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
           cd apps/api
-          python -m pytest tests/unit -v --tb=short
+          python -m pytest tests/unit -v --tb=short --cov=src --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: apps/api/coverage.xml
+          flags: python
+          fail_ci_if_error: false
+
+      - name: Security scan (bandit)
+        run: |
+          pip install bandit
+          bandit -r apps/api/src -ll -ii || true
 
   # TypeScript build and test (only when TS files change)
   build-typescript:
