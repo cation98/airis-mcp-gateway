@@ -29,6 +29,7 @@ logger = get_logger(__name__)
 
 MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway:9390")
 MCP_CONFIG_PATH = os.getenv("MCP_CONFIG_PATH", "/app/mcp-config.json")
+SHUTDOWN_TIMEOUT = int(os.getenv("SHUTDOWN_TIMEOUT", "30"))  # seconds
 
 
 async def _precache_docker_gateway_tools():
@@ -220,11 +221,23 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown ProcessManager
-    logger.info("Shutting down...")
+    # Graceful shutdown with timeout
+    logger.info(f"Shutting down (timeout: {SHUTDOWN_TIMEOUT}s)...")
     try:
         manager = get_process_manager()
-        await manager.shutdown()
+
+        # Shutdown with timeout
+        try:
+            await asyncio.wait_for(
+                manager.shutdown(),
+                timeout=SHUTDOWN_TIMEOUT
+            )
+            logger.info("Graceful shutdown completed")
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Shutdown timed out after {SHUTDOWN_TIMEOUT}s, "
+                "some processes may have been force-killed"
+            )
     except Exception as e:
         logger.error(f"ProcessManager shutdown error: {e}")
 
