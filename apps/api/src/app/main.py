@@ -19,6 +19,7 @@ from .core.logging import setup_logging, get_logger
 from .middleware.auth import OptionalBearerAuth
 from .middleware.request_id import RequestIDMiddleware
 from .middleware.logging_context import LoggingContextMiddleware
+from .middleware.rate_limit import RateLimitMiddleware
 
 # Initialize logging
 setup_logging()
@@ -245,7 +246,11 @@ app.add_middleware(
 app.add_middleware(OptionalBearerAuth)
 
 # Middleware order matters! Last added = first executed in request chain.
-# Execution order: RequestID -> LoggingContext -> Auth -> CORS -> Handler
+# Execution order: RequestID -> LoggingContext -> RateLimit -> Auth -> CORS -> Handler
+
+# Rate limiting - 429 responses will include request_id in logs
+# Skips /health, /ready, /metrics
+app.add_middleware(RateLimitMiddleware)
 
 # Logging context - sets request_id in ContextVar for structured logging
 app.add_middleware(LoggingContextMiddleware)

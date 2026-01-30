@@ -1,0 +1,181 @@
+"""
+Rate limiting middleware for API protection.
+
+In-memory fixed window rate limiting. Note: This does NOT work across
+multiple processes/instances. For production with multiple workers,
+use Redis-backed rate limiting (see DEPLOYMENT.md).
+
+Key priority: API-Key header > client IP
+"""
+import os
+import time
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Optional
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response, JSONResponse
+
+from ..core.logging import get_logger
+
+
+logger = get_logger(__name__)
+
+
+# Configuration via environment variables
+RATE_LIMIT_PER_IP = int(os.getenv("RATE_LIMIT_PER_IP", "100"))  # requests per minute
+RATE_LIMIT_PER_API_KEY = int(os.getenv("RATE_LIMIT_PER_API_KEY", "1000"))  # requests per minute
+RATE_LIMIT_WINDOW = 60  # seconds (fixed at 1 minute)
+
+# Paths excluded from rate limiting (monitoring endpoints)
+EXCLUDED_PATHS = frozenset({"/health", "/ready", "/metrics"})
+
+
+@dataclass
+class RateLimitEntry:
+    """Rate limit state for a single key."""
+    count: int = 0
+    window_start: float = 0.0
+
+
+class RateLimitStore:
+    """
+    In-memory rate limit storage.
+
+    Uses fixed window algorithm:
+    - Each key gets a count and window_start timestamp
+    - When window expires, count resets
+    - Simple but can have burst at window boundaries
+
+    Thread-safe for single process, but NOT shared across processes.
+    """
+
+    def __init__(self):
+        self._store: dict[str, RateLimitEntry] = defaultdict(RateLimitEntry)
+
+    def check_and_increment(self, key: str, limit: int, window: int = RATE_LIMIT_WINDOW) -> tuple[bool, int]:
+        """
+        Check rate limit and increment counter.
+
+        Args:
+            key: Rate limit key (API key or IP)
+            limit: Maximum requests allowed in window
+            window: Time window in seconds
+
+        Returns:
+            Tuple of (allowed: bool, retry_after: int seconds)
+        """
+        now = time.time()
+        entry = self._store[key]
+
+        # Check if window has expired
+        if now - entry.window_start >= window:
+            # Reset window
+            entry.count = 1
+            entry.window_start = now
+            return (True, 0)
+
+        # Check limit
+        if entry.count >= limit:
+            # Calculate retry-after (time until window resets)
+            retry_after = int(window - (now - entry.window_start)) + 1
+            return (False, retry_after)
+
+        # Increment and allow
+        entry.count += 1
+        return (True, 0)
+
+    def clear(self):
+        """Clear all entries. Useful for testing."""
+        self._store.clear()
+
+
+# Global store instance
+_rate_limit_store = RateLimitStore()
+
+
+def get_rate_limit_store() -> RateLimitStore:
+    """Get the global rate limit store."""
+    return _rate_limit_store
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """
+    Rate limiting middleware.
+
+    - Extracts key from Authorization header (Bearer token) or client IP
+    - Applies different limits for API-key vs IP-based requests
+    - Skips rate limiting for monitoring endpoints
+    - Returns 429 with Retry-After header when limit exceeded
+    """
+
+    def __init__(self, app, store: Optional[RateLimitStore] = None):
+        super().__init__(app)
+        self.store = store or get_rate_limit_store()
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        # Skip rate limiting for monitoring endpoints
+        if request.url.path in EXCLUDED_PATHS:
+            return await call_next(request)
+
+        # Determine key and limit
+        key, limit = self._get_key_and_limit(request)
+
+        # Check rate limit
+        allowed, retry_after = self.store.check_and_increment(key, limit)
+
+        if not allowed:
+            logger.warning(
+                f"Rate limit exceeded for key={key[:20]}... limit={limit}/min"
+            )
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": "rate_limit_exceeded",
+                    "message": f"Rate limit exceeded. Try again in {retry_after} seconds.",
+                    "retry_after": retry_after,
+                },
+                headers={"Retry-After": str(retry_after)},
+            )
+
+        return await call_next(request)
+
+    def _get_key_and_limit(self, request: Request) -> tuple[str, int]:
+        """
+        Extract rate limit key and determine applicable limit.
+
+        Priority: API-Key (Authorization: Bearer) > Client IP
+
+        Returns:
+            Tuple of (key: str, limit: int)
+        """
+        # Check for API key in Authorization header
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            api_key = auth_header[7:].strip()
+            if api_key:
+                return (f"apikey:{api_key}", RATE_LIMIT_PER_API_KEY)
+
+        # Fall back to client IP
+        client_ip = self._get_client_ip(request)
+        return (f"ip:{client_ip}", RATE_LIMIT_PER_IP)
+
+    def _get_client_ip(self, request: Request) -> str:
+        """Extract client IP, considering proxy headers."""
+        # Check X-Forwarded-For first (for reverse proxy setups)
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            # Take the first IP (original client)
+            return forwarded.split(",")[0].strip()
+
+        # Check X-Real-IP (nginx style)
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip.strip()
+
+        # Fall back to direct connection
+        if request.client:
+            return request.client.host
+
+        return "unknown"
