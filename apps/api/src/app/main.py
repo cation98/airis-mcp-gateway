@@ -18,6 +18,7 @@ from .core.process_manager import initialize_process_manager, get_process_manage
 from .core.logging import setup_logging, get_logger
 from .middleware.auth import OptionalBearerAuth
 from .middleware.request_id import RequestIDMiddleware
+from .middleware.logging_context import LoggingContextMiddleware
 
 # Initialize logging
 setup_logging()
@@ -242,6 +243,12 @@ app.add_middleware(
 # Optional API key auth - only active if AIRIS_API_KEY env var is set
 # Skips auth for /health, /ready, /
 app.add_middleware(OptionalBearerAuth)
+
+# Middleware order matters! Last added = first executed in request chain.
+# Execution order: RequestID -> LoggingContext -> Auth -> CORS -> Handler
+
+# Logging context - sets request_id in ContextVar for structured logging
+app.add_middleware(LoggingContextMiddleware)
 
 # Request ID middleware - MUST be last (executes first in request chain)
 # Ensures every request has X-Request-ID for tracing
