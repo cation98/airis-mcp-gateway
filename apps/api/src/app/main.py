@@ -17,6 +17,7 @@ from .api.endpoints import sse_tools
 from .core.process_manager import initialize_process_manager, get_process_manager
 from .core.logging import setup_logging, get_logger
 from .middleware.auth import OptionalBearerAuth
+from .middleware.request_id import RequestIDMiddleware
 
 # Initialize logging
 setup_logging()
@@ -241,6 +242,10 @@ app.add_middleware(
 # Optional API key auth - only active if AIRIS_API_KEY env var is set
 # Skips auth for /health, /ready, /
 app.add_middleware(OptionalBearerAuth)
+
+# Request ID middleware - MUST be last (executes first in request chain)
+# Ensures every request has X-Request-ID for tracing
+app.add_middleware(RequestIDMiddleware)
 
 # Mount MCP proxy router (Docker Gateway proxy with initialized notification fix)
 app.include_router(mcp_proxy.router, prefix="/mcp", tags=["mcp"])
