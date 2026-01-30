@@ -233,9 +233,36 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+def _parse_allowed_origins() -> list[str]:
+    """
+    Parse ALLOWED_ORIGINS environment variable.
+
+    Format: comma-separated list of origins (scheme+host+port)
+    Example: ALLOWED_ORIGINS=http://localhost:3000,https://app.example.com
+
+    Returns ["*"] if not set (development mode).
+    """
+    raw = os.getenv("ALLOWED_ORIGINS", "")
+    if not raw:
+        return ["*"]
+
+    # Split, strip whitespace, filter empty strings
+    # CRITICAL: "a, b".split(",") -> ["a", " b"] - must strip!
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+    if not origins:
+        return ["*"]
+
+    return origins
+
+
+ALLOWED_ORIGINS = _parse_allowed_origins()
+logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
