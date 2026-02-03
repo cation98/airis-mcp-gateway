@@ -39,6 +39,9 @@ POOL_TIMEOUT = 10.0
 SSE_KEEPALIVE_INTERVAL = 30.0
 INIT_CLIENT_TIMEOUT = 30.0
 
+# Track initialized sessions for auto-init fallback
+_initialized_sessions: set[str] = set()
+
 # SSE stream timeout - long read timeout for long-lived connections
 SSE_TIMEOUT = httpx.Timeout(
     connect=CONNECT_TIMEOUT,
@@ -362,7 +365,7 @@ async def proxy_sse_stream(request: Request):
                         if source == "process_manager":
                             # ProcessManager からのレスポンスを SSE で送信
                             queue_task = None
-                            logger.info(f"Sending ProcessManager response via SSE: id={data.get('id')}")
+                            logger.info(f"Sending ProcessManager response via SSE: id={data.get('id') if isinstance(data, dict) else None}")
                             yield f"data: {json.dumps(data)}\n\n"
                             continue
 
@@ -975,13 +978,9 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
 
     logger.info(f"JSON-RPC request: method={method}, sessionid={session_id}")
 
-    # セッション状態を追跡（初期化済みかどうか）
-    if not hasattr(_proxy_jsonrpc_request, '_initialized_sessions'):
-        _proxy_jsonrpc_request._initialized_sessions = set()
-
     # Auto-initialize session if tools/call arrives for uninitialized session
     # This is a fallback for clients that don't follow proper MCP init sequence
-    if method == "tools/call" and session_id and session_id not in _proxy_jsonrpc_request._initialized_sessions:
+    if method == "tools/call" and session_id and session_id not in _initialized_sessions:
         logger.info(f"Session {session_id} not initialized, running init sequence")
         gateway_post_url = f"{settings.MCP_GATEWAY_URL.rstrip('/')}/sse?sessionid={session_id}"
 
@@ -1034,7 +1033,7 @@ async def _proxy_jsonrpc_request(request: Request) -> Response:
                     if notif_response.status_code in (200, 202):
                         # Wait for Gateway to complete initialization before allowing tools/call
                         await asyncio.sleep(0.10)
-                        _proxy_jsonrpc_request._initialized_sessions.add(session_id)
+                        _initialized_sessions.add(session_id)
                         logger.info(f"Session {session_id} initialized successfully")
                     else:
                         logger.error(f"Initialized notification failed: {notif_response.status_code}")

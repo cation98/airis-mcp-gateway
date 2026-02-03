@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .endpoints import mcp_servers_router
+from .endpoints.mcp_servers import router as mcp_servers_router
 from .endpoints.secrets import router as secrets_router
 from .endpoints.mcp_proxy import router as mcp_proxy_router
 from .endpoints.gateway import router as gateway_router

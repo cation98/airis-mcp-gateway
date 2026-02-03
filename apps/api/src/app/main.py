@@ -5,6 +5,7 @@ Routes:
 - Docker MCP servers -> Docker MCP Gateway (port 9390)
 - Process MCP servers (uvx/npx) -> Direct subprocess management
 """
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,7 +44,6 @@ async def _precache_docker_gateway_tools():
     3. POST initialize, initialized, tools/list
     4. Continue reading GET stream for tools/list response
     """
-    import asyncio
     import json
 
     # Wait for Gateway to be fully ready
@@ -206,8 +206,6 @@ async def lifespan(app: FastAPI):
             logger.info(f"Pre-warm complete: {ready}/{len(hot_servers)} servers ready")
 
         # Start background task to pre-cache Docker Gateway tools
-        import asyncio
-
         def _handle_precache_error(task: asyncio.Task):
             """Log any unhandled errors from the precache task."""
             try:

@@ -46,6 +46,7 @@ class EncryptionManager:
                 logger.info(f"Generated new ENCRYPTION_MASTER_KEY and stored it at {self._key_file_path}")
                 logger.info("Set ENCRYPTION_MASTER_KEY in your environment to override the persisted key")
 
+        assert isinstance(master_key, str)
         self.master_key = master_key
         self._fernet = self._create_fernet(master_key)
 
