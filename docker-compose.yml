@@ -127,6 +127,8 @@ services:
     depends_on:
       gateway:
         condition: service_healthy
+      airis-agent:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 10s
