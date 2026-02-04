@@ -74,6 +74,22 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Airis Agent MCP Server (internal, port 8100)
+  # Confidence check, repo index, deep research, orchestrator
+  airis-agent:
+    container_name: airis-agent
+    build:
+      context: ../airis-agent
+    # image: ghcr.io/agiletec-inc/airis-agent:latest  # production
+    expose:
+      - "8100"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8100/health')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
   # FastAPI Proxy (external, port 9400)
   # Hybrid MCP Multiplexer: Docker Gateway + Process (uvx/npx)
   api:
