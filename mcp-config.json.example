@@ -10,7 +10,7 @@
       ],
       "env": {},
       "enabled": true,
-      "mode": "cold"
+      "mode": "hot"
     },
     "airis-workspace": {
       "command": "uvx",
