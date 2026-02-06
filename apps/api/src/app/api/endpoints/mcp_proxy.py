@@ -437,7 +437,20 @@ async def proxy_sse_stream(request: Request):
                                         "All 60+ tools are accessed through these 3 meta-tools. "
                                         "This provides 98% token reduction while maintaining full functionality. "
                                         "When you need a capability (web search, memory, code analysis, etc.), "
-                                        "ALWAYS start with airis-find to discover available tools."
+                                        "ALWAYS start with airis-find to discover available tools.\n\n"
+                                        "## MANDATORY: Use airis_do for ALL Implementation Tasks\n"
+                                        "For ANY code implementation, modification, or feature development:\n"
+                                        "```\n"
+                                        "airis-exec tool=\"airis-agent:airis_do\" arguments={\"task\": \"...\", \"context\": \"...\"}\n"
+                                        "```\n"
+                                        "airis_do automatically handles:\n"
+                                        "- Intent classification (7 types)\n"
+                                        "- Confidence check (blocks if < 0.90)\n"
+                                        "- Deep research (auto-triggered when confidence is low)\n"
+                                        "- Execution planning and reflection\n"
+                                        "- Self-correction on failure\n\n"
+                                        "DO NOT manually call airis_confidence, airis_deep_research, or implement directly.\n"
+                                        "airis_do orchestrates everything automatically based on context."
                                     )
 
                                 # 変換後のデータを返す
