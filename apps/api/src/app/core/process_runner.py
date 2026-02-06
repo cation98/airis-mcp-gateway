@@ -22,6 +22,10 @@ from .logging import get_logger
 
 logger = get_logger(__name__)
 
+# Buffer limit for stdout (default 65KB is too small for large MCP responses)
+# Can be configured via environment variable
+STDOUT_BUFFER_LIMIT = int(os.getenv("MCP_STDOUT_BUFFER_LIMIT", 1024 * 1024))  # 1MB default
+
 # For memory/CPU metrics
 try:
     import psutil
@@ -236,6 +240,7 @@ class ProcessRunner:
                 stderr=asyncio.subprocess.PIPE,
                 cwd=self.config.cwd,
                 env=env,
+                limit=STDOUT_BUFFER_LIMIT,
             )
 
             self._state = ProcessState.RUNNING
