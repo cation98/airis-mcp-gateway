@@ -12,7 +12,12 @@ from ..schemas.dashboard import (
 )
 
 
-def _default_status(enabled: bool) -> str:
+from typing import Literal
+
+ServerStatus = Literal['connected', 'disconnected', 'error']
+
+
+def _default_status(enabled: bool) -> ServerStatus:
     return 'connected' if enabled else 'disconnected'
 
 

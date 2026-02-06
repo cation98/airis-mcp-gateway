@@ -6,7 +6,7 @@ Claude Code → FastAPI (/mcp/sse) → Docker MCP Gateway (http://mcp-gateway:93
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import StreamingResponse
-from typing import Any, Dict, Optional
+from typing import Any, AsyncGenerator, Dict, Optional
 import httpx
 import json
 import asyncio
@@ -278,7 +278,7 @@ async def proxy_sse_stream(request: Request):
                 async for line in response.aiter_lines():
                     yield ("gateway", line)
 
-            async def read_response_queue():
+            async def read_response_queue() -> AsyncGenerator[tuple[str, Any], None]:
                 """ProcessManager のレスポンスキューから読み取る"""
                 nonlocal captured_session_id
                 while True:

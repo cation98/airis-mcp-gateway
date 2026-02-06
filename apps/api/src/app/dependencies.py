@@ -15,10 +15,10 @@ def _container() -> tuple[
     CredentialProvider, MCPRegistry, SettingRepository
 ]:
     cipher = load_default_cipher()
-    credential_repo = CredentialRepository(AsyncSessionLocal, cipher)
+    credential_repo = CredentialRepository(AsyncSessionLocal, cipher)  # pyright: ignore[reportArgumentType]
     provider = CredentialProvider(credential_repo)
     registry = MCPRegistry(provider)
-    settings_repo = SettingRepository(AsyncSessionLocal)
+    settings_repo = SettingRepository(AsyncSessionLocal)  # pyright: ignore[reportArgumentType]
     return provider, registry, settings_repo
 
 

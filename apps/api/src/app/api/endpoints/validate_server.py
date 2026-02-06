@@ -72,6 +72,7 @@ async def validate_supabase_selfhost(config: Dict[str, str]) -> Dict[str, Any]:
 
     try:
         async with httpx.AsyncClient() as client:
+            assert postgrest_jwt is not None
             response = await client.get(
                 f"{normalized_postgrest_url}/",
                 headers={

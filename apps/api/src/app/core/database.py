@@ -35,7 +35,7 @@ if _HAS_SQLALCHEMY and _DATABASE_URL and _GATEWAY_MODE == "full":
         return True
 
     async def get_db() -> AsyncGenerator[AsyncSession, None]:
-        async with AsyncSessionLocal() as session:
+        async with AsyncSessionLocal() as session:  # pyright: ignore[reportOptionalCall,reportGeneralTypeIssues]
             yield session
 
 elif _HAS_SQLALCHEMY:
