@@ -97,6 +97,22 @@
       "enabled": false,
       "mode": "cold",
       "description": "Current time"
+    },
+    "stripe": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.stripe.com/"],
+      "env": {},
+      "enabled": true,
+      "mode": "cold",
+      "description": "Stripe API: customers, products, prices, subscriptions (OAuth)"
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.supabase.com/mcp"],
+      "env": {},
+      "enabled": true,
+      "mode": "cold",
+      "description": "Supabase: database, migrations, Edge Functions (OAuth)"
     }
   },
   "log": {
