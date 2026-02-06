@@ -24,10 +24,8 @@ services:
 
   # Serena MCP Server (internal, port 8000)
   # Semantic code retrieval and editing capabilities
-  # Only started with: docker compose --profile serena-remote up -d
   serena:
     container_name: airis-serena
-    profiles: ["serena-remote"]
     image: ghcr.io/oraios/serena:latest
     command:
       - serena
@@ -92,6 +90,26 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # Airis Workspace MCP Server (internal, port 8200/SSE)
+  # Thin wrapper around airis CLI for workspace management
+  airis-workspace:
+    container_name: airis-workspace
+    image: ghcr.io/agiletec-inc/airis-agent:latest
+    command: ["airis-workspace-mcp-sse"]
+    expose:
+      - "8200"
+    environment:
+      - AIRIS_WORKSPACE_PORT=8200
+    volumes:
+      - ${HOST_WORKSPACE_DIR:-${HOME}/github}:/workspace:rw
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8200/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   # FastAPI Proxy (external, port 9400)
   # Hybrid MCP Multiplexer: Docker Gateway + Process (uvx/npx)
   api:
@@ -111,7 +129,6 @@ services:
       - MCP_GATEWAY_URL=http://gateway:9390
       - MCP_CONFIG_PATH=/app/mcp-config.json
       - GATEWAY_CONFIG_PATH=/app/config/gateway-config.yaml
-      - SERENA_MODE=${SERENA_MODE:-serena-local}
       # Dynamic MCP: exposes only meta-tools (airis-find, airis-exec, airis-schema)
       # instead of all tools - reduces context token usage by ~98%
       # Set to "false" to disable and expose all tools directly
@@ -131,6 +148,10 @@ services:
         condition: service_healthy
       airis-agent:
         condition: service_healthy
+      airis-workspace:
+        condition: service_healthy
+      serena:
+        condition: service_started
     healthcheck:
       # Use /ready instead of /health to ensure HOT servers are initialized
       # before accepting connections (fixes Claude Code slash command visibility)
