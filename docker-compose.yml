@@ -78,9 +78,9 @@ services:
   # Confidence check, repo index, deep research, orchestrator
   airis-agent:
     container_name: airis-agent
-    build:
-      context: ../airis-agent
-    # image: ghcr.io/agiletec-inc/airis-agent:latest  # production
+    image: ghcr.io/agiletec-inc/airis-agent:latest
+    # build:
+    #   context: ../airis-agent  # for local development
     expose:
       - "8100"
     healthcheck:
