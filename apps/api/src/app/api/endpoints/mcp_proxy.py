@@ -16,6 +16,7 @@ from ...core.protocol_logger import protocol_logger
 from ...core.process_manager import get_process_manager
 from ...core.dynamic_mcp import get_dynamic_mcp
 from ...core.logging import get_logger
+from ...core.mcp_config_loader import ServerMode
 
 logger = get_logger(__name__)
 
@@ -1476,33 +1477,40 @@ async def handle_airis_exec(rpc_request: Dict[str, Any], session_id: Optional[st
             media_type="application/json"
         )
 
-    # Route to ProcessManager (only if server is registered AND enabled)
-    # If server exists but is disabled in ProcessManager, fall through to Docker Gateway
+    # Route to ProcessManager (with auto-enable for COLD mode servers)
     process_manager = get_process_manager()
-    enabled_servers = process_manager.get_enabled_servers()
-    if process_manager.is_process_server(server_name) and server_name in enabled_servers:
-        result = await process_manager.call_tool_on_server(server_name, tool_name, tool_args)
+    if process_manager.is_process_server(server_name):
+        config = process_manager._server_configs.get(server_name)
 
-        response_data = {
-            "jsonrpc": "2.0",
-            "id": rpc_request.get("id"),
-        }
-        if "error" in result:
-            response_data["error"] = result["error"]
-        else:
-            response_data["result"] = result.get("result")
+        # Auto-enable COLD mode servers on first airis-exec call
+        if config and config.mode == ServerMode.COLD and not config.enabled:
+            logger.info(f"Auto-enabling COLD server for airis-exec: {server_name}")
+            await process_manager.enable_server(server_name)
 
-        # Send via SSE queue if session exists
-        if session_id:
-            queue = await get_response_queue(session_id)
-            await queue.put(response_data)
-            return Response(status_code=202)
+        # Execute if server is now enabled
+        if config and config.enabled:
+            result = await process_manager.call_tool_on_server(server_name, tool_name, tool_args)
 
-        return Response(
-            content=json.dumps(response_data),
-            status_code=200,
-            media_type="application/json"
-        )
+            response_data = {
+                "jsonrpc": "2.0",
+                "id": rpc_request.get("id"),
+            }
+            if "error" in result:
+                response_data["error"] = result["error"]
+            else:
+                response_data["result"] = result.get("result")
+
+            # Send via SSE queue if session exists
+            if session_id:
+                queue = await get_response_queue(session_id)
+                await queue.put(response_data)
+                return Response(status_code=202)
+
+            return Response(
+                content=json.dumps(response_data),
+                status_code=200,
+                media_type="application/json"
+            )
 
     # Route to Docker Gateway for non-process tools
     # Check if we have a session to proxy through
