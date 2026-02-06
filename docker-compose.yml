@@ -95,7 +95,7 @@ services:
   airis-workspace:
     container_name: airis-workspace
     image: ghcr.io/agiletec-inc/airis-agent:latest
-    command: ["airis-workspace-mcp-sse"]
+    entrypoint: ["airis-workspace-mcp-sse"]
     expose:
       - "8200"
     environment:
