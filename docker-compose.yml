@@ -51,7 +51,7 @@ services:
     restart: unless-stopped
 
   # Docker MCP Gateway (internal, port 9390)
-  # Manages MCP servers from Docker catalog
+  # Manages MCP servers from Docker catalog (time, mindbase via stdio)
   gateway:
     container_name: airis-mcp-gateway-core
     image: docker/mcp-gateway:latest
@@ -74,20 +74,22 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Airis Agent MCP Server (internal, port 8100)
-  # Confidence check, repo index, deep research, orchestrator
+  # Airis Agent MCP Server (internal, port 8100/SSE)
+  # Note: airis-agent only supports HTTP/SSE transport (not stdio)
+  # The API container uses mcp-remote to bridge SSE to stdio
   airis-agent:
     container_name: airis-agent
     image: ghcr.io/agiletec-inc/airis-agent:latest
-    # build:
-    #   context: ../airis-agent  # for local development
     expose:
       - "8100"
+    volumes:
+      - ${HOST_WORKSPACE_DIR:-${HOME}/github}:/workspace:rw
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8100/health')\""]
-      interval: 30s
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   # FastAPI Proxy (external, port 9400)
