@@ -80,6 +80,10 @@ services:
     image: ghcr.io/agiletec-inc/airis-agent:latest
     expose:
       - "8100"
+    environment:
+      # Gateway URL for orchestrator (connect to API container)
+      # Note: airis-agent uses AIRIS_GATEWAY_URL (not MCP_GATEWAY_URL)
+      - AIRIS_GATEWAY_URL=http://api:8000
     volumes:
       - ${HOST_WORKSPACE_DIR:-${HOME}/github}:/workspace:rw
     healthcheck:
