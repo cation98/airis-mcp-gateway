@@ -139,14 +139,21 @@ services:
       - DYNAMIC_MCP=${DYNAMIC_MCP:-true}
       # External API keys (optional)
       - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - MAGIC_API_KEY=${MAGIC_API_KEY:-}
+      - MORPH_API_KEY=${MORPH_API_KEY:-}
     volumes:
       - ./mcp-config.json:/app/mcp-config.json:ro
       - ./config/gateway-config.yaml:/app/config/gateway-config.yaml:ro
       - ./profiles:/app/profiles:rw
+      - ~/PycharmProjects:/workspaces/pycharm:rw
+      - ~/RiderProjects:/workspaces/rider:rw
+      - ~/WebstormProjects:/workspaces/webstorm:rw
+      - ~/DataGripProjects:/workspaces/datagrip:rw
+      - ~/DataspellProjects:/workspaces/dataspell:rw
       # Persistent data volumes (appuser home directory)
       - cache-uv:/home/appuser/.cache/uv   # uvx package cache (faster restarts)
       - cache-npm:/home/appuser/.npm       # npm package cache (faster restarts)
-      - memory-data:/app/data              # Knowledge graph persistence
+      - ./data/memory:/app/data              # Knowledge graph persistence (bind mount for Syncthing sync)
     depends_on:
       gateway:
         condition: service_healthy
@@ -170,4 +177,4 @@ volumes:
   mindbase-data:    # PostgreSQL data for pgvector
   cache-uv:         # uvx package cache (persists airis-agent packages)
   cache-npm:        # npm package cache (persists npx server packages)
-  memory-data:      # Knowledge graph JSON file
+  # memory-data: removed — now using bind mount (./data/memory) for Syncthing sync

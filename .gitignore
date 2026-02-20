@@ -4,6 +4,8 @@
 .env
 .env.*
 !.env.example
+catalogs/airis-catalog.yaml
+!catalogs/airis-catalog.yaml.example
 .DS_Store
 mcp.json
 mcp-config.json
@@ -65,6 +67,10 @@ secrets.json
 
 # Serena memory (local AI context)
 .serena/
+serena-config.yml
+
+# Docker Compose override (machine-specific)
+docker-compose.override.yml
 
 # Casks (local macOS app builds)
 Casks/
