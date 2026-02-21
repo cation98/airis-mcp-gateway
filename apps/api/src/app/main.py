@@ -380,11 +380,17 @@ async def ready():
     """
     Readiness check for the MCP Gateway.
 
-    Returns ready=true only when:
+    Returns ready=true when:
     1. Docker Gateway is reachable
-    2. All HOT servers are in READY state
+    2. All HOT servers are in an acceptable state
 
-    This ensures Claude Code slash commands are available from startup.
+    Acceptable states:
+    - READY: running and serving requests
+    - STOPPED: idle-killed after timeout, will restart on demand (normal lifecycle)
+    - STOPPING: transitioning to stopped (momentary)
+
+    Only transient startup states (STARTING, RUNNING, INITIALIZING) are
+    considered not-ready, which naturally resolves after pre-warm completes.
     """
     # Check Docker Gateway
     try:
@@ -398,27 +404,28 @@ async def ready():
     manager = get_process_manager()
     hot_servers = manager.get_hot_servers()
     hot_status = {}
-    all_hot_ready = True
+    all_hot_ok = True
+
+    # STOPPED is acceptable: idle-killed HOT servers restart on demand
+    acceptable_states = {ProcessState.READY, ProcessState.STOPPED, ProcessState.STOPPING}
 
     for name in hot_servers:
         runner = manager.get_runner(name)
         if runner:
-            is_ready = runner.state == ProcessState.READY
-            hot_status[name] = "ready" if is_ready else runner.state.value
-            if not is_ready:
-                all_hot_ready = False
+            hot_status[name] = runner.state.value
+            if runner.state not in acceptable_states:
+                all_hot_ok = False
         else:
             hot_status[name] = "not_found"
-            all_hot_ready = False
+            all_hot_ok = False
 
-    # Ready only if gateway is ok AND all HOT servers are ready
-    is_ready = gateway_ok and (all_hot_ready or len(hot_servers) == 0)
+    is_ready = gateway_ok and (all_hot_ok or len(hot_servers) == 0)
 
     return {
         "ready": is_ready,
         "gateway": "ok" if gateway_ok else "unreachable",
         "hot_servers": hot_status,
-        "hot_servers_ready": f"{sum(1 for s in hot_status.values() if s == 'ready')}/{len(hot_servers)}",
+        "hot_servers_ready": f"{sum(1 for s in hot_status.values() if s in ('ready', 'stopped'))}/{len(hot_servers)}",
     }
 
 

@@ -164,13 +164,13 @@ services:
       serena:
         condition: service_started
     healthcheck:
-      # Use /ready instead of /health to ensure HOT servers are initialized
-      # before accepting connections (fixes Claude Code slash command visibility)
-      test: ["CMD-SHELL", "curl -sf http://localhost:8000/ready | grep -q '\"ready\": true' || exit 1"]
-      interval: 5s
+      # Use /ready to check gateway + HOT server state
+      # Note: FastAPI returns compact JSON ("ready":true, no space)
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/ready | grep -q '\"ready\":true' || exit 1"]
+      interval: 10s
       timeout: 3s
-      retries: 10
-      start_period: 30s  # Allow time for HOT server initialization
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
 volumes:

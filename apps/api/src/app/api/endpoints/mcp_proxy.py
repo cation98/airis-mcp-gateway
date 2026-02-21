@@ -34,10 +34,11 @@ router = APIRouter()
 
 # Connection timeout constants (seconds)
 CONNECT_TIMEOUT = 10.0
-READ_TIMEOUT = 120.0
+READ_TIMEOUT = 600.0  # 10 min - generous to avoid premature SSE disconnection
 WRITE_TIMEOUT = 10.0
 POOL_TIMEOUT = 10.0
 SSE_KEEPALIVE_INTERVAL = 30.0
+GATEWAY_PING_INTERVAL = 90.0  # Ping upstream gateway to keep SSE alive
 INIT_CLIENT_TIMEOUT = 30.0
 
 # Track initialized sessions for auto-init fallback
@@ -301,10 +302,43 @@ async def proxy_sse_stream(request: Request):
                     await asyncio.sleep(SSE_KEEPALIVE_INTERVAL)
                     yield ("keepalive", None)
 
+            async def gateway_pinger():
+                """Periodically ping upstream gateway to keep SSE connection alive.
+
+                The Docker MCP Gateway SSE stream only sends data for actual MCP
+                responses. Without periodic activity, the httpx read timeout will
+                fire and disconnect. Sending MCP 'ping' generates a response in
+                the SSE stream, resetting the read timeout timer.
+                """
+                while True:
+                    await asyncio.sleep(GATEWAY_PING_INTERVAL)
+                    if captured_session_id:
+                        try:
+                            ping_request = {
+                                "jsonrpc": "2.0",
+                                "method": "ping",
+                                "id": "__keepalive__"
+                            }
+                            gateway_post_url = (
+                                f"{settings.MCP_GATEWAY_URL.rstrip('/')}"
+                                f"/sse?sessionid={captured_session_id}"
+                            )
+                            await client.post(
+                                gateway_post_url,
+                                json=ping_request,
+                                headers={"Content-Type": "application/json"},
+                                timeout=10.0
+                            )
+                        except Exception:
+                            pass  # Don't fail the stream on ping errors
+
             # Merge all streams: gateway, response queue, and keepalive
             gateway_gen = read_gateway_stream()
             queue_gen = read_response_queue()
             keepalive_gen = keepalive_sender()
+
+            # Background task: periodically ping gateway upstream
+            ping_bg_task = asyncio.create_task(gateway_pinger())
 
             gateway_task = None
             queue_task = None
@@ -404,6 +438,11 @@ async def proxy_sse_stream(request: Request):
                             try:
                                 json_data = json.loads(data_str)
 
+                                # Filter out keepalive ping responses (don't forward to client)
+                                if (isinstance(json_data, dict) and
+                                        json_data.get("id") == "__keepalive__"):
+                                    continue
+
                                 # initialize リクエストを検出（SSEストリームで見えることはないが念のため）
                                 if isinstance(json_data, dict) and json_data.get("method") == "initialize":
                                     initialize_request_id = json_data.get("id")
@@ -490,6 +529,12 @@ async def proxy_sse_stream(request: Request):
                         else:
                             yield f"{line}\n"
             finally:
+                # Cancel background ping task
+                ping_bg_task.cancel()
+                try:
+                    await ping_bg_task
+                except (asyncio.CancelledError, Exception):
+                    pass
                 # Cancel any pending tasks to prevent "Task exception was never retrieved"
                 for task in [gateway_task, queue_task, keepalive_task]:
                     if task is not None and not task.done():

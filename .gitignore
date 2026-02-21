@@ -11,6 +11,10 @@ mcp.json
 mcp-config.json
 !mcp-config.json.example
 
+# Generated catalog (contains secrets from 1Password)
+catalogs/airis-catalog.yaml
+!catalogs/airis-catalog.yaml.template
+
 # Docker volumes
 data/
 logs/

@@ -1,0 +1,151 @@
+version: 2
+name: airis-custom
+displayName: Airis Custom MCP Catalog
+registry:
+  # === AIRIS CORE SERVERS ===
+
+  airis-agent:
+    title: Airis Agent
+    description: Confidence check, deep research, repo indexing - prevents wrong-direction work
+    type: server
+    image: ghcr.io/agiletec-inc/airis-agent:latest
+    command: ["airis-agent-mcp"]
+    category: AIRIS Core
+    readme: https://github.com/agiletec-inc/airis-agent
+    tools:
+      - name: execute_task
+      - name: plan_task
+    volumes:
+      - '/workspace:/workspace'
+    allowHosts:
+      - "*"
+
+  airis-workspace:
+    title: Airis Workspace
+    description: Workspace management (init, validate, sync)
+    type: server
+    image: ghcr.io/agiletec-inc/airis-agent:latest
+    command: ["airis-workspace-mcp"]
+    category: AIRIS Core
+    readme: https://github.com/agiletec-inc/airis-agent
+    tools:
+      - name: workspace_init
+      - name: workspace_validate
+      - name: workspace_sync
+    volumes:
+      - '/workspace:/workspace'
+
+  mindbase:
+    title: MindBase MCP Server
+    description: Mindbase knowledge graph operations with vector search
+    type: server
+    image: ghcr.io/agiletec-inc/mindbase-mcp:latest
+    command: ["node", "dist/index.js"]
+    category: AIRIS Core
+    readme: https://github.com/kazuph/mindbase
+    tools:
+      - name: memory_write
+      - name: memory_read
+      - name: memory_list
+      - name: memory_delete
+      - name: memory_search
+      - name: conversation_save
+      - name: conversation_get
+      - name: conversation_search
+      - name: conversation_hybrid_search
+      - name: conversation_delete
+      - name: session_create
+      - name: session_start
+      - name: session_list
+      - name: session_delete
+    config:
+      - name: mindbase_settings
+        type: object
+        properties:
+          database_url:
+            type: string
+            description: PostgreSQL connection string with pgvector
+          ollama_url:
+            type: string
+            description: Ollama server URL for embeddings
+          embedding_model:
+            type: string
+            description: Embedding model name
+    env:
+      - name: DATABASE_URL
+        value: 'postgresql://postgres.hmmtnzfcktwanjlewieb:__MINDBASE_DB_PASSWORD__@aws-1-ap-southeast-2.pooler.supabase.com:5432/postgres'
+      - name: OLLAMA_URL
+        value: '{{mindbase_settings.ollama_url|default:"http://host.docker.internal:11434"}}'
+      - name: EMBEDDING_MODEL
+        value: '{{mindbase_settings.embedding_model|default:"nomic-embed-text"}}'
+    allowHosts:
+      - "*"
+
+  # === SESSION & RESEARCH SERVERS ===
+
+  serena:
+    title: Serena (Session Persistence)
+    description: Session state persistence and restoration. Enables PDCA cycle with cross-session memory.
+    type: process
+    command: ["serena", "start-mcp-server"]
+    category: Session Management
+    readme: https://github.com/oraios/serena
+    tools:
+      - name: list_memories
+      - name: read_memory
+      - name: write_memory
+      - name: delete_memory
+
+  tavily:
+    title: Tavily (Deep Web Search)
+    description: Web search with summarization. Rate-controlled, cached results for deep research.
+    type: process
+    command: ["npx", "tavily-mcp@latest"]
+    category: Research
+    readme: https://docs.tavily.com
+    tools:
+      - name: search
+      - name: extract
+    config:
+      - name: tavily_api_key
+        type: string
+        description: Tavily API key
+        required: true
+    env:
+      - name: TAVILY_API_KEY
+        value: '{{tavily_api_key}}'
+
+  # === INFRASTRUCTURE SERVERS ===
+
+  cloudflare:
+    title: Cloudflare MCP Server
+    description: Manage Cloudflare DNS, Workers, KV, R2, D1 via MCP
+    type: process
+    command: ["npx", "@cloudflare/mcp-server-cloudflare@latest"]
+    category: Infrastructure
+    readme: https://github.com/cloudflare/mcp-server-cloudflare
+    tools:
+      - name: dns_record_create
+      - name: dns_record_list
+      - name: dns_record_delete
+      - name: zone_list
+      - name: kv_namespace_list
+      - name: kv_get
+      - name: kv_put
+      - name: r2_bucket_list
+      - name: worker_list
+      - name: worker_deploy
+    config:
+      - name: cloudflare_api_token
+        type: string
+        description: Cloudflare API Token with DNS edit permissions
+        required: true
+      - name: cloudflare_account_id
+        type: string
+        description: Cloudflare Account ID
+        required: true
+    env:
+      - name: CLOUDFLARE_API_TOKEN
+        value: '{{cloudflare_api_token}}'
+      - name: CLOUDFLARE_ACCOUNT_ID
+        value: '{{cloudflare_account_id}}'

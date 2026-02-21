@@ -5,9 +5,34 @@ vars:
   COMPOSE_DEV_FILE: "{{.REPO_ROOT}}/docker-compose.dev.yml"
 
 tasks:
-  up:
-    desc: Start the stack
+  inject-secrets:
+    desc: Generate catalog from template with 1Password secrets
     cmds:
+      - |
+        TEMPLATE="{{.REPO_ROOT}}/catalogs/airis-catalog.yaml.template"
+        OUTPUT="{{.REPO_ROOT}}/catalogs/airis-catalog.yaml"
+        if [ ! -f "$TEMPLATE" ]; then
+          echo "ERROR: Template not found: $TEMPLATE"
+          exit 1
+        fi
+        DB_PASSWORD=$(op item get sokyzs5sonpdtqbu3urcidv6vm --fields credential --reveal 2>/dev/null)
+        if [ -z "$DB_PASSWORD" ]; then
+          echo "WARN: 1Password unavailable. Checking existing catalog..."
+          if [ -f "$OUTPUT" ]; then
+            echo "Using existing catalog (already generated)."
+            exit 0
+          fi
+          echo "ERROR: No catalog and no 1Password. Run 'op signin' first."
+          exit 1
+        fi
+        sed "s|__MINDBASE_DB_PASSWORD__|${DB_PASSWORD}|" "$TEMPLATE" > "$OUTPUT"
+        echo "Catalog generated with 1Password secrets."
+    silent: true
+
+  up:
+    desc: Start the stack (injects secrets from 1Password)
+    cmds:
+      - task: inject-secrets
       - docker compose -f {{.COMPOSE_FILE}} up -d
 
   down:
