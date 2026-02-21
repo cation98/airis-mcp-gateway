@@ -257,6 +257,16 @@ The gateway automatically injects `instructions` into the MCP `initialize` respo
 
 This is implemented in `mcp_proxy.py:405-423` and ensures LLMs always know to use `airis-find` → `airis-schema` → `airis-exec` pattern.
 
+## Skills
+
+Custom verification and maintenance skills are defined in `.claude/skills/`.
+
+| Skill | Purpose |
+|-------|---------|
+| `verify-implementation` | Runs all project verify skills sequentially to produce a unified validation report |
+| `manage-skills` | Analyzes session changes, creates/updates verification skills, and manages CLAUDE.md |
+| `verify-mindbase` | Verifies all 14 mindbase MCP tools function correctly via airis-exec gateway calls |
+
 ## Claude Code Slash Commands
 
 Built-in commands in `.claude/commands/`:
