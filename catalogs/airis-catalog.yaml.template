@@ -39,7 +39,7 @@ registry:
     title: MindBase MCP Server
     description: Mindbase knowledge graph operations with vector search
     type: server
-    image: ghcr.io/agiletec-inc/mindbase-mcp:latest
+    image: ghcr.io/cation98/mindbase-mcp:patched
     command: ["node", "dist/index.js"]
     category: AIRIS Core
     readme: https://github.com/kazuph/mindbase
