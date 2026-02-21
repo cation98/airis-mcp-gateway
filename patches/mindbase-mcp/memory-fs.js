@@ -348,7 +348,7 @@ export class FileSystemMemoryBackend {
             throw new Error('Database not configured for semantic search');
         }
         const limit = options?.limit ?? 10;
-        const threshold = options?.threshold ?? 0.7;
+        const threshold = options?.threshold ?? 0.5;
         // Generate query embedding
         const queryEmbedding = await this.generateEmbedding(query);
         if (!queryEmbedding) {
