@@ -26,7 +26,10 @@ services:
   # Semantic code retrieval and editing capabilities
   serena:
     container_name: airis-serena
-    image: ghcr.io/oraios/serena:latest
+    image: ghcr.io/cation98/serena:patched
+    build:
+      context: ./patches/serena
+      dockerfile: Dockerfile
     command:
       - serena
       - start-mcp-server
@@ -36,10 +39,13 @@ services:
       - "8000"
       - --context
       - ide-assistant
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
+      - "24282:24282"
     volumes:
       - ${HOST_WORKSPACE_DIR:-${HOME}/github}:/workspaces/projects:rw
+      - ${HOME}/RiderProjects:/workspaces/rider-projects:rw
+      - ${HOME}/PycharmProjects:/workspaces/pycharm-projects:rw
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health 2>/dev/null || exit 0"]
       interval: 30s
